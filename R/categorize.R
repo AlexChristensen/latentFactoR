@@ -1,0 +1,131 @@
+#' Categorize Continuous Data
+#'
+#' Categorizes continuous data based on Garrido, Abad and Ponsoda (2011; see references).
+#' Categorical data with 2 to 5 categories can include skew between -2 to 2 in
+#' increments of 0.50
+#'
+#' @param data Numeric (length = n).
+#' A vector of continuous data with \emph{n} values.
+#' For matrices, use \code{apply}
+#' 
+#' @param categories Numeric (length = 1).
+#' Number of categories to create.
+#' Between 2 and 5 categories can be used with skew
+#' 
+#' @param skew_value Numeric (length = 1).
+#' Value of skew.
+#' Ranges between -2 to 2 in increments of 0.50.
+#' Skews not in this sequence will be converted to
+#' the nearest value in this sequence.
+#' Defaults to \code{0} or no skew.
+#' Future versions will incorporate finer skews
+#' 
+#' @return Returns a numeric vector of the categorize data
+#'
+#' @examples
+#' # Dichotomous data (no skew)
+#' dichotomous <- categorize(
+#'   data = rnorm(1000),
+#'   categories = 2
+#' )
+#' 
+#' # Dichotomous data (with positive skew)
+#' dichotomous_skew <- categorize(
+#'   data = rnorm(1000),
+#'   categories = 2,
+#'   skew_value = 1
+#' )
+#' 
+#' # 5-point Likert scale (no skew)
+#' five_likert <- categorize(
+#'   data = rnorm(1000),
+#'   categories = 5 
+#' )
+#' 
+#' # 5-point Likert scale (negative skew)
+#' five_likert <- categorize(
+#'   data = rnorm(1000),
+#'   categories = 5,
+#'   skew_value = -1
+#' )
+#' 
+#' @author
+#' Maria Dolores Nieto Canaveras <mnietoca@nebrija.es>,
+#' Luis Eduardo Garrido <luisgarrido@pucmm.edu>,
+#' Hudson Golino <hfg9s@virginia.edu>,
+#' Alexander P. Christensen <alexpaulchristensen@gmail.com>
+#' 
+#' @references
+#' Garrido, L. E., Abad, F. J., & Ponsoda, V. (2011). \cr
+#' Performance of Velicer’s minimum average partial factor retention method with categorical variables. \cr
+#' Educational and Psychological Measurement, 71(3), 551-570.
+#'
+#' @export
+#'
+# Categorization function
+# Updated 09.08.2022
+categorize <- function(
+  data, categories, skew_value = 0
+)
+{
+  
+  # Possible skew values
+  possible_skews <- seq(-2, 2, 0.50)
+  
+  # Check if skew is in possible values
+  if(!skew_value %in% possible_skews){
+    
+    # Round to hundredths digit
+    skew <- round(skew_value, 2)
+    
+    # Get differences
+    skew_difference <- abs(skew - possible_skews)
+    
+    # Get skew
+    skew_value <- possible_skews[which.min(skew_difference)]
+    
+  }
+  
+  # Load skew tables
+  skew_tables <- get(data(
+    "skew_tables",
+    package = "latentFactoR",
+    envir = environment()
+  ))
+  
+  # Switch categories to character
+  categories <- switch(
+    as.character(categories),
+    "2" = "two",
+    "3" = "three",
+    "4" = "four",
+    "5" = "five"
+  )
+  
+  # Obtain skew table
+  skew_table <- skew_tables[[categories]]
+  
+  # Obtain skew values
+  skew_values <- skew_table[,as.character(skew_value)]
+  
+  # Loop through skew values
+  for(i in (length(skew_values) + 1):1){
+    
+    # First category
+    if(i == 1){
+      data[data < skew_values[i]] <- i
+    }else if(i == length(skew_values) + 1){ # Last category
+      data[data >= skew_values[i-1]] <- i
+    }else{ # Middle category
+      data[data >= skew_values[i-1] & data < skew_values[i]] <- i
+    }
+    
+  }
+  
+  # Return categorized data
+  return(data)
+  
+}  
+  
+  
+  
