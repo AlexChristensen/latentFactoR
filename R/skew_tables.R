@@ -1,6 +1,6 @@
 #' Skew Tables
 #'
-#' Tables for skew based on the number of categories (2, 3, 4, or 5) in the data
+#' Tables for skew based on the number of categories (2, 3, 4, 5, or 6) in the data
 #'
 #' @name skew_tables
 #'
@@ -8,7 +8,7 @@
 #'
 #' @usage data(skew_tables)
 #'
-#' @format A list (length = 4)
+#' @format A list (length = 5)
 #'
 #' @keywords datasets
 #'

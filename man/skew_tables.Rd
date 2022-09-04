@@ -5,13 +5,13 @@
 \alias{skew_tables}
 \title{Skew Tables}
 \format{
-A list (length = 4)
+A list (length = 5)
 }
 \usage{
 data(skew_tables)
 }
 \description{
-Tables for skew based on the number of categories (2, 3, 4, or 5) in the data
+Tables for skew based on the number of categories (2, 3, 4, 5, or 6) in the data
 }
 \examples{
 data("skew_tables")

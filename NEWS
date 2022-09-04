@@ -1,1 +1,8 @@
+Changes in version 0.0.2
+
+o UPDATE: skews for categories now include 6 categories
+
+o UPDATE: available skew increments are now 0.05 (were 0.50 previously) 
+
+
 Initial commit version 0.0.1

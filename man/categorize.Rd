@@ -13,23 +13,22 @@ For matrices, use \code{apply}}
 
 \item{categories}{Numeric (length = 1).
 Number of categories to create.
-Between 2 and 5 categories can be used with skew}
+Between 2 and 6 categories can be used with skew}
 
 \item{skew_value}{Numeric (length = 1).
 Value of skew.
-Ranges between -2 to 2 in increments of 0.50.
+Ranges between -2 to 2 in increments of 0.05.
 Skews not in this sequence will be converted to
 the nearest value in this sequence.
-Defaults to \code{0} or no skew.
-Future versions will incorporate finer skews}
+Defaults to \code{0} or no skew}
 }
 \value{
 Returns a numeric vector of the categorize data
 }
 \description{
 Categorizes continuous data based on Garrido, Abad and Ponsoda (2011; see references).
-Categorical data with 2 to 5 categories can include skew between -2 to 2 in
-increments of 0.50
+Categorical data with 2 to 6 categories can include skew between -2 to 2 in
+increments of 0.05
 }
 \examples{
 # Dichotomous data (no skew)
@@ -42,7 +41,7 @@ dichotomous <- categorize(
 dichotomous_skew <- categorize(
   data = rnorm(1000),
   categories = 2,
-  skew_value = 1
+  skew_value = 1.25
 )
 
 # 5-point Likert scale (no skew)
@@ -55,7 +54,7 @@ five_likert <- categorize(
 five_likert <- categorize(
   data = rnorm(1000),
   categories = 5,
-  skew_value = -1
+  skew_value = -0.45
 )
 
 }

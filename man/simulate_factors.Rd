@@ -16,7 +16,7 @@ simulate_factors(
   correlations_range = NULL,
   sample_size,
   variable_categories = Inf,
-  categorical_limit = 5,
+  categorical_limit = 6,
   skew = 0,
   skew_range = NULL
 )
@@ -25,7 +25,7 @@ simulate_factors(
 \item{factors}{Numeric (length = 1).
 Number of factors}
 
-\item{variables}{Numeric (length = 1 or factors).
+\item{variables}{Numeric (length = 1 or number of factors).
 Number of variables per factor.
 Can be a single value or as many values as there are factors.
 Minimum three variables per factor}
@@ -34,25 +34,25 @@ Minimum three variables per factor}
 Range of variables to randomly select from a random uniform distribution.
 Minimum three variables per factor}
 
-\item{loadings}{Numeric or matrix (length = 1, factors, or factors * (factors \* variables)).
-Loadings drawn from a random uniform distribution using +/- 0.10 of value input.
+\item{loadings}{Numeric or matrix (length = 1, number of factors, or number of factors \mjeqn{\times}{x} (number of factors \mjeqn{\times}{x} variables)).
+Loadings drawn from a random uniform distribution using \mjeqn{\pm}{+/-} 0.10 of value input.
 Can be a single value or as many values as there are factors (corresponding to the factors).
-Can also be a loading matrix. Columns must match factors and rows must match total variables (factors * variables)}
+Can also be a loading matrix. Columns must match factors and rows must match total variables (factors \mjeqn{\times}{x} variables)}
 
 \item{loadings_range}{Numeric (length = 2).
 Range of loadings to randomly select from a random uniform distribution}
 
-\item{cross_loadings}{Numeric or matrix (length = 1, factors, or factors * (factors \* variables)).
+\item{cross_loadings}{Numeric or matrix(length = 1, number of factors, or number of factors \mjeqn{\times}{x} (number of factors \mjeqn{\times}{x} variables)).
 Cross-loadings drawn from a random normal distribution with a mean of 0 and standard deviation of value input.
 Can be a single value or as many values as there are factors (corresponding to the factors).
-Can also be a loading matrix. Columns must match factors and rows must match total variables (factors * variables)}
+Can also be a loading matrix. Columns must match factors and rows must match total variables (factors \mjeqn{\times}{x} variables)}
 
 \item{cross_loadings_range}{Numeric (length = 2).
 Range of cross-loadings to randomly select from a random uniform distribution}
 
-\item{correlations}{Numeric (length = 1 or factors * factors).
+\item{correlations}{Numeric (length = 1 or factors \mjeqn{\times}{x} factors).
 Can be a single value that will be used for all correlations between factors.
-Can also be a square matrix (factors * factors)}
+Can also be a square matrix (factors \mjeqn{\times}{x} factors)}
 
 \item{correlations_range}{Numeric (length = 2).
 Range of correlations to randomly select from a random uniform distribution}
@@ -61,19 +61,19 @@ Range of correlations to randomly select from a random uniform distribution}
 Number of cases to generate from a random multivariate normal distribution using
 \code{\link[mvtnorm]{rmvnorm}}}
 
-\item{variable_categories}{Numeric (length = 1 or total variables (factors * variables)).
+\item{variable_categories}{Numeric (length = 1 or total variables (factors \mjeqn{\times}{x} variables)).
 Number of categories for each variable. \code{Inf} is used for continuous variables; otherwise,
 values reflect number of categories}
 
 \item{categorical_limit}{Numeric (length = 1).
 Values greater than input value are considered continuous.
-Defaults to \code{5} meaning that 6 or more categories are considered continuous
+Defaults to \code{6} meaning that 7 or more categories are considered continuous
 (i.e., variables are \emph{not} categorized from continuous to categorical)}
 
 \item{skew}{Numeric (length = 1 or categorical variables).
 Skew to be included in categorical variables. It is randomly sampled from provided values.
 Can be a single value or as many values as there are (total) variables.
-Current skew implementation is between -2 and 2 in increments of 0.50.
+Current skew implementation is between -2 and 2 in increments of 0.05.
 Skews that are not in this sequence will be converted to their nearest
 value in the sequence. Not recommended to use with \code{variables_range}.
 Future versions will incorporate finer skews}
@@ -120,7 +120,7 @@ A list containing the parameters used to generate the data:
 \description{
 Simulates data from a latent factor model based on many
 manipulable parameters. Parameters do not have default values and
-must each be set. See examples to get started
+must each be set. \loadmathjax{} See examples to get started
 }
 \examples{
 # Generate factor data
@@ -175,7 +175,7 @@ two_factor_dichotomous_skew <- simulate_factors(
   correlations = 0.30, # correlation between factors = 0.30
   sample_size = 1000, # number of cases = 1000
   variable_categories = 2, # dichotomous data
-  skew_range = c(-2, 2) # skew = -2 to 2 (increments of 0.50)
+  skew_range = c(-2, 2) # skew = -2 to 2 (increments of 0.05)
 )
 
 }

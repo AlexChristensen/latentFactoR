@@ -1,8 +1,8 @@
 #' Categorize Continuous Data
 #'
 #' Categorizes continuous data based on Garrido, Abad and Ponsoda (2011; see references).
-#' Categorical data with 2 to 5 categories can include skew between -2 to 2 in
-#' increments of 0.50
+#' Categorical data with 2 to 6 categories can include skew between -2 to 2 in
+#' increments of 0.05
 #'
 #' @param data Numeric (length = n).
 #' A vector of continuous data with \emph{n} values.
@@ -10,15 +10,14 @@
 #' 
 #' @param categories Numeric (length = 1).
 #' Number of categories to create.
-#' Between 2 and 5 categories can be used with skew
+#' Between 2 and 6 categories can be used with skew
 #' 
 #' @param skew_value Numeric (length = 1).
 #' Value of skew.
-#' Ranges between -2 to 2 in increments of 0.50.
+#' Ranges between -2 to 2 in increments of 0.05.
 #' Skews not in this sequence will be converted to
 #' the nearest value in this sequence.
-#' Defaults to \code{0} or no skew.
-#' Future versions will incorporate finer skews
+#' Defaults to \code{0} or no skew
 #' 
 #' @return Returns a numeric vector of the categorize data
 #'
@@ -33,7 +32,7 @@
 #' dichotomous_skew <- categorize(
 #'   data = rnorm(1000),
 #'   categories = 2,
-#'   skew_value = 1
+#'   skew_value = 1.25
 #' )
 #' 
 #' # 5-point Likert scale (no skew)
@@ -46,7 +45,7 @@
 #' five_likert <- categorize(
 #'   data = rnorm(1000),
 #'   categories = 5,
-#'   skew_value = -1
+#'   skew_value = -0.45
 #' )
 #' 
 #' @author
@@ -63,14 +62,12 @@
 #' @export
 #'
 # Categorization function
-# Updated 09.08.2022
-categorize <- function(
-  data, categories, skew_value = 0
-)
+# Updated 04.09.2022
+categorize <- function(data, categories, skew_value = 0)
 {
   
   # Possible skew values
-  possible_skews <- seq(-2, 2, 0.50)
+  possible_skews <- seq(-2, 2, 0.05)
   
   # Check if skew is in possible values
   if(!skew_value %in% possible_skews){
@@ -99,7 +96,8 @@ categorize <- function(
     "2" = "two",
     "3" = "three",
     "4" = "four",
-    "5" = "five"
+    "5" = "five",
+    "6" = "six"
   )
   
   # Obtain skew table
