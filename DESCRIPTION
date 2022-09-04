@@ -10,7 +10,7 @@ Authors@R: c(
 Maintainer: Alexander Christensen <alexpaulchristensen@gmail.com>
 Description: Generates data based on latent factor models. Data can be continuous, polytomous, dichotomous, or mixed. Skew, cross-loadings, and population error can be added. All parameters can be manipulated. Data categorization is based on Garrido, Abad, and Ponsoda (2011) <doi:10.1177/0013164410389489>.
 Depends: R (>= 3.6.0)
-License: GPL (>= 3.0)
+License: GPL (>= 3.0) + file LICENSE
 Imports: methods, mvtnorm, psych, rstudioapi, mathjaxr
 RdMacros: mathjaxr
 Encoding: UTF-8

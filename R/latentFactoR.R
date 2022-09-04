@@ -18,6 +18,7 @@
 #' 
 #' 
 #' @importFrom utils packageDescription
+#' @import mathjaxr
 #'
 "_PACKAGE"
 #> [1] "_PACKAGE"

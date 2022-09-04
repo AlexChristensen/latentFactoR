@@ -14,7 +14,7 @@ All parameters can be manipulated. Data categorization is based on Garrido, Abad
 \references{
 Garrido, L. E., Abad, F. J., & Ponsoda, V. (2011). \cr
 Performance of Velicer’s minimum average partial factor retention method with categorical variables. \cr
-Educational and Psychological Measurement, 71(3), 551-570.
+\emph{Educational and Psychological Measurement}, \emph{71}(3), 551-570.
 }
 \author{
 Alexander P. Christensen <alexpaulchristensen@gmail.com>,
