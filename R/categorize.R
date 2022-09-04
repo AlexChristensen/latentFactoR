@@ -104,7 +104,10 @@ categorize <- function(data, categories, skew_value = 0)
   skew_table <- skew_tables[[categories]]
   
   # Obtain skew values
-  skew_values <- skew_table[,as.character(skew_value)]
+  skew_values <- skew_table[,formatC(
+    skew_value, digits = 2,
+    format = "f", flag = "0"
+  )]
   
   # Loop through skew values
   for(i in (length(skew_values) + 1):1){
