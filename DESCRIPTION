@@ -8,7 +8,7 @@ Authors@R: c(
 	person("Hudson", "Golino", email = "hfg9s@virginia.edu", role = "aut", comment = c(ORCID = "0000-0002-1601-1447")),
 	person("Luis", "Eduardo Garrido", email = "luisgarrido@pucmm.edu", role = "aut", comment = c(ORCID = "0000-0001-8932-6063")))
 Maintainer: Alexander Christensen <alexpaulchristensen@gmail.com>
-Description: Generates data based on latent factor models. Data can be continuous, polytomous, dichotomous, or mixed. Skew, cross-loadings, and population error can be added. All parameters can be manipulated. Data categorization is based on Garrido, Abad, and Ponsoda (2011) <doi:10.1177/0013164410389489>.
+Description: Generates data based on latent factor models. Data can be continuous, polytomous, dichotomous, or mixed. Skews, cross-loadings, wording effects, population errors, and local dependencies can be added. All parameters can be manipulated. Data categorization is based on Garrido, Abad, and Ponsoda (2011) <doi:10.1177/0013164410389489>.
 Depends: R (>= 3.6.0)
 License: GPL (>= 3.0) + file LICENSE
 Imports: methods, mvtnorm, psych, rstudioapi, mathjaxr
