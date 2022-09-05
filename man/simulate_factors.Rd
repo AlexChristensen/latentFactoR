@@ -37,10 +37,12 @@ Minimum three variables per factor}
 \item{loadings}{Numeric or matrix (length = 1, \code{factors}, total number of variables (\code{factors} \mjeqn{\times}{x} \code{variables}), or \code{factors} \mjeqn{\times}{x} total number of variables.
 Loadings drawn from a random uniform distribution using \mjeqn{\pm}{+/-} 0.10 of value input.
 Can be a single value or as many values as there are factors (corresponding to the factors).
-Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} \mjeqn{\times}{x} \code{variables})}
+Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} \mjeqn{\times}{x} \code{variables})
+General effect sizes range from small (0.40), moderate (0.55), to large (0.70)}
 
 \item{loadings_range}{Numeric (length = 2).
-Range of loadings to randomly select from a random uniform distribution}
+Range of loadings to randomly select from a random uniform distribution.
+General effect sizes range from small (0.40), moderate (0.55), to large (0.70)}
 
 \item{cross_loadings}{Numeric or matrix(length = 1, \code{factors}, or \code{factors} \mjeqn{\times}{x} total number of variables.
 Cross-loadings drawn from a random normal distribution with a mean of 0 and standard deviation of value input.
@@ -52,10 +54,12 @@ Range of cross-loadings to randomly select from a random uniform distribution}
 
 \item{correlations}{Numeric (length = 1 or \code{factors} \mjeqn{\times}{x} \code{factors}).
 Can be a single value that will be used for all correlations between factors.
-Can also be a square matrix (\code{factors} \mjeqn{\times}{x} \code{factors})}
+Can also be a square matrix (\code{factors} \mjeqn{\times}{x} \code{factors}).
+General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70)}
 
 \item{correlations_range}{Numeric (length = 2).
-Range of correlations to randomly select from a random uniform distribution}
+Range of correlations to randomly select from a random uniform distribution.
+General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70)}
 
 \item{sample_size}{Numeric (length = 1).
 Number of cases to generate from a random multivariate normal distribution using
@@ -182,7 +186,11 @@ two_factor_dichotomous_skew <- simulate_factors(
 \references{
 Garrido, L. E., Abad, F. J., & Ponsoda, V. (2011). \cr
 Performance of Velicer’s minimum average partial factor retention method with categorical variables. \cr
-Educational and Psychological Measurement, 71(3), 551-570.
+\emph{Educational and Psychological Measurement}, \emph{71}(3), 551-570.
+
+Golino, H., Shi, D., Christensen, A. P., Garrido, L. E., Nieto, M. D., Sadana, R., ... & Martinez-Molina, A. (2020).
+Investigating the performance of exploratory graph analysis and traditional techniques to identify the number of latent factors: A simulation and tutorial.
+\emph{Psychological Methods}, \emph{25}(3), 292-320.
 }
 \author{
 Maria Dolores Nieto Canaveras <mnietoca@nebrija.es>,

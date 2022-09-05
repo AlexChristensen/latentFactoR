@@ -1,4 +1,309 @@
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
+# add_local_dependence ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#' @noRd
+# Adds correlated residuals to generated data
+# Updated 05.09.2022
+correlate_residuals <- function(
+    lf_object,
+    proportion_LD, allow_multiple = FALSE,
+    add_residuals, add_residuals_range
+)
+{
+  
+  # Obtain parameters
+  parameters <- lf_object$parameters
+  
+  # Set parameters
+  factors <- parameters$factors
+  variables <- parameters$variables
+  loadings <- parameters$loadings
+  total_variables <- sum(variables)
+  sample_size <- nrow(lf_object$data)
+  variable_categories <- parameters$categories
+  categorical_limit <- parameters$categorical_limit
+  skew <- parameters$skew
+  original_correlation <- lf_object$population_correlation
+  population_correlation <- original_correlation
+  
+  # Obtain number of local dependencies
+  variables_LD <- round(proportion_LD * variables)
+  
+  # If variables cannot have multiple local dependencies,
+  # then number of local dependencies needs to be cut in half (per factor)
+  if(!isTRUE(allow_multiple)){
+    variables_LD <- floor(variables_LD / 2) 
+  }
+  
+  # Check for add residual range
+  if(!is.null(add_residuals_range)){
+    type_error(add_residuals_range, "numeric") # object type error
+    length_error(add_residuals_range, 2) # object length error
+    range_error(add_residuals_range, c(0, 1)) # object range error
+    add_residuals <- runif(
+      sum(variables_LD),
+      min = min(add_residuals_range),
+      max = max(add_residuals_range)
+    )
+  }
+  
+  # Ensure appropriate types
+  type_error(add_residuals, "numeric");
+  
+  # Ensure appropriate lengths
+  length_error(add_residuals, c(1, parameters$factors, sum(variables_LD)));
+  
+  # Ensure appropriate ranges
+  range_error(add_residuals, c(0, 1));
+  
+  # Set start and end points for variables
+  end_variables <- cumsum(variables)
+  start_variables <- end_variables + 1 - variables
+  
+  # Initialize checks
+  check_eigenvalues <- TRUE
+  
+  # Run through loop
+  while(isTRUE(check_eigenvalues)){
+    
+    # Initialize correlated residual matrix
+    correlated_residuals <- matrix(
+      0, nrow = 0, ncol = 2
+    )
+    
+    # Loop through factors and add local dependence
+    for(f in 1:factors){
+      
+      # Item rows
+      item_rows <- sample(
+        start_variables[f]:end_variables[f],
+        variables_LD[f],
+        replace = allow_multiple
+      )
+      
+      # Set remaining variables
+      if(isTRUE(allow_multiple)){
+        
+        # Do not remove variables
+        remaining_variables <- start_variables[f]:end_variables[f]
+        
+      }else{
+        
+        # Remove already included variables
+        remaining_variables <- setdiff(
+          start_variables[f]:end_variables[f], item_rows
+        )
+        
+      }
+      
+      # Item columns
+      item_columns <- sample(
+        remaining_variables,
+        variables_LD[f],
+        replace = allow_multiple
+      )
+      
+      # Bind to correlated residual matrix
+      correlated_residuals <- rbind(
+        correlated_residuals,
+        cbind(item_rows, item_columns)
+      )
+      
+      # Obtain duplicate rows
+      duplicate_rows <- match_row(correlated_residuals)
+      
+      # Replace until there are no duplicate rows
+      while(any(duplicate_rows)){
+        
+        # Replace second column with new variable
+        correlated_residuals[duplicate_rows, 2] <- sample(
+          remaining_variables,
+          length(duplicate_rows),
+          replace = allow_multiple
+        )
+        
+        # Re-check for duplicate rows
+        duplicate_rows <- match_row(correlated_residuals)
+        
+      }
+      
+    }
+    
+    # Obtain amount residual to add
+    if(length(add_residuals) == length(variables_LD)){
+      
+      # Loop through correlated_residuals
+      for(i in 1:nrow(correlated_residuals)){
+        
+        # Add residuals to correlation matrix
+        original_correlation[
+          correlated_residuals[i,1],
+          correlated_residuals[i,2]
+        ] <- add_residuals[i]
+        
+        # Ensure symmetric
+        original_correlation[
+          correlated_residuals[i,2],
+          correlated_residuals[i,1]
+        ] <- original_correlation[
+          correlated_residuals[i,1],
+          correlated_residuals[i,2]
+        ]
+        
+      }
+      
+      
+    }else{
+      
+      # Check if add residuals length equals 1 or number of factors
+      if(length(add_residuals) != sum(variables_LD)){
+        
+        # If only one value
+        if(length(add_residuals) == 1){
+          add_residuals <- rep(add_residuals, sum(variables_LD))
+        }else if(length(add_residuals) == parameters$factors){# Length of factors
+          
+          # Loop through number of local dependence variables
+          add_residuals <- unlist(lapply(1:parameters$factors, function(i){
+            rep(add_residuals[i], variables_LD[i])
+          }))
+          
+        }
+        
+      }
+      
+      # Loop through correlated_residuals
+      for(i in 1:nrow(correlated_residuals)){
+        
+        # Compute random residual
+        random_residual <- runif(
+          1,
+          min = add_residuals[i] - 0.05,
+          max = add_residuals[i] + 0.05
+        )
+        
+        # Obtain sign
+        original_sign <- sign(original_correlation[
+          correlated_residuals[i,1],
+          correlated_residuals[i,2]
+        ])
+        
+        # Add residuals to correlation matrix
+        population_correlation[
+          correlated_residuals[i,1],
+          correlated_residuals[i,2]
+        ] <- (abs(original_correlation[
+          correlated_residuals[i,1],
+          correlated_residuals[i,2]
+        ]) + random_residual) * original_sign
+        
+        # Ensure symmetric
+        population_correlation[
+          correlated_residuals[i,2],
+          correlated_residuals[i,1]
+        ] <- population_correlation[
+          correlated_residuals[i,1],
+          correlated_residuals[i,2]
+        ]
+        
+      }
+      
+    }
+    
+    # Check eigenvalues
+    check_eigenvalues <- any(eigen(population_correlation)$values <= 0)
+    
+    # Return population correlation to original state (if necessary)
+    if(isTRUE(check_eigenvalues)){
+      population_correlation <- original_correlation
+    }
+    
+  }
+  
+  # Cholesky decomposition
+  cholesky <- chol(population_correlation)
+  
+  # Generate data
+  data <- mvtnorm::rmvnorm(sample_size, sigma = diag(total_variables))
+  
+  # Make data based on factor structure
+  data <- data %*% cholesky
+  
+  # Ensure appropriate type and length for categories
+  type_error(variable_categories, "numeric")
+  length_error(variable_categories, c(1, total_variables))
+  
+  # Identify categories to variables
+  if(length(variable_categories) == 1){
+    variable_categories <- rep(variable_categories, total_variables)
+  }
+  
+  # Check for categories greater than categorical limit and not infinite
+  if(any(variable_categories > categorical_limit & !is.infinite(variable_categories))){
+    
+    # Make variables with categories greater than 7 (or categorical_limit) continuous
+    variable_categories[
+      variable_categories > categorical_limit & !is.infinite(variable_categories)
+    ] <- Inf
+    
+  }
+  
+  # Find categories
+  if(any(variable_categories <= categorical_limit)){
+    
+    # Target columns to categorize
+    columns <- which(variable_categories <= categorical_limit)
+    
+    # Set skew
+    if(length(skew) != length(columns)){
+      skew <- sample(skew, length(columns), replace = TRUE)
+    }
+    
+    # Loop through columns
+    for(i in columns){
+      
+      data[,i] <- categorize(
+        data = data[,i],
+        categories = variable_categories[i],
+        skew_value = skew[i]
+      )
+      
+    }
+    
+  }
+  
+  # Add column names to data
+  colnames(data) <- paste0(
+    "V", formatC(
+      x = 1:total_variables,
+      digits = floor(log10(total_variables)),
+      flag = "0", format = "d"
+    )
+  )
+  
+  # Update correlated residuals
+  correlated_residuals_df <- data.frame(
+    V1 = correlated_residuals[,1],
+    V2 = correlated_residuals[,2],
+    added_residual = add_residuals
+  )
+  
+  # Populate results
+  results <- list(
+    correlated_residuals = correlated_residuals_df,
+    data = data,
+    population_correlation = population_correlation,
+    original_correlation = original_correlation,
+    parameters = parameters
+  )
+  
+  # Return results
+  return(results)
+  
+}
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
 # GENERATION FUNCTIONS ----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -300,6 +605,25 @@ range_error <- function(input, expected_ranges){
 
 }
 
+#%%%%%%%%%%%%%%%%%%%%%%%
+# UTILITY FUNCTIONS ----
+#%%%%%%%%%%%%%%%%%%%%%%%
+
+#' @noRd
+# Checks for duplicated rows
+# Updated 05.09.2022
+match_row <- function(data)
+{
+  # Make data frame
+  df <- as.data.frame(data)
+  
+  # Obtain duplicate indices
+  dupe_ind <- duplicated(df)
+  
+  # Return rows
+  return(which(dupe_ind))
+  
+}
 
 #%%%%%%%%%%%%%%%%%%%%%%
 # SYSTEM FUNCTIONS ----
