@@ -186,8 +186,9 @@ simulate_factors <- function(
   
   # Check for variables range
   if(!is.null(variables_range)){
-    type_error(variables_range, "numeric")
-    length_error(variables_range, 2)
+    type_error(variables_range, "numeric") # object type error
+    length_error(variables_range, 2) # object length error
+    range_error(variables_range, c(3, Inf)) # object range error
     variables <- round(runif(
       factors,
       min = min(variables_range),
@@ -197,8 +198,9 @@ simulate_factors <- function(
   
   # Check for cross-loadings range
   if(!is.null(cross_loadings_range)){
-    type_error(cross_loadings_range, "numeric")
-    length_error(cross_loadings_range, 2)
+    type_error(cross_loadings_range, "numeric") # object type error
+    length_error(cross_loadings_range, 2) # object length error
+    range_error(cross_loadings_range, c(0, 1)) # object range error
     cross_loadings <- runif(
       factors,
       min = min(cross_loadings_range),
@@ -208,8 +210,9 @@ simulate_factors <- function(
   
   # Check for correlations range
   if(!is.null(correlations_range)){
-    type_error(correlations_range, "numeric")
-    length_error(correlations_range, 2)
+    type_error(correlations_range, "numeric") # object type error
+    length_error(correlations_range, 2) # object length error
+    range_error(correlations_range, c(-1, 1)) # object range error
     
     # Initialize correlation matrix
     correlation_matrix <- matrix(
@@ -232,15 +235,16 @@ simulate_factors <- function(
   
   # Check for skew range
   if(!is.null(skew_range)){
-    type_error(skew_range, "numeric")
-    length_error(skew_range, 2)
-    possible_skews <- seq(-2, 2, 0.05)
+    type_error(skew_range, "numeric") # object type error
+    length_error(skew_range, 2) # object length error
+    range_error(skew_range, c(-2, 2)) # object range error
+    possible_skews <- seq(-2, 2, 0.05) # possible skews
     skew_range <- round(skew_range, 2) # get to hundredths digit
     min_range <- abs(min(skew_range) - possible_skews) # difference for minimum
     min_skew <- possible_skews[which.min(min_range)] # get minimum skew
     max_range <- abs(max(skew_range) - possible_skews) # difference for maximum
     max_skew <- possible_skews[which.min(max_range)] # get maximum skew
-    skew <- seq(min_skew, max_skew, 0.05)
+    skew <- seq(min_skew, max_skew, 0.05) # obtain skews
   }
   
   # Ensure appropriate types
@@ -252,6 +256,11 @@ simulate_factors <- function(
   length_error(factors, 1); length_error(variables, c(1, factors))
   length_error(sample_size, 1); length_error(categorical_limit, 1)
   
+  # Ensure appropriate ranges
+  range_error(factors, c(1, Inf)); range_error(variables, c(3, Inf));
+  range_error(sample_size, c(1, Inf)); range_error(variable_categories, c(2, Inf));
+  range_error(categorical_limit, c(2, 6)); range_error(skew, c(-2, 2))
+  
   # Determine total number of variables
   if(length(variables) == 1){
     total_variables <- factors * variables
@@ -261,8 +270,9 @@ simulate_factors <- function(
   
   # Check for loadings range
   if(!is.null(loadings_range)){
-    type_error(loadings_range, "numeric")
-    length_error(loadings_range, 2)
+    type_error(loadings_range, "numeric") # object type error
+    length_error(loadings_range, 2)  # object length error
+    range_error(loadings_range, c(-1, 1)) # object range error
     loadings <- runif(
       total_variables,
       min = min(loadings_range),
@@ -275,7 +285,11 @@ simulate_factors <- function(
   length_error(cross_loadings, c(1, factors, factors * total_variables))
   length_error(correlations, c(1, factors * factors))
   
-  # Loadings and correlations
+  # Ensure appropriate ranges
+  range_error(loadings, c(-1, 1)); range_error(cross_loadings, c(-1, 1));
+  range_error(correlations, c(-1, 1))
+  
+  # Ensure appropriate types
   if(!is(loadings, "matrix")){type_error(loadings, "numeric")}
   if(!is(cross_loadings, "matrix")){type_error(cross_loadings, "numeric")}
   if(!is(correlations, "matrix")){type_error(correlations, "numeric")}
