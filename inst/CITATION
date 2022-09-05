@@ -9,10 +9,10 @@ bibentry(
 				person("Golino,", "Hudson"),
 				person("Garrido,", "Luis E")),
 	year	= "2022",
-	note    = "R package version 0.0.1",
+	note    = "R package version 0.0.2",
 
   textVersion  =
   paste0("Christensen, A. P., Nieto Canaveras, M. D., Golino, H., & Garrido, L. E. (2022). ",
         "latentFactoR: Data simulation based on latent factors. ",
-	"R package version 0.0.1")
+	"R package version 0.0.2")
 )
