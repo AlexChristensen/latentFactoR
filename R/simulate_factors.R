@@ -7,7 +7,7 @@
 #' @param factors Numeric (length = 1).
 #' Number of factors
 #' 
-#' @param variables Numeric (length = 1 or number of factors).
+#' @param variables Numeric (length = 1 or \code{factors}).
 #' Number of variables per factor.
 #' Can be a single value or as many values as there are factors.
 #' Minimum three variables per factor
@@ -16,25 +16,25 @@
 #' Range of variables to randomly select from a random uniform distribution.
 #' Minimum three variables per factor
 #' 
-#' @param loadings Numeric or matrix (length = 1, number of factors, or number of factors \mjeqn{\times}{x} (number of factors \mjeqn{\times}{x} variables)).
+#' @param loadings Numeric or matrix (length = 1, \code{factors}, total number of variables (\code{factors} \mjeqn{\times}{x} \code{variables}), or \code{factors} \mjeqn{\times}{x} total number of variables.
 #' Loadings drawn from a random uniform distribution using \mjeqn{\pm}{+/-} 0.10 of value input.
 #' Can be a single value or as many values as there are factors (corresponding to the factors).
-#' Can also be a loading matrix. Columns must match factors and rows must match total variables (factors \mjeqn{\times}{x} variables)
+#' Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} \mjeqn{\times}{x} \code{variables})
 #' 
 #' @param loadings_range Numeric (length = 2).
 #' Range of loadings to randomly select from a random uniform distribution
 #' 
-#' @param cross_loadings Numeric or matrix(length = 1, number of factors, or number of factors \mjeqn{\times}{x} (number of factors \mjeqn{\times}{x} variables)).
+#' @param cross_loadings Numeric or matrix(length = 1, \code{factors}, or \code{factors} \mjeqn{\times}{x} total number of variables.
 #' Cross-loadings drawn from a random normal distribution with a mean of 0 and standard deviation of value input.
 #' Can be a single value or as many values as there are factors (corresponding to the factors).
-#' Can also be a loading matrix. Columns must match factors and rows must match total variables (factors \mjeqn{\times}{x} variables)
+#' Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} \mjeqn{\times}{x} \code{variables})
 #' 
 #' @param cross_loadings_range Numeric (length = 2).
 #' Range of cross-loadings to randomly select from a random uniform distribution
 #' 
-#' @param correlations Numeric (length = 1 or factors \mjeqn{\times}{x} factors).
+#' @param correlations Numeric (length = 1 or \code{factors} \mjeqn{\times}{x} \code{factors}).
 #' Can be a single value that will be used for all correlations between factors.
-#' Can also be a square matrix (factors \mjeqn{\times}{x} factors)
+#' Can also be a square matrix (\code{factors} \mjeqn{\times}{x} \code{factors})
 #' 
 #' @param correlations_range Numeric (length = 2).
 #' Range of correlations to randomly select from a random uniform distribution
@@ -43,7 +43,7 @@
 #' Number of cases to generate from a random multivariate normal distribution using
 #' \code{\link[mvtnorm]{rmvnorm}}
 #' 
-#' @param variable_categories Numeric (length = 1 or total variables (factors \mjeqn{\times}{x} variables)).
+#' @param variable_categories Numeric (length = 1 or total variables (\code{factors} \mjeqn{\times}{x} \code{variables})).
 #' Number of categories for each variable. \code{Inf} is used for continuous variables; otherwise,
 #' values reflect number of categories
 #' 
@@ -69,7 +69,7 @@
 #' 
 #' \item{data}{Simulated data from the specified factor model}
 #' 
-#' \item{correlation}{Population correlation matrix}
+#' \item{population_correlation}{Population correlation matrix}
 #' 
 #' \item{parameters}{
 #' A list containing the parameters used to generate the data:
@@ -85,7 +85,7 @@
 #' \item{\code{loadings}}
 #' {Loading matrix}
 #' 
-#' \item{\code{correlations}}
+#' \item{\code{factor_correlations}}
 #' {Correlations between factors}
 #' 
 #' \item{\code{categories}}
@@ -171,7 +171,7 @@
 #' @export
 #'
 # Main factor simulation function
-# Updated 09.08.2022
+# Updated 05.09.2022
 simulate_factors <- function(
   factors,
   variables, variables_range = NULL,
@@ -193,17 +193,6 @@ simulate_factors <- function(
       min = min(variables_range),
       max = max(variables_range)
     ))
-  }
-  
-  # Check for loadings range
-  if(!is.null(loadings_range)){
-    type_error(loadings_range, "numeric")
-    length_error(loadings_range, 2)
-    loadings <- runif(
-      factors,
-      min = min(loadings_range),
-      max = max(loadings_range)
-    )
   }
   
   # Check for cross-loadings range
@@ -270,8 +259,19 @@ simulate_factors <- function(
     total_variables <- sum(variables)
   }
   
+  # Check for loadings range
+  if(!is.null(loadings_range)){
+    type_error(loadings_range, "numeric")
+    length_error(loadings_range, 2)
+    loadings <- runif(
+      total_variables,
+      min = min(loadings_range),
+      max = max(loadings_range)
+    )
+  }
+  
   # Ensure appropriate lengths
-  length_error(loadings, c(1, factors, factors * total_variables))
+  length_error(loadings, c(1, factors, total_variables, factors * total_variables))
   length_error(cross_loadings, c(1, factors, factors * total_variables))
   length_error(correlations, c(1, factors * factors))
   
@@ -312,13 +312,25 @@ simulate_factors <- function(
       for(i in 1:factors){
         
         # Populate dominant loadings
-        loading_matrix[
-          start_variables[i]:end_variables[i], i # dominant loadings
-        ] <- runif(
-          variables[i], # target variables
-          min = loadings[i] - 0.10,
-          max = loadings[i] + 0.10
-        )
+        if(is.null(loadings_range)){
+          
+          # Generate loadings from uniform distribution
+          loading_matrix[
+            start_variables[i]:end_variables[i], i # dominant loadings
+          ] <- runif(
+            variables[i], # target variables
+            min = loadings[i] - 0.10,
+            max = loadings[i] + 0.10
+          )
+          
+        }else{
+          
+          # Accept loadings from range (generated earlier)
+          loading_matrix[
+            start_variables[i]:end_variables[i], i # dominant loadings
+          ] <- loadings[start_variables[i]:end_variables[i]]
+          
+        }
         
         # Add cross-loadings (if more than one factor)
         if(factors > 1){
@@ -446,7 +458,7 @@ simulate_factors <- function(
     factors = factors,
     variables = variables,
     loadings = loading_matrix,
-    correlations = correlation_matrix,
+    factor_correlations = correlation_matrix,
     categories = variable_categories,
     skew = skew
   )
@@ -454,7 +466,7 @@ simulate_factors <- function(
   # Populate results
   results <- list(
     data = data,
-    correlation = population_correlation,
+    population_correlation = population_correlation,
     parameters = parameters
   )
   
