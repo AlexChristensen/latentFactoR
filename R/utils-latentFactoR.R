@@ -261,6 +261,45 @@ length_error <- function(input, expected_lengths){
   
 }
 
+#' @noRd
+# Error for input range
+# Updated 05.09.2022
+range_error <- function(input, expected_ranges){
+  
+  # Obtain expected maximum and minimum values
+  expected_maximum <- max(expected_ranges)
+  expected_minimum <- min(expected_ranges)
+  
+  # Obtain maximum and minimum values
+  actual_maximum <- round(max(input), 3)
+  actual_minimum <- round(min(input), 3)
+  
+  # Check for maximum of input in expected range
+  if(actual_maximum > expected_maximum){
+    stop(
+      paste(
+        "Maximum of '", deparse(substitute(input)),
+        "' (", actual_maximum,") does not match expected range(s). Range must be between: ",
+        paste0("'", expected_ranges, "'", collapse = " and "),
+        sep = ""
+      )
+    )
+  }
+  
+  # Check for maximum of input in expected range
+  if(actual_minimum < expected_minimum){
+    stop(
+      paste(
+        "Minimum of '", deparse(substitute(input)),
+        "' (", actual_minimum,") does not match expected range(s). Range must be between: ",
+        paste0("'", expected_ranges, "'", collapse = " and "),
+        sep = ""
+      )
+    )
+  }
+
+}
+
 
 #%%%%%%%%%%%%%%%%%%%%%%
 # SYSTEM FUNCTIONS ----

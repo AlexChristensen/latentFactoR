@@ -470,6 +470,9 @@ simulate_factors <- function(
     parameters = parameters
   )
   
+  # Add class
+  class(results) <- "lf-simulate"
+  
   return(results)
   
 }
