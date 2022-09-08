@@ -2,7 +2,7 @@
 #'
 #' Simulates data from a latent factor model based on many
 #' manipulable parameters. Parameters do not have default values and
-#' must each be set. \loadmathjax{} See examples to get started
+#' must each be set. See examples to get started
 #' 
 #' @param factors Numeric (length = 1).
 #' Number of factors
@@ -16,27 +16,27 @@
 #' Range of variables to randomly select from a random uniform distribution.
 #' Minimum three variables per factor
 #' 
-#' @param loadings Numeric or matrix (length = 1, \code{factors}, total number of variables (\code{factors} \mjeqn{\times}{x} \code{variables}), or \code{factors} \mjeqn{\times}{x} total number of variables.
-#' Loadings drawn from a random uniform distribution using \mjeqn{\pm}{+/-} 0.10 of value input.
+#' @param loadings Numeric or matrix (length = 1, \code{factors}, total number of variables (\code{factors} x \code{variables}), or \code{factors} x total number of variables.
+#' Loadings drawn from a random uniform distribution using +/- 0.10 of value input.
 #' Can be a single value or as many values as there are factors (corresponding to the factors).
-#' Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} \mjeqn{\times}{x} \code{variables})
+#' Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} x \code{variables})
 #' General effect sizes range from small (0.40), moderate (0.55), to large (0.70)
 #' 
 #' @param loadings_range Numeric (length = 2).
 #' Range of loadings to randomly select from a random uniform distribution.
 #' General effect sizes range from small (0.40), moderate (0.55), to large (0.70)
 #' 
-#' @param cross_loadings Numeric or matrix(length = 1, \code{factors}, or \code{factors} \mjeqn{\times}{x} total number of variables.
+#' @param cross_loadings Numeric or matrix(length = 1, \code{factors}, or \code{factors} x total number of variables.
 #' Cross-loadings drawn from a random normal distribution with a mean of 0 and standard deviation of value input.
 #' Can be a single value or as many values as there are factors (corresponding to the factors).
-#' Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} \mjeqn{\times}{x} \code{variables})
+#' Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} x \code{variables})
 #' 
 #' @param cross_loadings_range Numeric (length = 2).
 #' Range of cross-loadings to randomly select from a random uniform distribution
 #' 
-#' @param correlations Numeric (length = 1 or \code{factors} \mjeqn{\times}{x} \code{factors}).
+#' @param correlations Numeric (length = 1 or \code{factors} x \code{factors}).
 #' Can be a single value that will be used for all correlations between factors.
-#' Can also be a square matrix (\code{factors} \mjeqn{\times}{x} \code{factors}).
+#' Can also be a square matrix (\code{factors} x \code{factors}).
 #' General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70)
 #' 
 #' @param correlations_range Numeric (length = 2).
@@ -47,7 +47,7 @@
 #' Number of cases to generate from a random multivariate normal distribution using
 #' \code{\link[mvtnorm]{rmvnorm}}
 #' 
-#' @param variable_categories Numeric (length = 1 or total variables (\code{factors} \mjeqn{\times}{x} \code{variables})).
+#' @param variable_categories Numeric (length = 1 or total variables (\code{factors} x \code{variables})).
 #' Number of categories for each variable. \code{Inf} is used for continuous variables; otherwise,
 #' values reflect number of categories
 #' 

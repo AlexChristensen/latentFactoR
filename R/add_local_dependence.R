@@ -1,7 +1,7 @@
 #' Adds Local Dependence to Factor Model Data
 #'
-#' Adds local dependence to simulated data from \code{\link[latentFactoR]{simulate_factors}}.
-#' \loadmathjax{} See examples to get started
+#' Adds local dependence to simulated data from \code{\link[latentFactoR]{simulate_factors}}. 
+#' See examples to get started
 #' 
 #' @param lf_object Data object from \code{\link[latentFactoR]{simulate_factors}}
 #' 
@@ -37,7 +37,7 @@
 #' @param add_residuals Numeric (length = 1, \code{factors}, or total number of locally dependent variables).
 #' Amount of residual to add to the population correlation matrix between two variables.
 #' Only used when \code{method = "correlated_residuals"}. Magnitudes are drawn from
-#' a random uniform distribution using \mjeqn{\pm}{+/-} 0.05 of value input.
+#' a random uniform distribution using +/- 0.05 of value input.
 #' Can also be specified directly (same length as total number of locally dependent variables).
 #' General effect sizes range from small (0.20), moderate (0.30), to large (0.40)
 #' 

@@ -3,7 +3,6 @@
 export(add_local_dependence)
 export(categorize)
 export(simulate_factors)
-import(mathjaxr)
 importFrom(methods,is)
 importFrom(stats,qnorm)
 importFrom(stats,rnorm)
