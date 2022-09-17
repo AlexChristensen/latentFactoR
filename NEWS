@@ -1,3 +1,8 @@
+Changes in version 0.0.3
+
+o ADD: `add_population_error` will add population error, using {bifactor}, from a simulated factor model
+
+
 Changes in version 0.0.2
 
 o UPDATE: skews for categories now include 6 categories

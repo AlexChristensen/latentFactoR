@@ -1,4 +1,593 @@
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
+# add_population_error ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Grid search for Cudeck function
+# Updated 17.09.2022
+grid_search <- function(delta, G) {
+  
+  n <- 1000
+  x <- seq(-1e3, 1e3, length.out = n)
+  y <- vector(length = n)
+  for(i in 1:n) y[i] <- root_ml(x[i], delta, G)
+  
+  index <- which.min(y)
+  x <- seq(x[index-1], x[index+1], length.out = n)
+  for(i in 1:n) y[i] <- root_ml(x[i], delta, G)
+  
+  index <- which.min(y)
+  x <- seq(x[index-1], x[index+1], length.out = n)
+  for(i in 1:n) y[i] <- root_ml(x[i], delta, G)
+  
+  return(x[which.min(y)])
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Maximum likelhood for grid search in Cudeck function
+# Updated 17.09.2022
+root_ml <- function(x, delta, G) {
+  
+  I <- diag(nrow(G))
+  f <- x*sum(diag(G)) - log(det(I + x*G)) - delta
+  
+  return(f^2)
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Maximum likelhood for grid search in Cudeck function
+# Updated 17.09.2022
+groot_ml <- function(x, delta, G) {
+  
+  I <- diag(nrow(G))
+  f <- x*sum(diag(G)) - log(det(I + x*G)) - delta
+  g <- sum(diag(G)) - sum(diag(solve(I + x*G) %*% G))
+  g <- 2*g*f
+  
+  return(g)
+  
+}
+
+#' @noRd
+#' @importFrom stats optim
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Optimization function
+# Updated 17.09.2022
+opt <- function(x, delta, G) {
+  
+  # x <- stats::runif(1, 0, 1)
+  # det(diag(nrow(G)) + x*G)
+  root <- optim(x, fn = root_ml, gr = groot_ml, method = "L-BFGS-B",
+                       lower = -Inf, upper = Inf, G = G, delta = delta)
+  k <- root$par
+  
+  return(k)
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Error catch for optimization function
+# Updated 17.09.2022
+opt_error <- function(x, delta, G) {
+  
+  x <- tryCatch({opt(x, delta, G)}, error = return(x))
+  return(x)
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Derivative function for Rhat methods
+# Updated 17.09.2022
+dxt <- function(X) {
+  
+  # derivative wrt transpose (just a permutation matrix)
+  
+  p <- nrow(X)
+  q <- ncol(X)
+  pq <- p*q
+  
+  res <- array(0, dim = c(pq, pq))
+  null <- matrix(0, p, q)
+  
+  for(i in 1:pq) {
+    temp <- null
+    temp[i] <- 1
+    res[, i] <- c(t(temp))
+  }
+  
+  return(res)
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# LRhat function for Cudeck method
+# Updated 17.09.2022
+gLRhat <- function(Lambda, Phi) {
+  
+  # derivative of Lambda wrt Rhat
+  
+  p <- nrow(Lambda)
+  g1 <- (Lambda %*% Phi) %x% diag(p)
+  g21 <- diag(p) %x% (Lambda %*% Phi)
+  g2 <- g21 %*% dxt(Lambda)
+  g <- g1 + g2
+  
+  return(g)
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# PRhat function for Cudeck method
+# Updated 17.09.2022
+gPRhat <- function(Lambda, Phi) {
+  
+  g1 <- Lambda %x% Lambda
+  g2 <- g1 %*% dxt(Phi)
+  g <- g1 + g2
+  g <- g[, which(lower.tri(Phi))]
+  
+  return(g)
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Rhat function for Cudeck method
+# Updated 17.09.2022
+guRhat <- function(p) {
+  
+  gu <- matrix(0, p*p, p)
+  
+  for(i in 1:p) {
+    
+    index <- (i-1)*p + i
+    gu[index, i] <- 1
+    
+  }
+  
+  return(gu)
+  
+}
+
+#' @noRd
+#' @importFrom stats lm
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Adds population error using Cudeck method to generated data
+# Updated 17.09.2022
+cudeck <- function(R, lambda, Phi, uniquenesses,
+                   fit = "rmsr", misfit = "close",
+                   method = "ols", confirmatory = TRUE) {
+  
+  # Method of Cudeck and Browne (1992):
+  
+  p <- nrow(R)
+  q <- ncol(lambda)
+  
+  tdiag <- TRUE
+  
+  if(confirmatory) {
+    
+    # Select the columns corresponding to estimated loadings (only works when
+    # not estimating correlations)
+    # if(!correlation) dS_dL <- dS_dL[, which(lambda > 0)]
+    npars <- sum(lambda > 0) + p + sum(abs(Phi[lower.tri(Phi)]) > 0)
+    dS_du <- guRhat(p)
+    dS_dL <- gLRhat(lambda, Phi)[, which(lambda != 0)]
+    dS_dP <- gPRhat(lambda, Phi)[, which(Phi[lower.tri(Phi)] != 0)]
+    gS <- cbind(dS_dL, dS_dP, dS_du) # matrix of derivatives wrt the correlation model
+    
+  } else {
+    
+    # dS_dP <- gPRhat(lambda, Phi)
+    # gS <- cbind(dS_dL, dS_dP, dS_du)
+    npars <- p*q + p - 0.5*q*(q-1) # Number of model parameters
+    dS_du <- guRhat(p)
+    dS_dL <- gLRhat(lambda, Phi)
+    # dS_dP <- gPRhat(lambda, Phi)
+    # gS <- cbind(dS_dL, dS_dP, dS_du) # matrix of derivatives wrt the correlation model
+    gS <- cbind(dS_dL, dS_du) # matrix of derivatives wrt the correlation model
+    
+  }
+  
+  df <- p*(p+1)/2 - npars # Degrees of freedom
+  
+  if(method == "minres" || method == "ols") {
+    
+    B <- -2*gS[lower.tri(R, diag = tdiag), ]
+    # B <- -2*lambda %*%
+    
+  } else if(method == "ml") {
+    
+    # K <- transition(p)
+    # MP_inv <- solve(t(K) %*% K) %*% t(K)
+    # D <- MP_inv %*% t(MP_inv)
+    indexes <- vector(length = p)
+    indexes[1] <- 1
+    for(i in 2:p) {
+      increment <- i
+      indexes[i] <- indexes[i-1]+increment
+    }
+    D <- matrix(0, p*(p+1)/2, p*(p+1)/2)
+    diag(D) <- 2
+    diag(D)[indexes] <- 1
+    R_inv <- solve(R)
+    vecs <- apply(gS, 2, FUN = function(x) -t(R_inv %*% matrix(x, p, p) %*% R_inv))
+    B <- t(vecs[which(upper.tri(R, diag = tdiag)), ]) %*% D
+    B <- t(B)
+    
+  }
+  
+  # BtB <- t(B) %*% B
+  m <- p+1
+  U <- replicate(p, runif(m, 0, 1))
+  A1 <- t(U) %*% U
+  sq <- diag(1/sqrt(diag(A1)))
+  A2 <- sq %*% A1 %*% sq
+  diag_u <- diag(sqrt(uniquenesses))
+  y <- diag_u %*% A2 %*% diag_u
+  y <- y[lower.tri(y, diag = tdiag)]
+  # y <- A2[lower.tri(A2, diag = tdiag)]
+  # y <- stats::runif(p*(p+1)/2, 0, 1)
+  # e <- qr.Q(qr(cbind(B, y)))[, ncol(B)+1]
+  # v <- MASS::ginv(BtB) %*% t(B) %*% y
+  # e <- y - B %*% v # equation 7
+  # B.qr <- qr(B)
+  # e <- qr.resid(B.qr, y)
+  e <- unname(lm(y ~ B, model = FALSE, qr = TRUE)$residuals)
+  
+  if(fit == "rmsr") {
+    if(misfit == "close") {
+      r2 <- mean(1-uniquenesses)
+      misfit <- 0.05*r2
+    } else if(misfit == "acceptable") {
+      r2 <- mean(1-uniquenesses)
+      misfit <- 0.10*r2
+    }
+    delta <- misfit^2*0.5*p*(p-1)
+    # delta <- (1-misfit2)*(0.5*(sum(R_error^2) - p))
+  } else if(fit == "cfi") {
+    null_f <- 0.5*(sum(R^2) - p)
+    delta <- (1-misfit)*null_f
+  } else if(fit == "rmsea") {
+    delta <- misfit^2 * df
+  } else if(fit == "raw") {
+    delta <- misfit
+  }
+  
+  if(method == "minres" || method == "ols") {
+    
+    E <- matrix(0, p, p)
+    E[lower.tri(E, diag = tdiag)] <- e
+    E <- t(E) + E
+    diag(E) <- 0
+    k <- sqrt(2*delta/sum(E*E))
+    E <- k*E
+    
+  } else if(method == "ml") {
+    
+    E <- matrix(0, p, p)
+    E[upper.tri(R, diag = tdiag)] <- e
+    E <- t(E) + E
+    diag(E) <- 0
+    constant <- 1e-04 / sqrt(mean(E*E))
+    E <- constant*E # Fix this to avoid NAs
+    R_inv <- solve(R)
+    G <- R_inv %*% E
+    x <- suppressWarnings(grid_search(delta, G))
+    k <- opt(x, delta, G)
+    # limits <- c(-1e05, 1e05)
+    # k <- GSS(delta, G, limits)
+    # k <- grad_descend(delta, G)
+    
+    E <- k*E
+    
+  }
+  
+  R_error <- R + E
+  
+  # check for positiveness:
+  minimum_eigval <- min(eigen(R_error, symmetric = TRUE, only.values = TRUE)$values)
+  if(minimum_eigval <= 0) warning("The matrix was not positive-definite. The amount of error may be too big.")
+  
+  return(list(R_error = R_error, fit = fit, delta = delta, misfit = misfit))
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Minimum residual function for CFA in Yuan method
+# Updated 17.09.2022
+f_minres <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
+  
+  p <- nrow(S)
+  lambda_parameters <- length(indexes_lambda)
+  Lambda <- matrix(0, p, q)
+  Lambda[indexes_lambda] <- x[1:lambda_parameters]
+  Phi <- matrix(0, q, q)
+  Phi[indexes_phi] <- x[-(1:lambda_parameters)]
+  Phi <- t(Phi) + Phi
+  diag(Phi) <- 1
+  Rhat <- Lambda %*% Phi %*% t(Lambda)
+  diag(Rhat) <- 1
+  res <- S - Rhat
+  f <- 0.5*sum(res*res)
+  
+  return(f)
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Minimum residual function for CFA in Yuan method
+# Updated 17.09.2022
+g_minres <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
+  
+  p <- nrow(S)
+  lambda_parameters <- length(indexes_lambda)
+  Lambda <- matrix(0, p, q)
+  Lambda[indexes_lambda] <- x[1:lambda_parameters]
+  Phi <- matrix(0, q, q)
+  Phi[indexes_phi] <- x[-(1:lambda_parameters)]
+  Phi <- t(Phi) + Phi
+  diag(Phi) <- 1
+  Rhat <- Lambda %*% Phi %*% t(Lambda)
+  diag(Rhat) <- 1
+  res <- S - Rhat
+  
+  g1 <- (res %*% Lambda %*% Phi)[indexes_lambda]
+  g2 <- (t(Lambda) %*% res %*% Lambda)[indexes_phi]
+  g <- -2*c(g1, g2)
+  
+  return(g)
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Maximum likelihood function for CFA in Yuan method
+# Updated 17.09.2022
+f_ml <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
+  
+  p <- nrow(S)
+  lambda_p <- length(indexes_lambda)
+  Lambda <- matrix(0, p, q)
+  Lambda[indexes_lambda] <- x[1:lambda_p]
+  phi_p <- length(indexes_phi)
+  Phi <- matrix(0, q, q)
+  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
+  Phi <- t(Phi) + Phi
+  diag(Phi) <- 1
+  u <- x[-(1:(lambda_p + phi_p))]
+  Rhat <- Lambda %*% Phi %*% t(Lambda) + diag(u)
+  f <- log(det(Rhat)) - ldetS + sum(S*solve(Rhat)) - p
+  
+  return(f)
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Maximum likelihood function for CFA in Yuan method
+# Updated 17.09.2022
+g_ml <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
+  
+  p <- nrow(S)
+  lambda_p <- length(indexes_lambda)
+  Lambda <- matrix(0, p, q)
+  Lambda[indexes_lambda] <- x[1:lambda_p]
+  phi_p <- length(indexes_phi)
+  Phi <- matrix(0, q, q)
+  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
+  Phi <- t(Phi) + Phi
+  diag(Phi) <- 1
+  u <- x[-(1:(lambda_p + phi_p))]
+  
+  Rhat <- Lambda %*% Phi %*% t(Lambda) + diag(u)
+  Rhat_inv <- solve(Rhat)
+  Ri_res_Ri <- 2*Rhat_inv %*% (Rhat - S) %*% Rhat_inv
+  
+  # Joreskog (page 10; 1965) Testing a simple structure in factor analysis
+  g <- c(c(Ri_res_Ri %*% Lambda %*% Phi)[indexes_lambda],
+         c(t(Lambda) %*% Ri_res_Ri %*% Lambda)[indexes_phi],
+         diag(Ri_res_Ri)*0.5) # omitting the sample size constant
+  
+  return(g)
+  
+}
+
+#' @noRd
+#' @importFrom stats runif nlminb
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# CFA function for Yuan method
+# Updated 17.09.2022
+CFA <- function(S, target, targetphi, method = "minres") {
+  
+  p <- nrow(target)
+  q <- ncol(target)
+  indexes_lambda <- which(target != 0)
+  indexes_phi <- which(targetphi != 0 & lower.tri(targetphi))
+  lambda_p <- length(indexes_lambda)
+  phi_p <- length(indexes_phi)
+  init <- 1/diag(solve(S))
+  
+  if(method == "minres") {
+    
+    x <- c(runif(lambda_p), rep(0, phi_p))
+    ldetS <- NULL
+    f <- f_minres
+    g <- g_minres
+    lower <- c(rep(-Inf, lambda_p), rep(-1, phi_p))
+    upper <- c(rep(Inf, lambda_p), rep(1, phi_p))
+    
+  } else if(method == "ml") {
+    
+    x <- c(runif(lambda_p), rep(0, phi_p), init)
+    ldetS <- log(det(S))
+    f <- f_ml
+    g <- g_ml
+    lower <- c(rep(-Inf, lambda_p), rep(-1, phi_p), rep(0, p))
+    upper <- c(rep(Inf, lambda_p), rep(1, phi_p + p))
+    
+  }
+  
+  cfa <- nlminb(x, objective = f, gradient = g,
+                       lower = lower, upper = upper,
+                       S = S, ldetS = ldetS, q = q, indexes_lambda = indexes_lambda,
+                       indexes_phi = indexes_phi,
+                       control = list(iter.max = 1e4, eval.max = 1e4))
+  
+  lambda_hat <- matrix(0, p, q)
+  lambda_hat[indexes_lambda] <- cfa$par[1:lambda_p]
+  phi_hat <- matrix(0, q, q)
+  
+  if(method == "minres") {
+    
+    phi_hat[indexes_phi] <- cfa$par[-(1:lambda_p)]
+    phi_hat <- phi_hat + t(phi_hat)
+    diag(phi_hat) <- 1
+    
+  } else if(method == "ml") {
+    
+    phi_hat[indexes_phi] <- cfa$par[(lambda_p+1):(lambda_p + phi_p)]
+    phi_hat <- t(phi_hat) + phi_hat
+    diag(phi_hat) <- 1
+    u <- cfa$par[-(1:(lambda_p + phi_p))]
+    
+  }
+  
+  S_hat <- lambda_hat %*% phi_hat %*% t(lambda_hat)
+  uniquenesses_hat <- 1 - diag(S_hat)
+  diag(S_hat) <- 1
+  residuals <- S - S_hat
+  
+  df <- p*(p+1)/2 - (length(indexes_lambda) + length(indexes_phi) + p)
+  
+  results <- list(f = cfa$objective, convergence = cfa$convergence,
+                  iterations = cfa$iterations, df = df,
+                  lambda = lambda_hat, phi = phi_hat,
+                  uniquenesses = uniquenesses_hat,
+                  model = S_hat, residuals = residuals)
+  
+  return(results)
+  
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Adds population error using Yuan method to generated data
+# Updated 17.09.2022
+yuan <- function(
+    R, lambda, Phi, uniquenesses,
+    fit = "rmsr", misfit = "close",
+    method = "minres", confirmatory = TRUE
+)
+{
+  
+  p <- nrow(R)
+  q <- ncol(lambda)
+  
+  tdiag <- TRUE
+  
+  if(confirmatory) {
+    
+    npars <- sum(lambda > 0) + p + sum(abs(Phi[lower.tri(Phi)]) > 0)
+    
+  } else {
+    
+    npars <- p*q + p - 0.5*q*(q-1) # Number of model parameters
+    
+  }
+  
+  df <- p*(p+1)/2 - npars # Degrees of freedom
+  
+  if(fit == "rmsr") {
+    if(misfit == "close") {
+      r2 <- mean(1-uniquenesses)
+      misfit <- 0.05*r2
+    } else if(misfit == "acceptable") {
+      r2 <- mean(1-uniquenesses)
+      misfit <- 0.10*r2
+    }
+    delta <- misfit^2*0.5*p*(p-1)
+    # delta <- (1-misfit2)*(0.5*(sum(R_error^2) - p))
+  } else if(fit == "cfi") {
+    null_f <- 0.5*(sum(R^2) - p)
+    delta <- (1-misfit)*null_f
+  } else if(fit == "rmsea") {
+    delta <- misfit^2 * df
+  } else if(fit == "raw") {
+    delta <- misfit
+  }
+  
+  p <- nrow(R)
+  L <- lambda + 1e-06
+  R1 <- R
+  R <- L %*% Phi %*% t(L); diag(R) <- 1
+  target <- ifelse(lambda != 0, 1, 0)
+  targetphi <- ifelse(Phi != 0, 1, 0)
+  fit <- CFA(R, target, targetphi, method = method)
+  Phat <- fit$model
+  
+  # from delta to tau:
+  E <- R - Phat
+  
+  if(method == "minres" || method == "ols") {
+    
+    tau <- sqrt(2*delta/sum(E*E))
+    R_error <- Phat + tau*E
+    
+  } else if(method == "ml") {
+    
+    R_inv <- solve(R1)
+    constant <- 1e-04 / sqrt(mean(E*E))
+    E <- constant*E # Fix this to avoid NAs
+    G <- R_inv %*% E
+    
+    tau <- suppressWarnings(grid_search(delta, G))
+    tau <- opt_error(tau, delta, G)
+    # limits <- c(-1e3, 1e3)
+    # tau <- GSS(delta, G, limits)
+    # tau <- grad_descend(delta, G)
+    
+    R_error <- Phat + tau*E
+    
+  }
+  
+  # check for positiveness:
+  minimum_eigval <- min(eigen(R_error, symmetric = TRUE, only.values = TRUE)$values)
+  if(minimum_eigval <= 0) warning("The matrix was not positive-definite. The amount of error may be too big.")
+  
+  return(list(R_error = R_error, fit = fit, delta = delta, misfit = misfit))
+  
+}
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
 # add_local_dependence ----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
 

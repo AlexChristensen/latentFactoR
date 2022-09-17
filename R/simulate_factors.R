@@ -480,6 +480,7 @@ simulate_factors <- function(
     factors = factors,
     variables = variables,
     loadings = loading_matrix,
+    cross_loadings = cross_loadings,
     factor_correlations = correlation_matrix,
     categories = variable_categories,
     categorical_limit = categorical_limit,

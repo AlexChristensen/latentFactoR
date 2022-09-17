@@ -147,7 +147,7 @@
 #' @export
 #'
 # Add local dependence to simulated data
-# Updated 05.09.2022
+# Updated 17.09.2022
 add_local_dependence <- function(
     lf_object,
     method = c(
@@ -260,7 +260,7 @@ add_local_dependence <- function(
   }
   
   # Add class
-  class(results) <- c("lf-simulate", "lf-ld")
+  class(results) <- c(class(lf_object), "lf-ld")
   
   # Return results
   return(results)
