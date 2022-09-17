@@ -253,16 +253,81 @@ add_population_error <- function(
   }
   
   # Re-estimate data
-  results <- simulate_factors(
-    factors = parameters$factors,
-    variables = parameters$variables,
-    loadings = parameters$loadings,
-    cross_loadings = parameters$cross_loadings,
-    correlations = parameters$factor_correlations,
-    sample_size = nrow(lf_object$data),
-    variable_categories = parameters$categories,
-    categorical_limit = parameters$categorical_limit,
-    skew = parameters$skew
+  ## Cholesky decomposition
+  cholesky <- chol(population_error$R_error)
+  
+  ## Obtain sample size and total variables
+  sample_size <- nrow(lf_object$data)
+  total_variables <- ncol(lf_object$data)
+  
+  ## Generate data
+  data <- mvtnorm::rmvnorm(sample_size, sigma = diag(total_variables))
+  
+  ## Make data based on factor structure
+  data <- data %*% cholesky
+  
+  ## Set variable categories, limit, and skew
+  variable_categories <- parameters$categories
+  categorical_limit <- parameters$categorical_limit
+  skew <- parameters$skew
+  
+  ## Ensure appropriate type and length for categories
+  type_error(variable_categories, "numeric")
+  length_error(variable_categories, c(1, total_variables))
+  
+  ## Identify categories to variables
+  if(length(variable_categories) == 1){
+    variable_categories <- rep(variable_categories, total_variables)
+  }
+  
+  ## Check for categories greater than categorical limit and not infinite
+  if(any(variable_categories > categorical_limit & !is.infinite(variable_categories))){
+    
+    ## Make variables with categories greater than 7 (or categorical_limit) continuous
+    variable_categories[
+      variable_categories > categorical_limit & !is.infinite(variable_categories)
+    ] <- Inf
+    
+  }
+  
+  ## Find categories
+  if(any(variable_categories <= categorical_limit)){
+    
+    ## Target columns to categorize
+    columns <- which(variable_categories <= categorical_limit)
+    
+    ## Set skew
+    if(length(skew) != length(columns)){
+      skew <- sample(skew, length(columns), replace = TRUE)
+    }
+    
+    ## Loop through columns
+    for(i in columns){
+      
+      data[,i] <- categorize(
+        data = data[,i],
+        categories = variable_categories[i],
+        skew_value = skew[i]
+      )
+      
+    }
+    
+  }
+  
+  ## Add column names to data
+  colnames(data) <- paste0(
+    "V", formatC(
+      x = 1:total_variables,
+      digits = floor(log10(total_variables)),
+      flag = "0", format = "d"
+    )
+  )
+  
+  ## Populate results
+  results <- list(
+    data = data,
+    population_correlation = population_error$R_error,
+    original_correlation = lf_object$population_correlation
   )
   
   # Add parameters from population error
