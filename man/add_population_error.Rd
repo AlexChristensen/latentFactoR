@@ -8,7 +8,7 @@ add_population_error(
   lf_object,
   cfa_method = c("minres", "ml"),
   fit = c("cfi", "rmsea", "rmsr", "raw"),
-  misfit = 0,
+  misfit = c("close", "acceptable"),
   error_method = c("cudeck", "yuan")
 )
 }
@@ -51,13 +51,28 @@ Available options:
 
 }}
 
-\item{misfit}{Numeric (length = 1).
+\item{misfit}{Character or numeric (length = 1).
 Magnitude of error to add.
-Defaults to \code{0}.
-General effect sizes range from small (0.10), moderate (0.20), to large (0.30)}
+Defaults to \code{"close"}.
+Available options:
+
+\itemize{
+
+\item{\code{"close"}}
+{Slight deviations from original population correlation matrix}
+
+\item{\code{"acceptable"}}
+{Moderate deviations from original population correlation matrix}
+
+}
+
+While numbers can be used, they are \strong{not} recommended. They can be
+used to specify misfit but the level of misfit will vary depending
+on the factor structure}
 
 \item{error_method}{Character (length = 1).
 Method to control population error.
+Defaults to \code{"cudeck"}.
 Description of methods:
 
 \itemize{
@@ -148,7 +163,7 @@ two_factor <- simulate_factors(
 two_factor_Yuan <- add_population_error(
   lf_object = two_factor,
   cfa_method = "minres",
-  fit = "rmsr", misfit = 0.10,
+  fit = "rmsr", misfit = "close",
   error_method = "yuan"
 )
 
@@ -156,7 +171,7 @@ two_factor_Yuan <- add_population_error(
 two_factor_Yuan <- add_population_error(
   lf_object = two_factor,
   cfa_method = "minres",
-  fit = "rmsr", misfit = 0.10,
+  fit = "rmsr", misfit = "close",
   error_method = "cudeck"
 )
 

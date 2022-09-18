@@ -762,39 +762,44 @@ correlate_residuals <- function(
         
       }
       
-      # Loop through correlated_residuals
-      for(i in 1:nrow(correlated_residuals)){
+      # Loop through correlated residuals
+      if(nrow(correlated_residuals) != 0){
         
-        # Compute random residual
-        random_residual <- runif(
-          1,
-          min = add_residuals[i] - 0.05,
-          max = add_residuals[i] + 0.05
-        )
-        
-        # Obtain sign
-        original_sign <- sign(original_correlation[
-          correlated_residuals[i,1],
-          correlated_residuals[i,2]
-        ])
-        
-        # Add residuals to correlation matrix
-        population_correlation[
-          correlated_residuals[i,1],
-          correlated_residuals[i,2]
-        ] <- (abs(original_correlation[
-          correlated_residuals[i,1],
-          correlated_residuals[i,2]
-        ]) + random_residual) * original_sign
-        
-        # Ensure symmetric
-        population_correlation[
-          correlated_residuals[i,2],
-          correlated_residuals[i,1]
-        ] <- population_correlation[
-          correlated_residuals[i,1],
-          correlated_residuals[i,2]
-        ]
+        # Loop through correlated residuals
+        for(i in 1:nrow(correlated_residuals)){
+          
+          # Compute random residual
+          random_residual <- runif(
+            1,
+            min = add_residuals[i] - 0.05,
+            max = add_residuals[i] + 0.05
+          )
+          
+          # Obtain sign
+          original_sign <- sign(original_correlation[
+            correlated_residuals[i,1],
+            correlated_residuals[i,2]
+          ])
+          
+          # Add residuals to correlation matrix
+          population_correlation[
+            correlated_residuals[i,1],
+            correlated_residuals[i,2]
+          ] <- (abs(original_correlation[
+            correlated_residuals[i,1],
+            correlated_residuals[i,2]
+          ]) + random_residual) * original_sign
+          
+          # Ensure symmetric
+          population_correlation[
+            correlated_residuals[i,2],
+            correlated_residuals[i,1]
+          ] <- population_correlation[
+            correlated_residuals[i,1],
+            correlated_residuals[i,2]
+          ]
+          
+        }
         
       }
       

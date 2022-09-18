@@ -41,13 +41,28 @@
 #' 
 #' }
 #' 
-#' @param misfit Numeric (length = 1).
+#' @param misfit Character or numeric (length = 1).
 #' Magnitude of error to add.
-#' Defaults to \code{0}.
-#' General effect sizes range from small (0.10), moderate (0.20), to large (0.30)
+#' Defaults to \code{"close"}.
+#' Available options:
+#' 
+#' \itemize{
+#' 
+#' \item{\code{"close"}}
+#' {Slight deviations from original population correlation matrix}
+#' 
+#' \item{\code{"acceptable"}}
+#' {Moderate deviations from original population correlation matrix}
+#' 
+#' }
+#' 
+#' While numbers can be used, they are \strong{not} recommended. They can be
+#' used to specify misfit but the level of misfit will vary depending
+#' on the factor structure
 #' 
 #' @param error_method Character (length = 1).
 #' Method to control population error.
+#' Defaults to \code{"cudeck"}.
 #' Description of methods:
 #' 
 #' \itemize{
@@ -133,7 +148,7 @@
 #' two_factor_Yuan <- add_population_error(
 #'   lf_object = two_factor,
 #'   cfa_method = "minres",
-#'   fit = "rmsr", misfit = 0.10,
+#'   fit = "rmsr", misfit = "close",
 #'   error_method = "yuan"
 #' )
 #' 
@@ -141,7 +156,7 @@
 #' two_factor_Yuan <- add_population_error(
 #'   lf_object = two_factor,
 #'   cfa_method = "minres",
-#'   fit = "rmsr", misfit = 0.10,
+#'   fit = "rmsr", misfit = "close",
 #'   error_method = "cudeck"
 #' )
 #' 
@@ -179,7 +194,7 @@ add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
     fit = c("cfi", "rmsea", "rmsr", "raw"),
-    misfit = 0,
+    misfit = c("close", "acceptable"),
     error_method = c("cudeck", "yuan")
 )
 {
@@ -212,14 +227,18 @@ add_population_error <- function(
     fit <- "rmsr"
   }else{fit <- tolower(match.arg(fit))}
   
+  # Check for missing misfit
+  if(missing(misfit)){
+    misfit <- "close"
+  }
+  
   # Check for missing error method
   if(missing(error_method)){
-    error_method <- "yuan"
+    error_method <- "cudeck"
   }else{error_method <- tolower(match.arg(error_method))}
   
   # Check for appropriate misfit
-  type_error(misfit, "numeric"); length_error(misfit, 1);
-  range_error(misfit, c(0, 1));
+  length_error(misfit, 1);
   
   # Obtain population error
   if(error_method == "cudeck"){
@@ -346,6 +365,17 @@ add_population_error <- function(
   
   # Add class
   class(results) <- c(class(lf_object), "lf-pe")
+  
+  # Message to cite {bifactor}
+  message(
+    paste0(
+      "Please cite the {bifactor} package:\n\n",
+      "Jimenez, M., Abad, F. J., Garcia-Garzon, E., Garrido, L. E., Franco, V. R. (2022). ",
+      styletext("bifactor: Exploratory factor and bi-factor modeling with multiple general factors. ", defaults = "italics"),
+      "R package version 0.1.0. ",
+      "Retrieved from https://github.com/Marcosjnez/bifactor"
+    )
+  )
   
   # Return results
   return(results)
