@@ -64,32 +64,7 @@
 #' \item{original_correlation}{Original population correlation matrix \emph{before}
 #' local dependence was added}
 #' 
-#' \item{parameters}{
-#' A list containing the parameters used to generate the data:
-#' 
-#' \itemize{
-#' 
-#' \item{\code{factors}}
-#' {Number of factors}
-#' 
-#' \item{\code{variables}}
-#' {Variables on each factor}
-#' 
-#' \item{\code{loadings}}
-#' {Loading matrix}
-#' 
-#' \item{\code{factor_correlations}}
-#' {Correlations between factors}
-#' 
-#' \item{\code{categories}}
-#' {Categories for each variable}
-#' 
-#' \item{\code{skew}}
-#' {Skew for each variable}
-#' 
-#' }
-#' 
-#' } 
+#' \item{original_results}{Original \code{lf_object} input into function} 
 #'
 #' @examples
 #' # Generate factor data
@@ -140,8 +115,8 @@
 #' Luis Eduardo Garrido <luisgarrido@pucmm.edu>
 #' 
 #' @references
-#' Christensen, A. P., Garrido, L. E., & Golino, H. (2022). \cr
-#' Unique variable analysis: A network psychometrics method to detect local dependence. \cr
+#' Christensen, A. P., Garrido, L. E., & Golino, H. (2022).
+#' Unique variable analysis: A network psychometrics method to detect local dependence.
 #' \emph{PsyArXiv}
 #'
 #' @export

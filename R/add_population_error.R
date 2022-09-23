@@ -82,33 +82,6 @@
 #' 
 #' \item{population_correlation}{Population correlation matrix with local dependence added}
 #' 
-#' \item{parameters}{
-#' A list containing the parameters used to generate the data:
-#' 
-#' \itemize{
-#' 
-#' \item{\code{factors}}
-#' {Number of factors}
-#' 
-#' \item{\code{variables}}
-#' {Variables on each factor}
-#' 
-#' \item{\code{loadings}}
-#' {Loading matrix}
-#' 
-#' \item{\code{factor_correlations}}
-#' {Correlations between factors}
-#' 
-#' \item{\code{categories}}
-#' {Categories for each variable}
-#' 
-#' \item{\code{skew}}
-#' {Skew for each variable}
-#' 
-#' }
-#' 
-#' }
-#' 
 #' \item{population_error}{
 #' A list containing the parameters used to generate population error:
 #' 
@@ -174,22 +147,22 @@
 #' Luis Eduardo Garrido <luisgarrido@pucmm.edu>
 #' 
 #' @references
-#' Christensen, A. P., Garrido, L. E., & Golino, H. (2022). \cr
-#' Unique variable analysis: A network psychometrics method to detect local dependence. \cr
+#' Christensen, A. P., Garrido, L. E., & Golino, H. (2022).
+#' Unique variable analysis: A network psychometrics method to detect local dependence.
 #' \emph{PsyArXiv}
 #' 
-#' Cudeck, R., & Browne, M.W. (1992). \cr
-#' Constructing a covariance matrix that yields a specified minimizer and a specified minimum discrepancy function value. \cr
+#' Cudeck, R., & Browne, M.W. (1992).
+#' Constructing a covariance matrix that yields a specified minimizer and a specified minimum discrepancy function value.
 #' \emph{Psychometrika}, \emph{57}, 357–369.
 #' 
-#' Jimenez, M., Abad, F. J., Garcia-Garzon, E., Golino, H., Christensen, A. P., & Garrido, L. E. (2022). \cr
-#' Dimensionality assessment in generalized bi-factor structures: A network psychometrics approach. \cr
+#' Jimenez, M., Abad, F. J., Garcia-Garzon, E., Golino, H., Christensen, A. P., & Garrido, L. E. (2022).
+#' Dimensionality assessment in generalized bi-factor structures: A network psychometrics approach.
 #' \emph{PsyArXiv}
 #'
 #' @export
 #'
 # Add population to simulated data
-# Updated 17.09.2022
+# Updated 23.09.2022
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),

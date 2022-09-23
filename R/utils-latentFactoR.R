@@ -593,7 +593,7 @@ yuan <- function(
 
 #' @noRd
 # Adds correlated residuals to generated data
-# Updated 05.09.2022
+# Updated 23.09.2022
 correlate_residuals <- function(
     lf_object,
     proportion_LD, allow_multiple = FALSE,
@@ -889,12 +889,128 @@ correlate_residuals <- function(
     data = data,
     population_correlation = population_correlation,
     original_correlation = original_correlation,
-    parameters = parameters
+    original_results = lf_object
   )
   
   # Return results
   return(results)
   
+}
+
+#%%%%%%%%%%%%%%%%%%%
+# data_to_zipfs ----
+#%%%%%%%%%%%%%%%%%%%
+
+#' @noRd
+# Finds nearest non-zero decimal
+# Updated 23.09.2022
+nearest_decimal <- function(vec)
+{
+  
+  # Obtain minimum
+  minimum <- min(vec[vec!=0])
+  
+  # Zap digit
+  zap_digit <- 0
+  
+  # Count
+  digit <- -1
+  
+  # Find zap digit where it is not zero
+  while(zap_digit == 0){
+    
+    # Increase digit
+    digit <- digit + 1
+    
+    # Set zap
+    zap_digit <- round(minimum, digits = digit)
+    
+  }
+  
+  # Return digit
+  return(digit)
+  
+}
+
+#%%%%%%%%%%%%%%%%%%%%%
+# ERROR FUNCTIONS ----
+#%%%%%%%%%%%%%%%%%%%%%
+
+#' @noRd
+# Error for input type
+# Updated 08.08.2022
+type_error <- function(input, expected_type){
+  
+  # Check for type
+  if(!is(input, expected_type)){
+    stop(
+      paste(
+        "Input into '", deparse(substitute(input)),
+        "' argument is not '", expected_type,
+        "'. Input is ", paste("'", class(input), "'", sep = "", collapse = ", "),
+        sep = ""
+      )
+    )
+  }
+
+}
+
+#' @noRd
+# Error for input length
+# Updated 08.08.2022
+length_error <- function(input, expected_lengths){
+  
+  # Check for length of input in expected length
+  if(!length(input) %in% expected_lengths){
+    stop(
+      paste(
+        "Length of '", deparse(substitute(input)),
+        "' (", length(input),") does not match expected length(s). Length must be: ",
+        paste("'", expected_lengths, "'", collapse = " or ", sep = ""),
+        sep = ""
+      )
+    )
+  }
+  
+}
+
+#' @noRd
+# Error for input range
+# Updated 05.09.2022
+range_error <- function(input, expected_ranges){
+  
+  # Obtain expected maximum and minimum values
+  expected_maximum <- max(expected_ranges)
+  expected_minimum <- min(expected_ranges)
+  
+  # Obtain maximum and minimum values
+  actual_maximum <- round(max(input), 3)
+  actual_minimum <- round(min(input), 3)
+  
+  # Check for maximum of input in expected range
+  if(actual_maximum > expected_maximum){
+    stop(
+      paste(
+        "Maximum of '", deparse(substitute(input)),
+        "' (", actual_maximum,") does not match expected range(s). Range must be between: ",
+        paste0("'", expected_ranges, "'", collapse = " and "),
+        sep = ""
+      )
+    )
+  }
+  
+  # Check for maximum of input in expected range
+  if(actual_minimum < expected_minimum){
+    stop(
+      paste(
+        "Minimum of '", deparse(substitute(input)),
+        "' (", actual_minimum,") does not match expected range(s). Range must be between: ",
+        paste0("'", expected_ranges, "'", collapse = " and "),
+        sep = ""
+      )
+    )
+  }
+
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1115,107 +1231,6 @@ skew_generator <- function(
     probability = category_probability
   )
   return(result)
-  
-}
-
-#%%%%%%%%%%%%%%%%%%%%%
-# ERROR FUNCTIONS ----
-#%%%%%%%%%%%%%%%%%%%%%
-
-#' @noRd
-# Error for input type
-# Updated 08.08.2022
-type_error <- function(input, expected_type){
-  
-  # Check for type
-  if(!is(input, expected_type)){
-    stop(
-      paste(
-        "Input into '", deparse(substitute(input)),
-        "' argument is not '", expected_type,
-        "'. Input is ", paste("'", class(input), "'", sep = "", collapse = ", "),
-        sep = ""
-      )
-    )
-  }
-
-}
-
-#' @noRd
-# Error for input length
-# Updated 08.08.2022
-length_error <- function(input, expected_lengths){
-  
-  # Check for length of input in expected length
-  if(!length(input) %in% expected_lengths){
-    stop(
-      paste(
-        "Length of '", deparse(substitute(input)),
-        "' (", length(input),") does not match expected length(s). Length must be: ",
-        paste("'", expected_lengths, "'", collapse = " or ", sep = ""),
-        sep = ""
-      )
-    )
-  }
-  
-}
-
-#' @noRd
-# Error for input range
-# Updated 05.09.2022
-range_error <- function(input, expected_ranges){
-  
-  # Obtain expected maximum and minimum values
-  expected_maximum <- max(expected_ranges)
-  expected_minimum <- min(expected_ranges)
-  
-  # Obtain maximum and minimum values
-  actual_maximum <- round(max(input), 3)
-  actual_minimum <- round(min(input), 3)
-  
-  # Check for maximum of input in expected range
-  if(actual_maximum > expected_maximum){
-    stop(
-      paste(
-        "Maximum of '", deparse(substitute(input)),
-        "' (", actual_maximum,") does not match expected range(s). Range must be between: ",
-        paste0("'", expected_ranges, "'", collapse = " and "),
-        sep = ""
-      )
-    )
-  }
-  
-  # Check for maximum of input in expected range
-  if(actual_minimum < expected_minimum){
-    stop(
-      paste(
-        "Minimum of '", deparse(substitute(input)),
-        "' (", actual_minimum,") does not match expected range(s). Range must be between: ",
-        paste0("'", expected_ranges, "'", collapse = " and "),
-        sep = ""
-      )
-    )
-  }
-
-}
-
-#%%%%%%%%%%%%%%%%%%%%%%%
-# UTILITY FUNCTIONS ----
-#%%%%%%%%%%%%%%%%%%%%%%%
-
-#' @noRd
-# Checks for duplicated rows
-# Updated 05.09.2022
-match_row <- function(data)
-{
-  # Make data frame
-  df <- as.data.frame(data)
-  
-  # Obtain duplicate indices
-  dupe_ind <- duplicated(df)
-  
-  # Return rows
-  return(which(dupe_ind))
   
 }
 
@@ -1464,3 +1479,22 @@ textsymbol <- function(symbol = c("alpha", "beta", "chi", "delta",
   return(sym)
 }
 
+#%%%%%%%%%%%%%%%%%%%%%%%
+# UTILITY FUNCTIONS ----
+#%%%%%%%%%%%%%%%%%%%%%%%
+
+#' @noRd
+# Checks for duplicated rows
+# Updated 05.09.2022
+match_row <- function(data)
+{
+  # Make data frame
+  df <- as.data.frame(data)
+  
+  # Obtain duplicate indices
+  dupe_ind <- duplicated(df)
+  
+  # Return rows
+  return(which(dupe_ind))
+  
+}

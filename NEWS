@@ -2,6 +2,10 @@ Changes in version 0.0.3
 
 o ADD: `add_population_error` will add population error, using {bifactor}, from a simulated factor model
 
+o ADD: `data_to_zipfs` to transform data to Zipf's distribution from `simulate_factors`
+
+o ADD: `obtain_zipfs_parameters` to obtain a dataset's best fitting Zipf's distribution parameters 
+
 
 Changes in version 0.0.2
 
