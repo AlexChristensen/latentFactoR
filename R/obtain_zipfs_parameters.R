@@ -70,7 +70,7 @@
 #' @export
 #'
 # Obtain Zipf's distribution parameters
-# Updated 23.09.2022
+# Updated 26.09.2022
 obtain_zipfs_parameters <- function(data)
 {
   
@@ -108,24 +108,18 @@ obtain_zipfs_parameters <- function(data)
   # Assume rank order based on frequencies
   rank_order <- rank(-frequencies)
   
+  # For large datasets, remove frequencies
+  rm(frequencies); gc()
+  
   # Equation to solve
   # zipfs = 1 / (rank_order + beta)^alpha
   
   # Set beta (assume alpha = 1)
-  est_beta <- seq(0, 100, 1)
-  
-  # Estimate beta
-  poss_beta <- lapply(1:length(est_beta), function(i){
-    round(1 / (rank_order + est_beta[i])^1, digit)
-  })
-  
-  # Find differences with zipfs
-  diff_beta <- unlist(lapply(poss_beta, function(x){
-    sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
-  }))
-  
-  # Estimate beta
-  beta <- est_beta[which.min(diff_beta)]
+  beta <- estimate_beta(
+    beta_sequence = seq(0, 100, 1),
+    zipfs = zipfs,
+    non_zero_zipfs = non_zero_zipfs
+  )
   
   # Fine-tune beta
   est_beta <- seq(
@@ -134,18 +128,12 @@ obtain_zipfs_parameters <- function(data)
     0.1
   )
   
-  # Estimate beta
-  poss_beta <- lapply(1:length(est_beta), function(i){
-    round(1 / (rank_order + est_beta[i])^1, digit)
-  })
-  
-  # Find differences with zipfs
-  diff_beta <- unlist(lapply(poss_beta, function(x){
-    sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
-  }))
-  
-  # Estimate beta
-  beta <- est_beta[which.min(diff_beta)]
+  # Set beta (assume alpha = 1)
+  beta <- estimate_beta(
+    beta_sequence = est_beta,
+    zipfs = zipfs,
+    non_zero_zipfs = non_zero_zipfs
+  )
   
   # Further fine-tune beta
   est_beta <- seq(
@@ -154,34 +142,23 @@ obtain_zipfs_parameters <- function(data)
     0.01
   )
   
-  # Estimate beta
-  poss_beta <- lapply(1:length(est_beta), function(i){
-    round(1 / (rank_order + est_beta[i])^1, digit)
-  })
+  # Set beta (assume alpha = 1)
+  beta <- estimate_beta(
+    beta_sequence = est_beta,
+    zipfs = zipfs,
+    non_zero_zipfs = non_zero_zipfs
+  )
   
-  # Find differences with zipfs
-  diff_beta <- unlist(lapply(poss_beta, function(x){
-    sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
-  }))
+  # New line
+  cat("\n")
   
-  # Estimate beta
-  beta <- est_beta[which.min(diff_beta)]
-  
-  # Set beta (assume 2.7)
-  est_alpha <- seq(0, 20, 1)
-  
-  # Estimate alpha
-  poss_alpha <- lapply(1:length(est_alpha), function(i){
-    round(1 / (rank_order + beta)^est_alpha[i], digit)
-  })
-  
-  # Find differences with zipfs
-  diff_alpha <- unlist(lapply(poss_alpha, function(x){
-    sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
-  }))
-  
-  # Estimate alpha
-  alpha <- est_alpha[which.min(diff_alpha)]
+  # Set alpha
+  alpha <- estimate_alpha(
+    beta = beta,
+    alpha_sequence = seq(0, 20, 1),
+    zipfs = zipfs,
+    non_zero_zipfs = non_zero_zipfs
+  )
   
   # Fine-tune alpha
   est_alpha <- seq(
@@ -190,18 +167,13 @@ obtain_zipfs_parameters <- function(data)
     0.1
   )
   
-  # Estimate alpha
-  poss_alpha <- lapply(1:length(est_alpha), function(i){
-    round(1 / (rank_order + beta)^est_alpha[i], digit)
-  })
-  
-  # Find differences with zipfs
-  diff_alpha <- unlist(lapply(poss_alpha, function(x){
-    sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
-  }))
-  
-  # Estimate alpha
-  alpha <- est_alpha[which.min(diff_alpha)]
+  # Set alpha
+  alpha <- estimate_alpha(
+    beta = beta,
+    alpha_sequence = est_alpha,
+    zipfs = zipfs,
+    non_zero_zipfs = non_zero_zipfs
+  )
   
   # Further fine-tune alpha
   est_alpha <- seq(
@@ -210,18 +182,16 @@ obtain_zipfs_parameters <- function(data)
     0.01
   )
   
-  # Estimate alpha
-  poss_alpha <- lapply(1:length(est_alpha), function(i){
-    round(1 / (rank_order + beta)^est_alpha[i], digit)
-  })
+  # Set alpha
+  alpha <- estimate_alpha(
+    beta = beta,
+    alpha_sequence = est_alpha,
+    zipfs = zipfs,
+    non_zero_zipfs = non_zero_zipfs
+  )
   
-  # Find differences with zipfs
-  diff_alpha <- unlist(lapply(poss_alpha, function(x){
-    sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
-  }))
-  
-  # Estimate alpha
-  alpha <- est_alpha[which.min(diff_alpha)]
+  # New line
+  cat("\n")
   
   # Final values
   final_values <- round(1 / (rank_order + beta)^alpha, digit)

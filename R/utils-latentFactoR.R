@@ -932,6 +932,103 @@ nearest_decimal <- function(vec)
   
 }
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# obtain_zipfs_parameters ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#' @noRd
+# Estimates beta parameter
+# Updated 26.09.2022
+estimate_beta <- function(
+    beta_sequence,
+    zipfs, non_zero_zipfs
+)
+{
+  
+  # Possible values and differences (assume alpha = 1)
+  diff_beta <- lapply(1:length(beta_sequence), function(i){
+    cat(
+      colortext(
+        text =  paste(
+          "\r Estimating beta...", 
+          beta_sequence[i]
+        ),
+        defaults = "message"
+      )
+    )
+    x <- round(1 / (rank_order + beta_sequence[i])^1, digit)
+    sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
+  })
+  
+  # Estimate beta
+  beta <- beta_sequence[which.min(diff_beta)]
+  
+  # Current beta
+  cat(
+    colortext(
+      text =  paste(
+        "\r Estimating beta...", 
+        formatC(
+          beta, digits = 2,
+          format = "f", flag = "0"
+        ), "  "
+      ),
+      defaults = "message"
+    )
+  )
+  
+  # Return beta
+  return(beta)
+  
+}
+
+#' @noRd
+# Estimates alpha parameter
+# Updated 26.09.2022
+estimate_alpha <- function(
+    beta,
+    alpha_sequence,
+    zipfs, non_zero_zipfs
+)
+{
+  
+  # Possible values and differences (assume alpha = 1)
+  diff_alpha <- lapply(1:length(alpha_sequence), function(i){
+    cat(
+      colortext(
+        text =  paste(
+          "\r Estimating alpha...", 
+          alpha_sequence[i]
+        ),
+        defaults = "message"
+      )
+    )
+    x <- round(1 / (rank_order + beta)^alpha_sequence[i], digit)
+    sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
+  })
+  
+  # Estimate alpha
+  alpha <- alpha_sequence[which.min(diff_alpha)]
+  
+  # Current alpha
+  cat(
+    colortext(
+      text =  paste(
+        "\r Estimating alpha...", 
+        formatC(
+          alpha, digits = 2,
+          format = "f", flag = "0"
+        ), "  "
+      ),
+      defaults = "message"
+    )
+  )
+  
+  # Return alpha
+  return(alpha)
+  
+}
+
 #%%%%%%%%%%%%%%%%%%%%%
 # ERROR FUNCTIONS ----
 #%%%%%%%%%%%%%%%%%%%%%
