@@ -119,7 +119,8 @@ obtain_zipfs_parameters <- function(data)
     beta_sequence = seq(0, 100, 1),
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order
+    rank_order = rank_order,
+    digit = digit
   )
   
   # Fine-tune beta
@@ -134,7 +135,8 @@ obtain_zipfs_parameters <- function(data)
     beta_sequence = est_beta,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order
+    rank_order = rank_order,
+    digit = digit
   )
   
   # Further fine-tune beta
@@ -149,7 +151,8 @@ obtain_zipfs_parameters <- function(data)
     beta_sequence = est_beta,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order
+    rank_order = rank_order,
+    digit = digit
   )
   
   # New line
@@ -161,7 +164,8 @@ obtain_zipfs_parameters <- function(data)
     alpha_sequence = seq(0, 20, 1),
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order
+    rank_order = rank_order,
+    digit = digit
   )
   
   # Fine-tune alpha
@@ -177,7 +181,8 @@ obtain_zipfs_parameters <- function(data)
     alpha_sequence = est_alpha,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order
+    rank_order = rank_order,
+    digit = digit
   )
   
   # Further fine-tune alpha
@@ -193,7 +198,8 @@ obtain_zipfs_parameters <- function(data)
     alpha_sequence = est_alpha,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order
+    rank_order = rank_order,
+    digit = digit
   )
   
   # New line

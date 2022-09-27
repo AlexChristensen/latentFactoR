@@ -942,7 +942,7 @@ nearest_decimal <- function(vec)
 estimate_beta <- function(
     beta_sequence,
     zipfs, non_zero_zipfs,
-    rank_order
+    rank_order, digit
 )
 {
   
@@ -990,7 +990,7 @@ estimate_alpha <- function(
     beta,
     alpha_sequence,
     zipfs, non_zero_zipfs,
-    rank_order
+    rank_order, digit
 )
 {
   
