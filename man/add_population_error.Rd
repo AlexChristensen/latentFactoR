@@ -96,6 +96,14 @@ was added. Similarly, verifies that the MAE of the
 loadings are not greater than the specified amount,
 ensuring proper convergence.
 Defaults to \code{0.01}}
+
+\item{leave_cross_loadings}{Boolean.
+Should cross-loadings be kept?
+Defaults to \code{FALSE}.
+Convergence problems can arise if cross-loadings are kept,
+so setting them to zero is the default. Only set to \code{TRUE}
+with careful consideration of the structure. Make sure to perform
+additional checks that the data are adequate}
 }
 \value{
 Returns a list containing:

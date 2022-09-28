@@ -85,6 +85,14 @@
 #' ensuring proper convergence.
 #' Defaults to \code{0.01}
 #' 
+#' @param leave_cross_loadings Boolean.
+#' Should cross-loadings be kept?
+#' Defaults to \code{FALSE}.
+#' Convergence problems can arise if cross-loadings are kept,
+#' so setting them to zero is the default. Only set to \code{TRUE}
+#' with careful consideration of the structure. Make sure to perform
+#' additional checks that the data are adequate
+#' 
 #' @return Returns a list containing:
 #' 
 #' \item{data}{Simulated data from the specified factor model}
