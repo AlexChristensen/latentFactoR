@@ -70,7 +70,7 @@
 #' @export
 #'
 # Obtain Zipf's distribution parameters
-# Updated 26.09.2022
+# Updated 28.09.2022
 obtain_zipfs_parameters <- function(data)
 {
   
@@ -109,102 +109,118 @@ obtain_zipfs_parameters <- function(data)
   rank_order <- rank(-frequencies)
   
   # For large datasets, remove frequencies
-  rm(frequencies); gc()
+  rm(frequencies); gc(FALSE)
   
   # Equation to solve
   # zipfs = 1 / (rank_order + beta)^alpha
   
-  # Set beta (assume alpha = 1)
-  beta <- estimate_beta(
-    beta_sequence = seq(0, 100, 1),
+  # Set alpha and beta sequence
+  alpha_sequence <- seq(0, 5, 0.50)
+  beta_sequence <- seq(0, 100, 10)
+  
+  # Try to solve for both parameters
+  parameters <- estimate_parameters(
+    alpha_sequence = alpha_sequence,
+    beta_sequence = beta_sequence,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
     rank_order = rank_order,
     digit = digit
   )
   
-  # Fine-tune beta
-  est_beta <- seq(
-    ifelse(beta == 0, 0, beta - 1),
-    ifelse(beta == 0, 2, beta + 1),
-    0.1
+  # Search within definitions
+  ## alpha
+  alpha_sequence <- seq(
+    parameters$alpha - 0.5,
+    parameters$alpha + 0.5, 
+    0.10
   )
   
-  # Set beta (assume alpha = 1)
-  beta <- estimate_beta(
-    beta_sequence = est_beta,
+  # Try to solve for both parameters
+  parameters <- estimate_parameters(
+    alpha_sequence = alpha_sequence,
+    beta_sequence = beta_sequence,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
     rank_order = rank_order,
     digit = digit
   )
   
-  # Further fine-tune beta
-  est_beta <- seq(
-    ifelse(beta == 0, 0, beta - 0.1),
-    ifelse(beta == 0, 2, beta + 0.1),
+  # Search within definitions
+  ## alpha
+  alpha_sequence <- seq(
+    parameters$alpha - 0.10,
+    parameters$alpha + 0.10, 
     0.01
   )
   
-  # Set beta (assume alpha = 1)
-  beta <- estimate_beta(
-    beta_sequence = est_beta,
+  # Try to solve for both parameters
+  parameters <- estimate_parameters(
+    alpha_sequence = alpha_sequence,
+    beta_sequence = beta_sequence,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
     rank_order = rank_order,
     digit = digit
   )
   
-  # New line
-  cat("\n")
+  ## beta
+  beta_sequence <- seq(
+    parameters$beta - 10,
+    parameters$beta + 10, 
+    1
+  )
   
-  # Set alpha
-  alpha <- estimate_alpha(
-    beta = beta,
-    alpha_sequence = seq(0, 20, 1),
+  # Try to solve for both parameters
+  parameters <- estimate_parameters(
+    alpha_sequence = alpha_sequence,
+    beta_sequence = beta_sequence,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
     rank_order = rank_order,
     digit = digit
   )
   
-  # Fine-tune alpha
-  est_alpha <- seq(
-    ifelse(alpha == 0, 0, alpha - 1),
-    ifelse(alpha == 0, 2, alpha + 1),
-    0.1
+  # Search within definitions
+  ## beta
+  beta_sequence <- seq(
+    parameters$beta - 1,
+    parameters$beta + 1, 
+    0.10
   )
   
-  # Set alpha
-  alpha <- estimate_alpha(
-    beta = beta,
-    alpha_sequence = est_alpha,
+  # Try to solve for both parameters
+  parameters <- estimate_parameters(
+    alpha_sequence = parameters$alpha,
+    beta_sequence = beta_sequence,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
     rank_order = rank_order,
     digit = digit
   )
   
-  # Further fine-tune alpha
-  est_alpha <- seq(
-    ifelse(alpha == 0, 0, alpha - 0.1),
-    ifelse(alpha == 0, 2, alpha + 0.1),
+  # Search within definitions
+  ## beta
+  beta_sequence <- seq(
+    parameters$beta - 0.10,
+    parameters$beta + 0.10, 
     0.01
   )
   
-  # Set alpha
-  alpha <- estimate_alpha(
-    beta = beta,
-    alpha_sequence = est_alpha,
+  # Try to solve for both parameters
+  parameters <- estimate_parameters(
+    alpha_sequence = parameters$alpha,
+    beta_sequence = beta_sequence,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
     rank_order = rank_order,
     digit = digit
   )
   
-  # New line
-  cat("\n")
-  
+  # Set final parameters
+  alpha <- parameters$alpha
+  beta <- parameters$beta
+
   # Final values
   final_values <- round(1 / (rank_order + beta)^alpha, digit)
   
@@ -217,9 +233,12 @@ obtain_zipfs_parameters <- function(data)
     )
   )
   
+  # Add space
+  cat("\n")
+  
   # Return parameters
   return(
-    zapsmall(c(beta = beta, alpha = alpha, zipfs_rmse = rmse))
+    zapsmall(c(alpha = alpha, beta = beta, zipfs_rmse = rmse))
   )
   
 }

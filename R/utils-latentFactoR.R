@@ -1022,6 +1022,94 @@ zipf_rmse <- function(values, zipfs, non_zero_zipfs){
 zipf_values <- function(alpha, beta, rank_order, digit)
 {round(1 / (rank_order + beta)^alpha, digit)}
 
+alpha_sequence <- seq(0.5, 2.5, 0.5)
+beta_sequence <- seq(0, 100, 10)
+
+#' @noRd
+# Estimate parameters
+# Updated 28.09.2022
+estimate_parameters <- function(
+    alpha_sequence,
+    beta_sequence,
+    zipfs, non_zero_zipfs,
+    rank_order, digit
+)
+{
+  
+  # All possible combinations
+  sequences <- expand.grid(
+    alpha = alpha_sequence,
+    beta = beta_sequence
+  )
+  
+  # Initialize RMSE vector
+  rmse <- numeric(nrow(sequences))
+  
+  # Possible values and differences
+  for(i in 1:nrow(sequences)){
+    
+    # Progress message
+    cat(
+      colortext(
+        text =  paste(
+          "\r Estimating alpha...",
+          formatC(
+            sequences[i,1], digits = 2,
+            format = "f", flag = "0"
+          ), "  ",
+          "Estimating beta...", 
+          formatC(
+            sequences[i,2], digits = 2,
+            format = "f", flag = "0"
+          ), "  "
+        ),
+        defaults = "message"
+      )
+    )
+    
+    # Values based on parameters
+    values <- zipf_values(
+      alpha = sequences[i,1], beta = sequences[i,2],
+      rank_order = rank_order, digit = digit
+    )
+    
+    # Difference
+    rmse[i] <- zipf_rmse(
+      values = values,
+      zipfs = zipfs,
+      non_zero_zipfs = non_zero_zipfs
+    )
+    
+    
+  }
+  
+  # Update message
+  cat(
+    colortext(
+      text =  paste(
+        "\r Estimating alpha...",
+        formatC(
+          sequences[which.min(rmse),1], digits = 2,
+          format = "f", flag = "0"
+        ), "  ",
+        "Estimating beta...", 
+        formatC(
+          sequences[which.min(rmse),2], digits = 2,
+          format = "f", flag = "0"
+        ), "  "
+      ),
+      defaults = "message"
+    )
+  )
+  
+  # Return parameters
+  return(sequences[which.min(rmse),])
+  
+}
+
+
+
+
 #' @noRd
 # Estimates beta parameter
 # Updated 27.09.2022
