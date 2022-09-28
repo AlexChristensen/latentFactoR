@@ -24,8 +24,8 @@
 #' Numeric data to determine Zipf's distribution parameters
 #'
 #' @return Returns a vector containing the estimated \code{beta} and
-#' \code{alpha} parameters. Also contains \code{zipfs_rmse} which corresponds
-#' to the root mean square error between frequencies based
+#' \code{alpha} parameters. Also contains \code{zipfs_sse} which corresponds
+#' to the sum of square error between frequencies based
 #' on the parameter values estimated and the original data frequencies
 #'
 #' @examples
@@ -96,15 +96,6 @@ obtain_zipfs_parameters <- function(data)
     
   }
   
-  # Set nearest decimal
-  # digit <- nearest_decimal(zipfs)
-  # zipfs <- round(
-  #   zipfs, digits = digit
-  # )
-  
-  # Non-zero zipfs
-  non_zero_zipfs <- zipfs != 0
-  
   # Assume rank order based on frequencies
   rank_order <- rank(-frequencies)
   
@@ -115,15 +106,14 @@ obtain_zipfs_parameters <- function(data)
   # zipfs = 1 / (rank_order + beta)^alpha
   
   # Set alpha and beta sequence
-  alpha_sequence <- seq(0, 5, 0.50)
-  beta_sequence <- seq(0, 100, 10)
+  alpha_sequence <- seq(1, 4, 0.50)
+  beta_sequence <- seq(0, 200, 10)
   
   # Try to solve for both parameters
   parameters <- estimate_parameters(
     alpha_sequence = alpha_sequence,
     beta_sequence = beta_sequence,
     zipfs = zipfs,
-    non_zero_zipfs = non_zero_zipfs,
     rank_order = rank_order
   )
   
@@ -134,28 +124,28 @@ obtain_zipfs_parameters <- function(data)
     0.10
   )
   
-  # Try to solve for both parameters
-  parameters <- estimate_parameters(
-    alpha_sequence = alpha_sequence,
-    beta_sequence = beta_sequence,
-    zipfs = zipfs,
-    non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order
-  )
+  ## Ensure minimum equal zero
+  if(min(alpha_sequence) < 1){
+    alpha_sequence <- seq(1, max(alpha_sequence), 0.10)
+  }
   
   ## beta
   beta_sequence <- seq(
-    parameters$beta - 10,
-    parameters$beta + 10, 
-    1
+    parameters$beta - 50,
+    parameters$beta + 50, 
+    5
   )
+  
+  ## Ensure minimum equal zero
+  if(min(beta_sequence) < 0){
+    beta_sequence <- seq(0, max(beta_sequence), 5)
+  }
   
   # Try to solve for both parameters
   parameters <- estimate_parameters(
     alpha_sequence = alpha_sequence,
     beta_sequence = beta_sequence,
     zipfs = zipfs,
-    non_zero_zipfs = non_zero_zipfs,
     rank_order = rank_order
   )
   
@@ -166,14 +156,50 @@ obtain_zipfs_parameters <- function(data)
     0.01
   )
   
+  ## Ensure minimum equal zero
+  if(min(alpha_sequence) < 1){
+    alpha_sequence <- seq(1, max(alpha_sequence), 0.01)
+  }
+  
   # Try to solve for both parameters
   parameters <- estimate_parameters(
     alpha_sequence = alpha_sequence,
     beta_sequence = beta_sequence,
     zipfs = zipfs,
-    non_zero_zipfs = non_zero_zipfs,
     rank_order = rank_order
   )
+  
+  ## beta
+  beta_sequence <- seq(
+    parameters$beta - 10,
+    parameters$beta + 10, 
+    1
+  )
+  
+  ## Ensure minimum equal zero
+  if(min(beta_sequence) < 0){
+    beta_sequence <- seq(0, max(beta_sequence), 1)
+  }
+  
+  # Try to solve for both parameters
+  parameters <- estimate_parameters(
+    alpha_sequence = alpha_sequence,
+    beta_sequence = beta_sequence,
+    zipfs = zipfs,
+    rank_order = rank_order
+  )
+  
+  ## alpha
+  alpha_sequence <- seq(
+    parameters$alpha - 0.05,
+    parameters$alpha + 0.05, 
+    0.01
+  )
+  
+  ## Ensure minimum equal zero
+  if(min(alpha_sequence) < 1){
+    alpha_sequence <- seq(1, max(alpha_sequence), 0.01)
+  }
   
   ## beta
   beta_sequence <- seq(
@@ -182,12 +208,16 @@ obtain_zipfs_parameters <- function(data)
     0.10
   )
   
+  ## Ensure minimum equal zero
+  if(min(beta_sequence) < 0){
+    beta_sequence <- seq(0, max(beta_sequence), 0.01)
+  }
+  
   # Try to solve for both parameters
   parameters <- estimate_parameters(
     alpha_sequence = alpha_sequence,
     beta_sequence = beta_sequence,
     zipfs = zipfs,
-    non_zero_zipfs = non_zero_zipfs,
     rank_order = rank_order
   )
   
@@ -198,12 +228,16 @@ obtain_zipfs_parameters <- function(data)
     0.01
   )
   
+  ## Ensure minimum equal zero
+  if(min(beta_sequence) < 0){
+    beta_sequence <- seq(0, max(beta_sequence), 0.01)
+  }
+  
   # Try to solve for both parameters
   parameters <- estimate_parameters(
     alpha_sequence = parameters$alpha,
     beta_sequence = beta_sequence,
     zipfs = zipfs,
-    non_zero_zipfs = non_zero_zipfs,
     rank_order = rank_order
   )
   
@@ -215,12 +249,9 @@ obtain_zipfs_parameters <- function(data)
   final_values <- 1 / (rank_order + beta)^alpha
   
   # Compute root mean square error
-  rmse <- sqrt(
-    mean(
-      (
-        zipfs[non_zero_zipfs] - final_values[non_zero_zipfs]
-      )^2, na.rm = TRUE
-    )
+  sse <- zipf_sse(
+    values = final_values,
+    zipfs = zipfs
   )
   
   # Add space
@@ -228,7 +259,7 @@ obtain_zipfs_parameters <- function(data)
   
   # Return parameters
   return(
-    zapsmall(c(alpha = alpha, beta = beta, zipfs_rmse = rmse))
+    zapsmall(c(alpha = alpha, beta = beta, zipfs_sse = sse))
   )
   
 }

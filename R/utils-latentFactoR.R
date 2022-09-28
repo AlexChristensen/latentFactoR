@@ -1003,16 +1003,10 @@ nearest_decimal <- function(vec)
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #' @noRd
-# Obtains Zipf RMSE
+# Obtains Zipf SSE
 # Updated 27.09.2022
-zipf_rmse <- function(values, zipfs, non_zero_zipfs){
-  sqrt(
-    mean(
-      (
-        zipfs[non_zero_zipfs] - values[non_zero_zipfs]
-      )^2, na.rm = TRUE
-    )
-  )
+zipf_sse <- function(values, zipfs){
+  sum((zipfs - values)^2, na.rm = TRUE)
 }
 
 
@@ -1028,7 +1022,7 @@ zipf_values <- function(alpha, beta, rank_order)
 estimate_parameters <- function(
     alpha_sequence,
     beta_sequence,
-    zipfs, non_zero_zipfs,
+    zipfs,
     rank_order
 )
 {
@@ -1040,7 +1034,7 @@ estimate_parameters <- function(
   )
   
   # Initialize RMSE vector
-  rmse <- numeric(nrow(sequences))
+  sse <- numeric(nrow(sequences))
   
   # Possible values and differences
   for(i in 1:nrow(sequences)){
@@ -1071,10 +1065,9 @@ estimate_parameters <- function(
     )
     
     # Difference
-    rmse[i] <- zipf_rmse(
+    sse[i] <- zipf_sse(
       values = values,
-      zipfs = zipfs,
-      non_zero_zipfs = non_zero_zipfs
+      zipfs = zipfs
     )
     
     
@@ -1086,12 +1079,12 @@ estimate_parameters <- function(
       text =  paste(
         "\r Estimating alpha...",
         formatC(
-          sequences[which.min(rmse),1], digits = 2,
+          sequences[which.min(sse),1], digits = 2,
           format = "f", flag = "0"
         ), "  ",
         "Estimating beta...", 
         formatC(
-          sequences[which.min(rmse),2], digits = 2,
+          sequences[which.min(sse),2], digits = 2,
           format = "f", flag = "0"
         ), "  "
       ),
@@ -1100,7 +1093,7 @@ estimate_parameters <- function(
   )
   
   # Return parameters
-  return(sequences[which.min(rmse),])
+  return(sequences[which.min(sse),])
   
 }
 

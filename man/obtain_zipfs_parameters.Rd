@@ -12,8 +12,8 @@ Numeric data to determine Zipf's distribution parameters}
 }
 \value{
 Returns a vector containing the estimated \code{beta} and
-\code{alpha} parameters. Also contains \code{zipfs_rmse} which corresponds
-to the root mean square error between frequencies based
+\code{alpha} parameters. Also contains \code{zipfs_sse} which corresponds
+to the sum of square error between frequencies based
 on the parameter values estimated and the original data frequencies
 }
 \description{

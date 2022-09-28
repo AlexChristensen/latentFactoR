@@ -77,13 +77,6 @@
 #'   dichotomous = TRUE
 #' )
 #' 
-#' # Transform data to Pareto distribution
-#' two_factor_pareto <- data_to_zipfs(
-#'   lf_object = two_factor,
-#'   beta = 2.7,
-#'   alpha = 0.4 # gets very close to Pareto
-#' )
-#' 
 #' @references
 #' Mandelbrot, B. (1953).
 #' An informational theory of the statistical structure of language.
@@ -115,7 +108,7 @@
 #' @export
 #'
 # Transform data to Zipf's distribution
-# Updated 23.09.2022
+# Updated 28.09.2022
 data_to_zipfs <- function(
     lf_object,
     beta = 2.7,
@@ -158,10 +151,12 @@ data_to_zipfs <- function(
   rank_order <- rank(-original_data)
   
   # Transformation based on Mandelbrot
-  zipfs <- 1 / (rank_order + beta)^alpha
+  original_zipfs <- zipf_values(
+    alpha = alpha, beta = beta, rank_order = rank_order
+  )
   
   # Estimate frequencies
-  frequencies <- round(zipfs * nrow(original_data))
+  frequencies <- round(original_zipfs * nrow(original_data))
   
   # Initialize and populate data
   data <- original_data; data[] <- frequencies;
@@ -200,7 +195,7 @@ data_to_zipfs <- function(
   # Check for setting variables to zero
   if(minimum > 0){
     
-    # Substract minimum from data
+    # Subtract minimum from data
     data <- data - minimum
     
   }
@@ -212,31 +207,20 @@ data_to_zipfs <- function(
   
   # Check parameters
   frequencies <- as.vector(data)
-  
-  # Obtain Zipf's values
-  zipfs <- frequencies / nrow(data)
-  
-  # Set nearest decimal
-  digit <- nearest_decimal(zipfs)
-  zipfs <- round(zipfs, digits = digit)
-  
-  # Non-zero zipfs
-  non_zero_zipfs <- zipfs != 0
-  
+
   # Assume rank order based on frequencies
   rank_order <- rank(-frequencies)
   
   # Simulated values
-  simulated_values <- round(
-    1 / (rank_order + beta)^alpha,
-    digit
+  simulated_values <- zipf_values(
+    alpha = alpha, beta = beta, rank_order = rank_order
   )
   
   # Compute RMSE for Zipfs parameters
   zipfs_rmse <- sqrt(
     mean(
       (
-        zipfs[non_zero_zipfs] - simulated_values[non_zero_zipfs]
+        original_zipfs - simulated_values
       )^2, na.rm = TRUE
     )
   )

@@ -87,13 +87,6 @@ two_factor_zipfs_binary <- data_to_zipfs(
   dichotomous = TRUE
 )
 
-# Transform data to Pareto distribution
-two_factor_pareto <- data_to_zipfs(
-  lf_object = two_factor,
-  beta = 2.7,
-  alpha = 0.4 # gets very close to Pareto
-)
-
 }
 \references{
 Mandelbrot, B. (1953).
