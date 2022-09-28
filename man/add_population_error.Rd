@@ -9,7 +9,9 @@ add_population_error(
   cfa_method = c("minres", "ml"),
   fit = c("cfi", "rmsea", "rmsr", "raw"),
   misfit = c("close", "acceptable"),
-  error_method = c("cudeck", "yuan")
+  error_method = c("cudeck", "yuan"),
+  tolerance = 0.01,
+  leave_cross_loadings = FALSE
 )
 }
 \arguments{
@@ -85,6 +87,15 @@ for more details}
 {Description coming soon...}
 
 }}
+
+\item{tolerance}{Numeric (length = 1).
+Tolerance of SRMR difference between population error
+correlation matrix and the original population correlation
+matrix. Ensures that appropriate population error
+was added. Similarly, verifies that the MAE of the
+loadings are not greater than the specified amount,
+ensuring proper convergence.
+Defaults to \code{0.01}}
 }
 \value{
 Returns a list containing:
@@ -132,20 +143,20 @@ two_factor <- simulate_factors(
   sample_size = 1000 # number of cases = 1000
 )
 
+# Add small population error using Cudeck method
+two_factor_Cudeck <- add_population_error(
+  lf_object = two_factor,
+  cfa_method = "minres",
+  fit = "rmsr", misfit = "close",
+  error_method = "cudeck"
+)
+
 # Add small population error using Yuan method
 two_factor_Yuan <- add_population_error(
   lf_object = two_factor,
   cfa_method = "minres",
   fit = "rmsr", misfit = "close",
   error_method = "yuan"
-)
-
-# Add small population error using Cudeck method
-two_factor_Yuan <- add_population_error(
-  lf_object = two_factor,
-  cfa_method = "minres",
-  fit = "rmsr", misfit = "close",
-  error_method = "cudeck"
 )
 
 }
@@ -173,5 +184,9 @@ Luis Eduardo Garrido <luisgarrido@pucmm.edu>
 {\code{\link{latentFactoR}}} authors \cr
 Alexander P. Christensen <alexpaulchristensen@gmail.com>,
 Hudson Golino <hfg9s@virginia.edu>,
-Luis Eduardo Garrido <luisgarrido@pucmm.edu>
+Luis Eduardo Garrido <luisgarrido@pucmm.edu>,
+Marcos Jimenez,
+Francisco J. Abad,
+Eduardo Garcia-Garzon,
+Vithor R. Franco
 }

@@ -97,10 +97,10 @@ obtain_zipfs_parameters <- function(data)
   }
   
   # Set nearest decimal
-  digit <- nearest_decimal(zipfs)
-  zipfs <- round(
-    zipfs, digits = digit
-  )
+  # digit <- nearest_decimal(zipfs)
+  # zipfs <- round(
+  #   zipfs, digits = digit
+  # )
   
   # Non-zero zipfs
   non_zero_zipfs <- zipfs != 0
@@ -124,11 +124,9 @@ obtain_zipfs_parameters <- function(data)
     beta_sequence = beta_sequence,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order,
-    digit = digit
+    rank_order = rank_order
   )
   
-  # Search within definitions
   ## alpha
   alpha_sequence <- seq(
     parameters$alpha - 0.5,
@@ -142,26 +140,7 @@ obtain_zipfs_parameters <- function(data)
     beta_sequence = beta_sequence,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order,
-    digit = digit
-  )
-  
-  # Search within definitions
-  ## alpha
-  alpha_sequence <- seq(
-    parameters$alpha - 0.10,
-    parameters$alpha + 0.10, 
-    0.01
-  )
-  
-  # Try to solve for both parameters
-  parameters <- estimate_parameters(
-    alpha_sequence = alpha_sequence,
-    beta_sequence = beta_sequence,
-    zipfs = zipfs,
-    non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order,
-    digit = digit
+    rank_order = rank_order
   )
   
   ## beta
@@ -177,11 +156,25 @@ obtain_zipfs_parameters <- function(data)
     beta_sequence = beta_sequence,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order,
-    digit = digit
+    rank_order = rank_order
   )
   
-  # Search within definitions
+  ## alpha
+  alpha_sequence <- seq(
+    parameters$alpha - 0.10,
+    parameters$alpha + 0.10, 
+    0.01
+  )
+  
+  # Try to solve for both parameters
+  parameters <- estimate_parameters(
+    alpha_sequence = alpha_sequence,
+    beta_sequence = beta_sequence,
+    zipfs = zipfs,
+    non_zero_zipfs = non_zero_zipfs,
+    rank_order = rank_order
+  )
+  
   ## beta
   beta_sequence <- seq(
     parameters$beta - 1,
@@ -191,15 +184,13 @@ obtain_zipfs_parameters <- function(data)
   
   # Try to solve for both parameters
   parameters <- estimate_parameters(
-    alpha_sequence = parameters$alpha,
+    alpha_sequence = alpha_sequence,
     beta_sequence = beta_sequence,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order,
-    digit = digit
+    rank_order = rank_order
   )
   
-  # Search within definitions
   ## beta
   beta_sequence <- seq(
     parameters$beta - 0.10,
@@ -213,8 +204,7 @@ obtain_zipfs_parameters <- function(data)
     beta_sequence = beta_sequence,
     zipfs = zipfs,
     non_zero_zipfs = non_zero_zipfs,
-    rank_order = rank_order,
-    digit = digit
+    rank_order = rank_order
   )
   
   # Set final parameters
@@ -222,7 +212,7 @@ obtain_zipfs_parameters <- function(data)
   beta <- parameters$beta
 
   # Final values
-  final_values <- round(1 / (rank_order + beta)^alpha, digit)
+  final_values <- 1 / (rank_order + beta)^alpha
   
   # Compute root mean square error
   rmse <- sqrt(

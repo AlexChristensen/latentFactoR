@@ -1019,11 +1019,8 @@ zipf_rmse <- function(values, zipfs, non_zero_zipfs){
 #' @noRd
 # Obtains Zipf's values
 # Updated 27.09.2022
-zipf_values <- function(alpha, beta, rank_order, digit)
-{round(1 / (rank_order + beta)^alpha, digit)}
-
-alpha_sequence <- seq(0.5, 2.5, 0.5)
-beta_sequence <- seq(0, 100, 10)
+zipf_values <- function(alpha, beta, rank_order)
+{1 / (rank_order + beta)^alpha}
 
 #' @noRd
 # Estimate parameters
@@ -1032,7 +1029,7 @@ estimate_parameters <- function(
     alpha_sequence,
     beta_sequence,
     zipfs, non_zero_zipfs,
-    rank_order, digit
+    rank_order
 )
 {
   
@@ -1070,7 +1067,7 @@ estimate_parameters <- function(
     # Values based on parameters
     values <- zipf_values(
       alpha = sequences[i,1], beta = sequences[i,2],
-      rank_order = rank_order, digit = digit
+      rank_order = rank_order
     )
     
     # Difference
@@ -1104,111 +1101,6 @@ estimate_parameters <- function(
   
   # Return parameters
   return(sequences[which.min(rmse),])
-  
-}
-
-
-
-
-#' @noRd
-# Estimates beta parameter
-# Updated 27.09.2022
-estimate_beta <- function(
-    alpha = 1, # assume alpha is 1
-    beta_sequence,
-    zipfs, non_zero_zipfs,
-    rank_order, digit
-)
-{
-  
-  # Possible values and differences
-  diff_beta <- lapply(1:length(beta_sequence), function(i){
-    cat(
-      colortext(
-        text =  paste(
-          "\r Estimating beta...", 
-          beta_sequence[i]
-        ),
-        defaults = "message"
-      )
-    )
-    x <- zipf_values(
-      alpha = alpha, beta = beta_sequence[i],
-      rank_order = rank_order, digit = digit
-    )
-    sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
-  })
-  
-  # Estimate beta
-  beta <- beta_sequence[which.min(diff_beta)]
-  
-  # Current beta
-  cat(
-    colortext(
-      text =  paste(
-        "\r Estimating beta...", 
-        formatC(
-          beta, digits = 2,
-          format = "f", flag = "0"
-        ), "  "
-      ),
-      defaults = "message"
-    )
-  )
-  
-  # Return beta
-  return(beta)
-  
-}
-
-#' @noRd
-# Estimates alpha parameter
-# Updated 27.09.2022
-estimate_alpha <- function(
-    beta = 2.7, # assume beta is 2.7
-    alpha_sequence,
-    zipfs, non_zero_zipfs,
-    rank_order, digit
-)
-{
-  
-  # Possible values and differences (assume alpha = 1)
-  diff_alpha <- lapply(1:length(alpha_sequence), function(i){
-    cat(
-      colortext(
-        text =  paste(
-          "\r Estimating alpha...", 
-          alpha_sequence[i]
-        ),
-        defaults = "message"
-      )
-    )
-    x <- x <- zipf_values(
-      alpha = alpha_sequence[i], beta = beta,
-      rank_order = rank_order, digit = digit
-    )
-    sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
-  })
-  
-  # Estimate alpha
-  alpha <- alpha_sequence[which.min(diff_alpha)]
-  
-  # Current alpha
-  cat(
-    colortext(
-      text =  paste(
-        "\r Estimating alpha...", 
-        formatC(
-          alpha, digits = 2,
-          format = "f", flag = "0"
-        ), "  "
-      ),
-      defaults = "message"
-    )
-  )
-  
-  # Return alpha
-  return(alpha)
   
 }
 
