@@ -3,6 +3,72 @@
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #' @noRd
+# Specify CFA model
+# Updated 28.09.2022
+model_CFA <- function(variables)
+{
+  
+  # Set sequence of variables for each factor
+  end_variables <- cumsum(variables)
+  start_variables <- (end_variables + 1) - variables
+  
+  # Initialize model
+  model <- ""
+  
+  # Loop through factors
+  for(i in 1:length(start_variables)){
+    
+    # Append model
+    if(i != length(start_variables)){
+      model <- paste0(
+        model,
+        "F", i, " =~ ",
+        paste0(
+          "V", seq(start_variables[i], end_variables[i], 1),
+          collapse = " + "
+        ), " \n "
+      )
+    }else{
+      model <- paste0(
+        model,
+        "F", i, " =~ ",
+        paste0(
+          "V", seq(start_variables[i], end_variables[i], 1),
+          collapse = " + "
+        )
+      )
+    }
+    
+  }
+  
+  # Return model
+  return(model)
+  
+}
+
+#' @noRd
+# Standardized Root Mean Resdiual
+# Updated 28.09.2022
+srmr <- function(population, error)
+{
+  
+  # Obtain lower triangles
+  population_lower <- population[lower.tri(population)]
+  error_lower <- error[lower.tri(error)]
+  
+  # Compute SRMR
+  SRMR <- sqrt(
+    mean(
+      (population_lower - error_lower)^2
+    )
+  )
+  
+  # Return SRMR
+  return(SRMR)
+  
+}
+
+#' @noRd
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # Grid search for Cudeck function
@@ -937,16 +1003,37 @@ nearest_decimal <- function(vec)
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #' @noRd
+# Obtains Zipf RMSE
+# Updated 27.09.2022
+zipf_rmse <- function(values, zipfs, non_zero_zipfs){
+  sqrt(
+    mean(
+      (
+        zipfs[non_zero_zipfs] - values[non_zero_zipfs]
+      )^2, na.rm = TRUE
+    )
+  )
+}
+
+
+#' @noRd
+# Obtains Zipf's values
+# Updated 27.09.2022
+zipf_values <- function(alpha, beta, rank_order, digit)
+{round(1 / (rank_order + beta)^alpha, digit)}
+
+#' @noRd
 # Estimates beta parameter
-# Updated 26.09.2022
+# Updated 27.09.2022
 estimate_beta <- function(
+    alpha = 1, # assume alpha is 1
     beta_sequence,
     zipfs, non_zero_zipfs,
     rank_order, digit
 )
 {
   
-  # Possible values and differences (assume alpha = 1)
+  # Possible values and differences
   diff_beta <- lapply(1:length(beta_sequence), function(i){
     cat(
       colortext(
@@ -957,7 +1044,10 @@ estimate_beta <- function(
         defaults = "message"
       )
     )
-    x <- round(1 / (rank_order + beta_sequence[i])^1, digit)
+    x <- zipf_values(
+      alpha = alpha, beta = beta_sequence[i],
+      rank_order = rank_order, digit = digit
+    )
     sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
   })
   
@@ -985,9 +1075,9 @@ estimate_beta <- function(
 
 #' @noRd
 # Estimates alpha parameter
-# Updated 26.09.2022
+# Updated 27.09.2022
 estimate_alpha <- function(
-    beta,
+    beta = 2.7, # assume beta is 2.7
     alpha_sequence,
     zipfs, non_zero_zipfs,
     rank_order, digit
@@ -1005,7 +1095,10 @@ estimate_alpha <- function(
         defaults = "message"
       )
     )
-    x <- round(1 / (rank_order + beta)^alpha_sequence[i], digit)
+    x <- x <- zipf_values(
+      alpha = alpha_sequence[i], beta = beta,
+      rank_order = rank_order, digit = digit
+    )
     sum(abs(x[non_zero_zipfs] - zipfs[non_zero_zipfs]))
   })
   

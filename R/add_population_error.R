@@ -76,6 +76,15 @@
 #' 
 #' }
 #' 
+#' @param tolerance Numeric (length = 1).
+#' Tolerance of SRMR difference between population error
+#' correlation matrix and the original population correlation
+#' matrix. Ensures that appropriate population error
+#' was added. Similarly, verifies that the MAE of the
+#' loadings are not greater than the specified amount,
+#' ensuring proper convergence.
+#' Defaults to \code{0.01}
+#' 
 #' @return Returns a list containing:
 #' 
 #' \item{data}{Simulated data from the specified factor model}
@@ -117,20 +126,20 @@
 #'   sample_size = 1000 # number of cases = 1000
 #' )
 #' 
+#' # Add small population error using Cudeck method
+#' two_factor_Cudeck <- add_population_error(
+#'   lf_object = two_factor,
+#'   cfa_method = "minres",
+#'   fit = "rmsr", misfit = "close",
+#'   error_method = "cudeck"
+#' )
+#' 
 #' # Add small population error using Yuan method
 #' two_factor_Yuan <- add_population_error(
 #'   lf_object = two_factor,
 #'   cfa_method = "minres",
 #'   fit = "rmsr", misfit = "close",
 #'   error_method = "yuan"
-#' )
-#' 
-#' # Add small population error using Cudeck method
-#' two_factor_Yuan <- add_population_error(
-#'   lf_object = two_factor,
-#'   cfa_method = "minres",
-#'   fit = "rmsr", misfit = "close",
-#'   error_method = "cudeck"
 #' )
 #' 
 #' @author
@@ -144,7 +153,11 @@
 #' {\code{\link{latentFactoR}}} authors \cr
 #' Alexander P. Christensen <alexpaulchristensen@gmail.com>,
 #' Hudson Golino <hfg9s@virginia.edu>,
-#' Luis Eduardo Garrido <luisgarrido@pucmm.edu>
+#' Luis Eduardo Garrido <luisgarrido@pucmm.edu>,
+#' Marcos Jimenez,
+#' Francisco J. Abad,
+#' Eduardo Garcia-Garzon,
+#' Vithor R. Franco
 #' 
 #' @references
 #' Christensen, A. P., Garrido, L. E., & Golino, H. (2022).
@@ -162,13 +175,15 @@
 #' @export
 #'
 # Add population to simulated data
-# Updated 23.09.2022
+# Updated 28.09.2022
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
     fit = c("cfi", "rmsea", "rmsr", "raw"),
     misfit = c("close", "acceptable"),
-    error_method = c("cudeck", "yuan")
+    error_method = c("cudeck", "yuan"),
+    tolerance = 0.01,
+    leave_cross_loadings = FALSE
 )
 {
   
@@ -213,36 +228,127 @@ add_population_error <- function(
   # Check for appropriate misfit
   length_error(misfit, 1);
   
-  # Obtain population error
-  if(error_method == "cudeck"){
+  # Obtain loadings
+  loadings <- parameters$loadings
+  
+  # Check for whether cross-loadings should remain
+  if(!isTRUE(leave_cross_loadings)){
     
-    # Using Cudeck method
-    # From {bifactor} version 0.1.0
-    # See `utils-latentFactoR`
-    population_error <- cudeck(
-      R = lf_object$population_correlation,
-      lambda = parameters$loadings,
-      Phi = parameters$factor_correlations,
-      uniquenesses = 1 - rowSums(parameters$loadings^2),
-      misfit = misfit, method = cfa_method,
-      confirmatory = FALSE
-    )
+    # Set sequence of variables for each factor
+    end_variables <- cumsum(parameters$variables)
+    start_variables <- (end_variables + 1) - parameters$variables
     
-  }else if(error_method == "yuan"){
-    
-    # Using Yuan method
-    # From {bifactor} version 0.1.0
-    # See `utils-latentFactoR`
-    population_error <- yuan(
-      R = lf_object$population_correlation,
-      lambda = parameters$loadings,
-      Phi = parameters$factor_correlations,
-      uniquenesses = 1 - rowSums(parameters$loadings^2),
-      fit = fit, misfit = misfit, method = cfa_method,
-      confirmatory = FALSE
-    )
+    # Loop through loadings
+    for(i in 1:ncol(loadings)){
+      
+      # Set cross-loadings to zero
+      loadings[
+        start_variables[i]:end_variables[i],
+        -i
+      ] <- 0
+      
+    }
     
   }
+  
+  # Initialize convergence
+  convergence <- FALSE
+  
+  # Initialize count so it doesn't get stuck
+  stuck_count <- 0
+  
+  # Ensure proper convergence
+  while(!convergence){
+    
+    # Obtain population error
+    if(error_method == "cudeck"){
+      
+      # Using Cudeck method
+      # From {bifactor} version 0.1.0
+      # See `utils-latentFactoR`
+      population_error <- cudeck(
+        R = lf_object$population_correlation,
+        lambda = parameters$loadings,
+        Phi = parameters$factor_correlations,
+        uniquenesses = 1 - rowSums(loadings^2),
+        misfit = misfit, method = cfa_method,
+        confirmatory = FALSE
+      )
+      
+    }else if(error_method == "yuan"){
+      
+      # Using Yuan method
+      # From {bifactor} version 0.1.0
+      # See `utils-latentFactoR`
+      population_error <- yuan(
+        R = lf_object$population_correlation,
+        lambda = parameters$loadings,
+        Phi = parameters$factor_correlations,
+        uniquenesses = 1 - rowSums(loadings^2),
+        fit = fit, misfit = misfit, method = cfa_method,
+        confirmatory = FALSE
+      )
+      
+    }
+    
+    # Obtain population error correlation matrix
+    error_correlation <- population_error$R_error
+    
+    # Check SRMR
+    SRMR <- srmr(
+      population = lf_object$population_correlation,
+      error = error_correlation
+    )
+    
+    # Obtain SRMR difference
+    SRMR_difference <- abs(SRMR - population_error$misfit)
+    
+    # Specify model
+    model <- model_CFA(
+      variables = parameters$variables
+    )
+    
+    # Add row and column names to population error correlation matrix
+    colnames(error_correlation) <- paste0("V", 1:ncol(error_correlation))
+    row.names(error_correlation) <- colnames(error_correlation)
+    
+    # Fit CFA
+    CFA <- lavaan::cfa(
+      model = model,
+      sample.cov = error_correlation,
+      sample.nobs = nrow(lf_object$data),
+      estimator = "ML"
+    )
+    
+    # Obtain loadings
+    error_loadings <- lavaan::inspect(CFA, what = "std")$lambda
+    
+    # Obtain difference between error and population loadings
+    MAE <- mean(abs(error_loadings - loadings))
+    
+    # Check for convergence
+    if(SRMR_difference <= tolerance & MAE <= tolerance){
+      convergence <- TRUE
+    }
+    
+    # Increase stuck count
+    stuck_count <- stuck_count + 1
+    
+    # Check if a break is necessary
+    if(stuck_count >= 10){
+      stop(
+        paste(
+          "Convergence counter has exceeded its limit.",
+          "There were issues converging the model with proper",
+          "population error. Consider increasing the `tolerance`",
+          "by small amounts (e.g., 0.001); otherwise, model",
+          "may not be adequate to add population error."
+        )
+      )
+    }
+    
+  }
+  
   
   # Re-estimate data
   ## Cholesky decomposition
@@ -354,3 +460,4 @@ add_population_error <- function(
   return(results)
   
 }
+
