@@ -2,7 +2,7 @@
 % Please edit documentation in R/data_to_zipfs.R
 \name{data_to_zipfs}
 \alias{data_to_zipfs}
-\title{Transforms Data to Zipf's Distribution}
+\title{Transforms \code{\link[latentFactoR]{simulate_factors}} Data to Zipf's Distribution}
 \usage{
 data_to_zipfs(lf_object, beta = 2.7, alpha = 1, dichotomous = FALSE)
 }

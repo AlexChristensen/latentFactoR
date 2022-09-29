@@ -2,7 +2,7 @@
 % Please edit documentation in R/add_local_dependence.R
 \name{add_local_dependence}
 \alias{add_local_dependence}
-\title{Adds Local Dependence to Factor Model Data}
+\title{Adds Local Dependence to \code{\link[latentFactoR]{simulate_factors}} Data}
 \usage{
 add_local_dependence(
   lf_object,
@@ -44,7 +44,8 @@ or each factor. Accepts number of locally dependent values as well}
 
 \item{proportion_LD_range}{Numeric (length = 2).
 Range of proportion of variables that are randomly selected from
-a random uniform distribution. Accepts number of locally dependent values as well}
+a random uniform distribution. Accepts number of locally dependent values as well.
+Defaults to \code{NULL}}
 
 \item{add_residuals}{Numeric (length = 1, \code{factors}, or total number of locally dependent variables).
 Amount of residual to add to the population correlation matrix between two variables.
@@ -55,7 +56,8 @@ General effect sizes range from small (0.20), moderate (0.30), to large (0.40)}
 
 \item{add_residuals_range}{Numeric (length = 2).
 Range of the residuals to add to the correlation matrix are randomly selected from
-a random uniform distribution}
+a random uniform distribution.
+Defaults to \code{NULL}}
 
 \item{allow_multiple}{Boolean.
 Whether a variable should be allowed to be locally dependent with

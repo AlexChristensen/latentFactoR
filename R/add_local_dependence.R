@@ -1,4 +1,4 @@
-#' Adds Local Dependence to Factor Model Data
+#' Adds Local Dependence to \code{\link[latentFactoR]{simulate_factors}} Data
 #'
 #' Adds local dependence to simulated data from \code{\link[latentFactoR]{simulate_factors}}. 
 #' See examples to get started
@@ -32,7 +32,8 @@
 #' 
 #' @param proportion_LD_range Numeric (length = 2).
 #' Range of proportion of variables that are randomly selected from
-#' a random uniform distribution. Accepts number of locally dependent values as well
+#' a random uniform distribution. Accepts number of locally dependent values as well.
+#' Defaults to \code{NULL}
 #' 
 #' @param add_residuals Numeric (length = 1, \code{factors}, or total number of locally dependent variables).
 #' Amount of residual to add to the population correlation matrix between two variables.
@@ -43,7 +44,8 @@
 #' 
 #' @param add_residuals_range Numeric (length = 2).
 #' Range of the residuals to add to the correlation matrix are randomly selected from
-#' a random uniform distribution
+#' a random uniform distribution.
+#' Defaults to \code{NULL}
 #' 
 #' @param allow_multiple Boolean.
 #' Whether a variable should be allowed to be locally dependent with

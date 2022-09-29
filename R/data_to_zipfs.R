@@ -1,4 +1,4 @@
-#' Transforms Data to Zipf's Distribution
+#' Transforms \code{\link[latentFactoR]{simulate_factors}} Data to Zipf's Distribution
 #'
 #' Zipf's distribution is commonly found for text data. Closely related to the
 #' Pareto and power-law distributions, the Zipf's distribution produces

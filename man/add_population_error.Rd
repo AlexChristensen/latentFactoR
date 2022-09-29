@@ -2,7 +2,7 @@
 % Please edit documentation in R/add_population_error.R
 \name{add_population_error}
 \alias{add_population_error}
-\title{Adds Population Error to Factor Model Data}
+\title{Adds Population Error to \code{\link[latentFactoR]{simulate_factors}} Data}
 \usage{
 add_population_error(
   lf_object,

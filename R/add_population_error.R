@@ -1,4 +1,4 @@
-#' Adds Population Error to Factor Model Data
+#' Adds Population Error to \code{\link[latentFactoR]{simulate_factors}} Data
 #'
 #' Adds population error to simulated data from \code{\link[latentFactoR]{simulate_factors}}. 
 #' See examples to get started
