@@ -139,12 +139,12 @@ add_local_dependence <- function(
 {
   
   # Check for appropriate class
-  if(!is(lf_object, "lf-simulate")){
+  if(!is(lf_object, "lf_simulate")){
     
     # Produce error
     stop(
       paste(
-        "`lf_object` input is not class \"lf-simulate\" from the `simulate_factors` function.",
+        "`lf_object` input is not class \"lf_simulate\" from the `simulate_factors` function.",
         "\n\nInput class(es) of current `lf_object`:", 
         paste0("\"", class(lf_object), "\"", collapse = ", "),
         "\n\nUse `simulate_factors` to generate your data to input into this function"
@@ -237,7 +237,7 @@ add_local_dependence <- function(
   }
   
   # Add class
-  class(results) <- c(class(lf_object), "lf-ld")
+  class(results) <- c(class(lf_object), "lf_ld")
   
   # Return results
   return(results)

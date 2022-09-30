@@ -88,7 +88,7 @@
 #' @export
 #'
 # Add substantial cross-loadings to simulated data
-# Updated 29.09.2022
+# Updated 30.09.2022
 add_cross_loadings <- function(
     lf_object,
     proportion_cross_loadings,
@@ -100,12 +100,12 @@ add_cross_loadings <- function(
 {
   
   # Check for appropriate class
-  if(!is(lf_object, "lf-simulate")){
+  if(!is(lf_object, "lf_simulate")){
     
     # Produce error
     stop(
       paste(
-        "`lf_object` input is not class \"lf-simulate\" from the `simulate_factors` function.",
+        "`lf_object` input is not class \"lf_simulate\" from the `simulate_factors` function.",
         "\n\nInput class(es) of current `lf_object`:", 
         paste0("\"", class(lf_object), "\"", collapse = ", "),
         "\n\nUse `simulate_factors` to generate your data to input into this function"
@@ -240,6 +240,14 @@ add_cross_loadings <- function(
     # Obtain cross-loading structure
     cross_loading_structure <- loadings[start_variables[i]:end_variables[i],-i]
     
+    # Ensure cross-loading structure is a matrix
+    if(!is.matrix(cross_loading_structure)){
+      cross_loading_structure <- matrix(
+        cross_loading_structure,
+        ncol = 1
+      )
+    }
+    
     # Sample row
     random_row <- sample(
       1:nrow(cross_loading_structure),
@@ -286,7 +294,7 @@ add_cross_loadings <- function(
   results$original_results <- lf_object
   
   # Add class
-  class(results) <- c(class(lf_object), "lf-cl")
+  class(results) <- c(class(lf_object), "lf_cl")
   
   # Return results
   return(results)

@@ -1102,6 +1102,32 @@ estimate_parameters <- function(
 #%%%%%%%%%%%%%%%%%%%%%
 
 #' @noRd
+# Error for object type
+# Updated 30.09.2022
+object_error <- function(input, expected_type){
+  
+  # Check for possible object types
+  possible_types <- sapply(
+    X = expected_type,
+    FUN = is,
+    object = input
+  )
+  
+  # Check for object types
+  if(all(!possible_types)){
+    stop(
+      paste(
+        "Input into '", deparse(substitute(input)),
+        "' argument is not ", paste("'", expected_type, "'", sep = "", collapse = ", "),
+        ". Input is ", paste("'", class(input), "'", sep = "", collapse = ", "),
+        sep = ""
+      )
+    )
+  }
+  
+}
+
+#' @noRd
 # Error for input type
 # Updated 08.08.2022
 type_error <- function(input, expected_type){
@@ -1662,4 +1688,50 @@ match_row <- function(data)
   # Return rows
   return(which(dupe_ind))
   
+  
+  
 }
+
+#' @noRd
+#' @importFrom stats na.omit
+# Function to obtain arguments
+# Updated 30.09.2022
+obtain_arguments <- function(FUN, FUN_args)
+{
+  
+  # Obtain formal arguments
+  FUN_formals <- formals(FUN)
+  
+  # Check for input arguments
+  if(length(FUN_args) != 0){
+    
+    ## Check for matching arguments
+    if(any(names(FUN_args) %in% names(FUN_formals))){
+      
+      replace_args <- FUN_args[na.omit(match(names(FUN_formals), names(FUN_args)))]
+      
+      FUN_formals[names(replace_args)] <- replace_args
+    }
+    
+  }
+  
+  # Remove ellipses
+  if("..." %in% names(FUN_formals)){
+    FUN_formals[which(names(FUN_formals) == "...")] <- NULL
+  }
+  
+  # Return agrumnets
+  return(FUN_formals)
+  
+}
+
+
+
+
+
+
+
+
+
+
+

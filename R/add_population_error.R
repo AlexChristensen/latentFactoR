@@ -196,12 +196,12 @@ add_population_error <- function(
 {
   
   # Check for appropriate class
-  if(!is(lf_object, "lf-simulate")){
+  if(!is(lf_object, "lf_simulate")){
     
     # Produce error
     stop(
       paste(
-        "`lf_object` input is not class \"lf-simulate\" from the `simulate_factors` function.",
+        "`lf_object` input is not class \"lf_simulate\" from the `simulate_factors` function.",
         "\n\nInput class(es) of current `lf_object`:", 
         paste0("\"", class(lf_object), "\"", collapse = ", "),
         "\n\nUse `simulate_factors` to generate your data to input into this function"
@@ -451,7 +451,7 @@ add_population_error <- function(
   results$original_results <- lf_object
   
   # Add class
-  class(results) <- c(class(lf_object), "lf-pe")
+  class(results) <- c(class(lf_object), "lf_pe")
   
   # Message to cite {bifactor}
   message(

@@ -4,7 +4,12 @@ o ADD: `add_population_error` will add population error, using {bifactor}, from 
 
 o ADD: `data_to_zipfs` to transform data to Zipf's distribution from `simulate_factors`
 
-o ADD: `obtain_zipfs_parameters` to obtain a dataset's best fitting Zipf's distribution parameters 
+o ADD: `obtain_zipfs_parameters` to obtain a dataset's best fitting Zipf's distribution parameters
+
+o ADD: `NEST` Next Eigenvalue Sufficiency Test to estimate dimensions
+
+o ADD: `estimate_dimensions` provides a single function to estimate dimensions using state-of-the-art methods: Exploratory Graph Analysis (EGA),
+Exploratory Factor Analysis with out-of-sample prediction (FSPE), Next Eigenvalue Sufficiency Test (NEST), and parallel analysis (PA)
 
 
 Changes in version 0.0.2

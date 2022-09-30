@@ -495,7 +495,7 @@ simulate_factors <- function(
   )
   
   # Add class
-  class(results) <- "lf-simulate"
+  class(results) <- "lf_simulate"
   
   return(results)
   
