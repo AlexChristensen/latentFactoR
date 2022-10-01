@@ -130,6 +130,9 @@ A list containing the parameters used to generate population error:
 \item{\code{misfit}}
 {Specified misfit value}
 
+\item{\code{loadings}}
+{Estiamted CFA loadings after error has been added}
+
 }
 
 }

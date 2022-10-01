@@ -46,6 +46,10 @@ Returns a list containing:
 \item{dimensions}{Number of dimensions identified}
 
 \item{loadings}{Loading matrix}
+
+\item{converged}{Whether estimation converged. If \code{FALSE},
+then results are reported from last convergence point. Interpret
+results with caution.}
 }
 \description{
 Estimates the number of dimensions in data using NEST (Achim, 2017).

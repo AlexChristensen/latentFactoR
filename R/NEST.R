@@ -34,6 +34,10 @@
 #' \item{dimensions}{Number of dimensions identified}
 #' 
 #' \item{loadings}{Loading matrix}
+#' 
+#' \item{converged}{Whether estimation converged. If \code{FALSE},
+#' then results are reported from last convergence point. Interpret
+#' results with caution.}
 #'
 #' @examples
 #' # Generate factor data
@@ -257,6 +261,12 @@ NEST <- function(
       # Compute new correlations
       new_correlation <- cor(new_data)
       
+      # Reject correlations if any NA
+      ## Due to eigenvalues > 1
+      if(any(is.na(new_correlation))){
+        break
+      }
+      
       # Compute eigenvalues
       eigens <- eigen(
         new_correlation,
@@ -269,6 +279,27 @@ NEST <- function(
         eigens$values[1:factors_1] >=
           eigenvalues[1:factors_1]
       )
+      
+    }
+    
+    # Break out of loop and report results
+    if(any(is.na(new_correlation))){
+      
+      # Obtain loadings
+      loadings <- as.matrix(
+        data.frame(
+          t(model[1:factors,])
+        )
+      )
+      
+      # Remove loading names
+      loadings <- unname(loadings)
+      
+      # Send warning
+      warning("Estimation stopped. Reporting last results. Interpret with caution.")
+      
+      # Break out of loop
+      break
       
     }
     
@@ -291,11 +322,29 @@ NEST <- function(
     
   }
   
+  # Ensure loadings are a matrix
+  if(!is.matrix(loadings)){
+    loadings <- matrix(loadings, ncol = 1)
+  }
+  
+  # Set names
+  colnames(loadings) <- paste0("F", 1:ncol(loadings))
+  
+  # Check for same number of factors as variables
+  if(ncol(loadings) != ncol(data)){
+    row.names(loadings) <- colnames(data)
+  }
+  
+  # Check for convergence
+  if(any(is.na(new_correlation))){
+    converged <- FALSE
+  }else{converged <- TRUE}
   
   # Set up results list
   results <- list(
     dimensions = factors,
-    loadings = loadings
+    loadings = loadings,
+    converged = converged
   )
   
   # Return results list

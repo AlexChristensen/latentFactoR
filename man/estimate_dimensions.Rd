@@ -7,8 +7,8 @@
 estimate_dimensions(
   data,
   sample_size,
-  EGA_args = list(corr = "cor_auto", uni.method = "louvain", model = "glasso", algorithm
-    = "walktrap", consensus.method = "most_common", plot.EGA = FALSE),
+  EGA_args = list(corr = "cor_auto", uni.method = "louvain", model = "glasso",
+    consensus.method = "most_common", plot.EGA = FALSE),
   FF_args = list(maximum_factors = 8),
   FSPE_args = list(maxK = 8, rep = 1, method = "PE", pbar = FALSE),
   NEST_args = list(iterations = 1000, maximum_iterations = 500, alpha = 0.05, convergence
@@ -33,7 +33,7 @@ Defaults are listed}
 
 \item{FF_args}{List.
 List of arguments to be passed along to
-\code{\link[EGAnet]{factor_forest}}.
+\code{\link[latentFactoR]{factor_forest}}.
 Defaults are listed}
 
 \item{FSPE_args}{List.

@@ -117,6 +117,9 @@
 #' \item{\code{misfit}}
 #' {Specified misfit value}
 #' 
+#' \item{\code{loadings}}
+#' {Estiamted CFA loadings after error has been added}
+#' 
 #' }
 #' 
 #' }
@@ -183,7 +186,7 @@
 #' @export
 #'
 # Add population to simulated data
-# Updated 28.09.2022
+# Updated 01.10.2022
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
@@ -313,7 +316,8 @@ add_population_error <- function(
     
     # Specify model
     model <- model_CFA(
-      variables = parameters$variables
+      variables = parameters$variables,
+      loadings = loadings
     )
     
     # Add row and column names to population error correlation matrix
@@ -330,6 +334,12 @@ add_population_error <- function(
     
     # Obtain loadings
     error_loadings <- lavaan::inspect(CFA, what = "std")$lambda
+    
+    # Set names of loadings
+    row.names(loadings) <- paste0("V", 1:nrow(loadings))
+    
+    # Ensure same order of loadings
+    error_loadings <- error_loadings[row.names(loadings),]
     
     # Obtain difference between error and population loadings
     MAE <- mean(abs(error_loadings - loadings))
@@ -441,7 +451,8 @@ add_population_error <- function(
     error_correlation = population_error$R_error,
     fit = population_error$fit,
     delta = population_error$delta,
-    misfit = population_error$misfit
+    misfit = population_error$misfit,
+    loadings = error_loadings
   )
   
   # Add population error parameters to results

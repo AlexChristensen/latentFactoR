@@ -4,27 +4,23 @@
 
 #' @noRd
 # Specify CFA model
-# Updated 28.09.2022
-model_CFA <- function(variables)
+# Updated 01.10.2022
+model_CFA <- function(variables, loadings)
 {
-  
-  # Set sequence of variables for each factor
-  end_variables <- cumsum(variables)
-  start_variables <- (end_variables + 1) - variables
   
   # Initialize model
   model <- ""
   
   # Loop through factors
-  for(i in 1:length(start_variables)){
+  for(i in 1:ncol(loadings)){
     
     # Append model
-    if(i != length(start_variables)){
+    if(i != ncol(loadings)){
       model <- paste0(
         model,
         "F", i, " =~ ",
         paste0(
-          "V", seq(start_variables[i], end_variables[i], 1),
+          "V", which(loadings[,i] != 0),
           collapse = " + "
         ), " \n "
       )
@@ -33,7 +29,7 @@ model_CFA <- function(variables)
         model,
         "F", i, " =~ ",
         paste0(
-          "V", seq(start_variables[i], end_variables[i], 1),
+          "V", which(loadings[,i] != 0),
           collapse = " + "
         )
       )
@@ -659,7 +655,7 @@ yuan <- function(
 
 #' @noRd
 # Adds correlated residuals to generated data
-# Updated 23.09.2022
+# Updated 01.10.2022
 correlate_residuals <- function(
     lf_object,
     proportion_LD, allow_multiple = FALSE,
@@ -951,10 +947,10 @@ correlate_residuals <- function(
   
   # Populate results
   results <- list(
-    correlated_residuals = correlated_residuals_df,
     data = data,
     population_correlation = population_correlation,
     original_correlation = original_correlation,
+    correlated_residuals = correlated_residuals_df,
     original_results = lf_object
   )
   

@@ -24,7 +24,7 @@
 #' 
 #' @param FF_args List.
 #' List of arguments to be passed along to
-#' \code{\link[EGAnet]{factor_forest}}.
+#' \code{\link[latentFactoR]{factor_forest}}.
 #' Defaults are listed
 #' 
 #' @param FSPE_args List.
@@ -79,8 +79,7 @@ estimate_dimensions <- function(
     data, sample_size,
     EGA_args = list(
       corr = "cor_auto", uni.method = "louvain",
-      model = "glasso", algorithm = "walktrap",
-      consensus.method = "most_common",
+      model = "glasso", consensus.method = "most_common",
       plot.EGA = FALSE
     ),
     FF_args = list(
@@ -142,40 +141,105 @@ estimate_dimensions <- function(
   range_error(sample_size, c(2, Inf))
   
   # Estimate dimensions
-  ## EGA
-  message("Estimating EGA...", appendLF = FALSE)
+  ## EGA -- Louvain 
+  message("Estimating EGA (Louvain)...", appendLF = FALSE)
+  
+  ## Obtain original EGA arguments
+  original_EGA_args <- EGA_args
   
   ## Obtain EGA arguments
   EGA_args <- obtain_arguments(
     FUN = EGAnet::EGA,
-    FUN_args = EGA_args
+    FUN_args = original_EGA_args
   )
   
-  ## Set data and sample size
+  ## Set data, sample size, and algorithm
   EGA_args$data <- correlation
   EGA_args$n <- sample_size
+  EGA_args$algorithm <- "louvain"
   
   ## Estimate EGA
-  ega_results <- try(
-    suppressWarnings(
-      do.call(
-        what = EGAnet::EGA,
-        args = EGA_args
+  ega_results_lv <- try(
+    suppressMessages(
+      suppressWarnings(
+        do.call(
+          what = EGAnet::EGA,
+          args = EGA_args
+        )
       )
     ), silent = TRUE
   )
   
   ## Catch error
-  if(is(ega_results, "try-error")){
+  if(is(ega_results_lv, "try-error")){
+    
     ## Return bad result
-    ega_results <- list(
+    ega_results_lv <- list(
       n.dim = NA
     )
     ## EGA finished
     message("could not be estimated properly.")
+    
   }else{
+    
+    ## Check for all NA
+    if(is.na(ega_results_lv$n.dim)){
+      ## EGA finished
+      message("could not be estimated properly.")
+    }else{
+      ## EGA finished
+      message("done.")
+    }
+    
+  }
+
+  ## EGA -- Walktrap 
+  message("Estimating EGA (Walktrap)...", appendLF = FALSE)
+  
+  ## Obtain EGA arguments
+  EGA_args <- obtain_arguments(
+    FUN = EGAnet::EGA,
+    FUN_args = original_EGA_args
+  )
+  
+  ## Set data, sample size, and algorithm
+  EGA_args$data <- correlation
+  EGA_args$n <- sample_size
+  EGA_args$algorithm <- "walktrap"
+  
+  ## Estimate EGA
+  ega_results_wt <- try(
+    suppressMessages(
+      suppressWarnings(
+        do.call(
+          what = EGAnet::EGA,
+          args = EGA_args
+        )
+      )
+    ), silent = TRUE
+  )
+  
+  ## Catch error
+  if(is(ega_results_wt, "try-error")){
+    
+    ## Return bad result
+    ega_results_wt <- list(
+      n.dim = NA
+    )
     ## EGA finished
-    message("done.")
+    message("could not be estimated properly.")
+    
+  }else{
+    
+    ## Check for all NA
+    if(is.na(ega_results_wt$n.dim)){
+      ## EGA finished
+      message("could not be estimated properly.")
+    }else{
+      ## EGA finished
+      message("done.")
+    }
+    
   }
 
   ## Empirical Kaiser Criterion
@@ -231,12 +295,19 @@ estimate_dimensions <- function(
   
   ## Catch error
   if(is(ff_results, "try-error")){
+    
     ## Return bad result
     ff_results <- list(
       dimensions = NA
     )
     ## Factor Forest finished
     message("could not be estimated properly.")
+    
+  }else if(ff_results$dimensions == FF_args$maximum_factors){
+    
+    ## Factor Forest finished
+    message("maximum factors reached.")
+    
   }else{
     ## Factor Forest finished
     message("done.")
@@ -279,12 +350,20 @@ estimate_dimensions <- function(
     
     ## Catch error
     if(is(fspe_results, "try-error")){
+      
       ## Return bad result
       fspe_results <- list(
         nfactor = NA
       )
+      
       ## FSPE finished
       message("could not be estimated properly.")
+      
+    }else if(fspe_results$nfactor == FSPE_args$maxK){
+      
+      ## FSPE finished
+      message("maximum factors reached.")
+      
     }else{
       ## FSPE finished
       message("done.")
@@ -317,10 +396,15 @@ estimate_dimensions <- function(
   
   ## Catch error
   if(is(nest_results, "try-error")){
+    
     ## Return bad result
     nest_results <- list(
       dimensions = NA
     )
+    ## NEST finished
+    message("could not be estimated properly.")
+    
+  }else if(!isTRUE(nest_results$converged)){
     ## NEST finished
     message("could not be estimated properly.")
   }else{
@@ -379,7 +463,8 @@ estimate_dimensions <- function(
   
   # Set up results vector
   dimension_results <- c(
-    EGA = ega_results$n.dim,
+    EGA_LV = ega_results_lv$n.dim,
+    EGA_WT = ega_results_wt$n.dim,
     EKC = ekc_results$dimensions,
     FF = ff_results$dimensions,
     FSPE = fspe_results$nfactor,
@@ -395,7 +480,8 @@ estimate_dimensions <- function(
   # Set up results list
   results <- list(
     dimensions = dimension_results,
-    EGA = ega_results,
+    EGA_LV = ega_results_lv,
+    EGA_WT = ega_results_wt,
     EKC = ekc_results,
     FF = ff_results,
     FSPE = fspe_results,

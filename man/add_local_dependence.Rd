@@ -68,16 +68,16 @@ Set to \code{TRUE} for more complex locally dependence patterns}
 \value{
 Returns a list containing:
 
-\item{correlated_residuals}{A data frame with the first two columns specifying
-the variables that are locally dependent and the third column specifying the
-magnitude of the added residual for each locally dependent pair}
-
 \item{data}{Simulated data from the specified factor model}
 
 \item{population_correlation}{Population correlation matrix with local dependence added}
 
 \item{original_correlation}{Original population correlation matrix \emph{before}
 local dependence was added}
+
+\item{correlated_residuals}{A data frame with the first two columns specifying
+the variables that are locally dependent and the third column specifying the
+magnitude of the added residual for each locally dependent pair}
 
 \item{original_results}{Original \code{lf_object} input into function}
 }
