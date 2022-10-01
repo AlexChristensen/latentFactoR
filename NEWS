@@ -9,7 +9,7 @@ o ADD: `obtain_zipfs_parameters` to obtain a dataset's best fitting Zipf's distr
 o ADD: `NEST` Next Eigenvalue Sufficiency Test to estimate dimensions
 
 o ADD: `estimate_dimensions` provides a single function to estimate dimensions using state-of-the-art methods: Exploratory Graph Analysis (EGA),
-Exploratory Factor Analysis with out-of-sample prediction (FSPE), Next Eigenvalue Sufficiency Test (NEST), and parallel analysis (PA)
+Exploratory Factor Analysis with out-of-sample prediction (FSPE), Next Eigenvalue Sufficiency Test (NEST), parallel analysis (PA), and Factor Forest
 
 
 Changes in version 0.0.2

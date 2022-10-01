@@ -15,7 +15,8 @@ Maintainer: Alexander Christensen <alexpaulchristensen@gmail.com>
 Description: Generates data based on latent factor models. Data can be continuous, polytomous, dichotomous, or mixed. Skews, cross-loadings, wording effects, population errors, and local dependencies can be added. All parameters can be manipulated. Data categorization is based on Garrido, Abad, and Ponsoda (2011) <doi:10.1177/0013164410389489>.
 Depends: R (>= 3.6.0)
 License: GPL (>= 3.0)
-Imports: EGAnet, fspe, lavaan, methods, mvtnorm, 
-         psych, qgraph, rstudioapi
+Imports: BBmisc, EGAnet, fspe, ineq, lavaan, methods,
+         mlr, mvtnorm, ParamHelpers, psych, qgraph, 
+	   rstudioapi, xgboost
 Encoding: UTF-8
 RoxygenNote: 7.2.1

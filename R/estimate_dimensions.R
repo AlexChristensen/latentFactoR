@@ -1,9 +1,11 @@
 #' Estimates Dimensions using Several State-of-the-art Methods
 #'
 #' Estimates dimensions using Exploratory Graph Analysis
-#' (\code{\link[EGAnet]{EGA}}), Exploratory Factor Analysis
-#' with out-of-sample prediction (\code{\link[fspe]{fspe}}),
-#' Next Eigenvalue Sufficiency Test (\code{\link[latentFactoR]{NEST}}),
+#' (\code{\link[EGAnet]{EGA}}),
+#' Empirical Kaiser Criterion (\code{\link[latentFactoR]{EKC}}),
+#' Factor Forest (\code{\link[latentFactoR]{factor_forest}}),
+#' Exploratory Factor Analysis with out-of-sample prediction (\code{\link[fspe]{fspe}}),
+#' Next Eigenvalue Sufficiency Test (\code{\link[latentFactoR]{NEST}}), and
 #' parallel analysis (\code{\link[psych]{fa.parallel}})
 #' 
 #' @param data Matrix or data frame.
@@ -18,6 +20,11 @@
 #' @param EGA_args List.
 #' List of arguments to be passed along to
 #' \code{\link[EGAnet]{EGA}}.
+#' Defaults are listed
+#' 
+#' @param FF_args List.
+#' List of arguments to be passed along to
+#' \code{\link[EGAnet]{factor_forest}}.
 #' Defaults are listed
 #' 
 #' @param FSPE_args List.
@@ -54,8 +61,7 @@
 #' 
 #' \dontrun{
 #' # Estimate dimensions
-#' estimate_dimensions(two_factor$data)
-#' }
+#' estimate_dimensions(two_factor$data)}
 #' 
 #' @author
 #' Maria Dolores Nieto Canaveras <mnietoca@nebrija.es>,
@@ -67,8 +73,8 @@
 #'
 #' @export
 #'
-# Main factor simulation function
-# Updated 05.09.2022
+# Estimate several different factor recovery methods
+# Updated 01.10.2022
 estimate_dimensions <- function(
     data, sample_size,
     EGA_args = list(
@@ -76,6 +82,9 @@ estimate_dimensions <- function(
       model = "glasso", algorithm = "walktrap",
       consensus.method = "most_common",
       plot.EGA = FALSE
+    ),
+    FF_args = list(
+      maximum_factors = 8
     ),
     FSPE_args = list(
       maxK = 8, rep = 1, method = "PE", pbar = FALSE
@@ -147,15 +156,91 @@ estimate_dimensions <- function(
   EGA_args$n <- sample_size
   
   ## Estimate EGA
-  ega_results <- suppressWarnings(
-    do.call(
-      what = EGAnet::EGA,
-      args = EGA_args
-    )
+  ega_results <- try(
+    suppressWarnings(
+      do.call(
+        what = EGAnet::EGA,
+        args = EGA_args
+      )
+    ), silent = TRUE
   )
   
-  ## EGA finished
-  message("done.")
+  ## Catch error
+  if(is(ega_results, "try-error")){
+    ## Return bad result
+    ega_results <- list(
+      n.dim = NA
+    )
+    ## EGA finished
+    message("could not be estimated properly.")
+  }else{
+    ## EGA finished
+    message("done.")
+  }
+
+  ## Empirical Kaiser Criterion
+  message("Estimating Empirical Kaiser Criterion...", appendLF = FALSE)
+  
+  ## Estimate Empirical Kaiser Criterion
+  ekc_results <- try(
+    suppressWarnings(
+      EKC(
+        data = correlation,
+        sample_size = sample_size
+      )
+    ), silent = TRUE
+  )
+  
+  ## Catch error
+  if(is(ekc_results, "try-error")){
+    ## Return bad result
+    ekc_results <- list(
+      dimensions = NA
+    )
+    ## Empirical Kaiser Criterion finished
+    message("could not be estimated properly.")
+  }else{
+    ## Empirical Kaiser Criterion finished
+    message("done.")
+  }
+  
+  ## Factor Forest
+  message("Estimating Factor Forest...", appendLF = FALSE)
+  
+  ## Obtain Factor Forest arguments
+  FF_args <- obtain_arguments(
+    FUN = factor_forest,
+    FUN_args = FF_args
+  )
+  
+  ## Set data and sample size
+  FF_args$data <- correlation
+  FF_args$sample_size <- sample_size
+  
+  ## Estimate Factor Forest
+  ff_results <- try(
+    suppressMessages(
+      suppressWarnings(
+        do.call(
+          what = factor_forest,
+          args = FF_args
+        )
+      )
+    ), silent = TRUE
+  )
+  
+  ## Catch error
+  if(is(ff_results, "try-error")){
+    ## Return bad result
+    ff_results <- list(
+      dimensions = NA
+    )
+    ## Factor Forest finished
+    message("could not be estimated properly.")
+  }else{
+    ## Factor Forest finished
+    message("done.")
+  }
   
   ## Check for whether FSPE can be estimated
   if(isSymmetric(data)){
@@ -165,7 +250,7 @@ estimate_dimensions <- function(
     
     ## Set results to NULL
     fspe_results <- list(
-      nfactor <- NA
+      nfactor = NA
     )
     
   }else{
@@ -183,15 +268,27 @@ estimate_dimensions <- function(
     FSPE_args$data <- data
     
     ## Estimate FSPE
-    fspe_results <- suppressWarnings(
-      do.call(
-        what = fspe::fspe,
-        args = FSPE_args
-      )
+    fspe_results <- try(
+      suppressWarnings(
+        do.call(
+          what = fspe::fspe,
+          args = FSPE_args
+        )
+      ), silent = TRUE
     )
     
-    ## FSPE finished
-    message("done.")
+    ## Catch error
+    if(is(fspe_results, "try-error")){
+      ## Return bad result
+      fspe_results <- list(
+        nfactor = NA
+      )
+      ## FSPE finished
+      message("could not be estimated properly.")
+    }else{
+      ## FSPE finished
+      message("done.")
+    }
     
   }
   
@@ -209,18 +306,30 @@ estimate_dimensions <- function(
   NEST_args$sample_size <- sample_size
   
   ## Estimate NEST
-  nest_results <- suppressWarnings(
-    do.call(
-      what = NEST,
-      args = NEST_args
-    )
+  nest_results <- try(
+    suppressWarnings(
+      do.call(
+        what = NEST,
+        args = NEST_args
+      )
+    ), silent = TRUE
   )
   
-  ## NEST finished
-  message("done.")
+  ## Catch error
+  if(is(nest_results, "try-error")){
+    ## Return bad result
+    nest_results <- list(
+      dimensions = NA
+    )
+    ## NEST finished
+    message("could not be estimated properly.")
+  }else{
+    ## NEST finished
+    message("done.")
+  }
   
   ## Parallel Analysis
-  message("Estimating parallel analysis...", appendLF = FALSE)
+  message("Estimating Parallel Analysis...", appendLF = FALSE)
   
   ## Obtain Parallel Analysis arguments
   PA_args <- obtain_arguments(
@@ -234,30 +343,45 @@ estimate_dimensions <- function(
   
   ## Estimate Parallel Analysis
   sink <- capture.output(
-    pa_results <- suppressWarnings(
-      do.call(
-        what = psych::fa.parallel,
-        args = PA_args
-      )
+    pa_results <- try(
+      suppressWarnings(
+        do.call(
+          what = psych::fa.parallel,
+          args = PA_args
+        )
+      ), silent = TRUE
     )
   )
   
-  ## Check for dimensions
-  ## PAF
-  if("nfact" %in% names(pa_results)){
-    pa_nfact <- pa_results$nfact
+  ## Catch error
+  if(is(pa_results, "try-error")){
+    ## Return bad result
+    pa_results <- list(
+      nfact <- NA,
+      ncomp <- NA
+    )
+    ## Parallel Analysis finished
+    message("could not be estimated properly.")
+  }else{
+    ## Check for dimensions
+    ## PAF
+    if("nfact" %in% names(pa_results)){
+      pa_nfact <- pa_results$nfact
+    }
+    ## PCA
+    if("ncomp" %in% names(pa_results)){
+      pa_ncomp <- pa_results$ncomp
+    }
+    
+    ## Parallel Analysis finished
+    message("done.")
   }
-  ## PCA
-  if("ncomp" %in% names(pa_results)){
-    pa_ncomp <- pa_results$ncomp
-  }
-  
-  ## Parallel Analysis finished
-  message("done.")
   
   # Set up results vector
   dimension_results <- c(
     EGA = ega_results$n.dim,
+    EKC = ekc_results$dimensions,
+    FF = ff_results$dimensions,
     FSPE = fspe_results$nfactor,
     NEST = nest_results$dimensions,
     PA_PAF = ifelse(
@@ -272,6 +396,8 @@ estimate_dimensions <- function(
   results <- list(
     dimensions = dimension_results,
     EGA = ega_results,
+    EKC = ekc_results,
+    FF = ff_results,
     FSPE = fspe_results,
     NEST = nest_results,
     PA = pa_results

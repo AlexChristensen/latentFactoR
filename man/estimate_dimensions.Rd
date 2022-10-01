@@ -9,6 +9,7 @@ estimate_dimensions(
   sample_size,
   EGA_args = list(corr = "cor_auto", uni.method = "louvain", model = "glasso", algorithm
     = "walktrap", consensus.method = "most_common", plot.EGA = FALSE),
+  FF_args = list(maximum_factors = 8),
   FSPE_args = list(maxK = 8, rep = 1, method = "PE", pbar = FALSE),
   NEST_args = list(iterations = 1000, maximum_iterations = 500, alpha = 0.05, convergence
     = 1e-05),
@@ -28,6 +29,11 @@ then specifying the sample size is required}
 \item{EGA_args}{List.
 List of arguments to be passed along to
 \code{\link[EGAnet]{EGA}}.
+Defaults are listed}
+
+\item{FF_args}{List.
+List of arguments to be passed along to
+\code{\link[EGAnet]{factor_forest}}.
 Defaults are listed}
 
 \item{FSPE_args}{List.
@@ -54,9 +60,11 @@ A list of each methods output (see their respective functions for their outputs)
 }
 \description{
 Estimates dimensions using Exploratory Graph Analysis
-(\code{\link[EGAnet]{EGA}}), Exploratory Factor Analysis
-with out-of-sample prediction (\code{\link[fspe]{fspe}}),
-Next Eigenvalue Sufficiency Test (\code{\link[latentFactoR]{NEST}}),
+(\code{\link[EGAnet]{EGA}}),
+Empirical Kaiser Criterion (\code{\link[latentFactoR]{EKC}}),
+Factor Forest (\code{\link[latentFactoR]{factor_forest}}),
+Exploratory Factor Analysis with out-of-sample prediction (\code{\link[fspe]{fspe}}),
+Next Eigenvalue Sufficiency Test (\code{\link[latentFactoR]{NEST}}), and
 parallel analysis (\code{\link[psych]{fa.parallel}})
 }
 \examples{
@@ -72,8 +80,7 @@ two_factor <- simulate_factors(
 
 \dontrun{
 # Estimate dimensions
-estimate_dimensions(two_factor$data)
-}
+estimate_dimensions(two_factor$data)}
 
 }
 \author{
