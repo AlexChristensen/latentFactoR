@@ -66,9 +66,10 @@
 #' @export
 #'
 # Factor Forest
-# Updated 30.09.2022
+# Updated 01.10.2022
 factor_forest <- function(
-    data, sample_size, maximum_factors = 8
+    data, sample_size,
+    maximum_factors = 8
 )
 {
   
@@ -193,58 +194,60 @@ factor_forest <- function(
   features <- cbind(data.frame(N,p,eiggreater1,releig1,releig2,releig3,eiggreater07,sdeigval,var50,var75,onenorm,frobnorm,
                                maxnorm, avgcor, specnorm, smlcor, avgcom,det, KMO, Gini, Kolm, pa_solution, ekc, cd), t(eigval), t(fa_eigval))
   
-  # Download Factor Forest model from Google Drive
-  drive_link <- "1bK-lMOh2lO7sGIVxHy1jI4kr3LjOURDD"
-  
-  # Check if Factor Forest model exists
-  if(
-    !"factor_forest_model.RData" %in%
-    tolower(list.files(tempdir()))
-  ){
+  # Check if model is stored in the environment
+  if(!exists("factor_forest_model", envir = globalenv())){
     
-    # Let user know Factor Forest model is downloading
-    message("Downloading Factor Forest model...", appendLF = FALSE)
+    # Download Factor Forest model from Google Drive
+    drive_link <- "1bK-lMOh2lO7sGIVxHy1jI4kr3LjOURDD"
     
-    # Download Factor Forest model
-    model_file <- suppressMessages(
-      googledrive::drive_download(
-        googledrive::as_id(drive_link),
-        path = paste(tempdir(), "factor_forest_model.Rdata", sep = "\\"),
-        overwrite = TRUE
+    # Check if Factor Forest model exists
+    if(
+      !"factor_forest_model.rdata" %in%
+      tolower(list.files(tempdir()))
+    ){
+      
+      # Let user know Factor Forest model is downloading
+      message("Downloading Factor Forest model...", appendLF = FALSE)
+      
+      # Download Factor Forest model
+      model_file <- suppressMessages(
+        googledrive::drive_download(
+          googledrive::as_id(drive_link),
+          path = paste(tempdir(), "factor_forest_model.Rdata", sep = "\\"),
+          overwrite = TRUE
+        )
       )
-    )
+      
+    }else{
+      
+      # Create dummy space file list
+      model_file <- list()
+      model_file$local_path <- paste(
+        tempdir(), "\\",
+        "factor_forest_model.RData",
+        sep = ""
+      )
+      
+    }
     
-    # Let user know downloading is finished
+    # Let user know Factor Forest model is loading
+    message("Loading Factor Forest model...", appendLF = FALSE)
+    
+    # Initialize object
+    factor_forest_model <- NULL
+    
+    # Load Factor Forest model
+    load(model_file$local_path)
+    
+    # Let user know loading is finished
     message("done")
     
-  }else{
-    
-    # Create dummy space file list
-    model_file <- list()
-    model_file$local_path <- paste(
-      tempdir(), "\\",
-      "factor_forest_model.RData",
-      sep = ""
-    )
-    
   }
-  
-  # Let user know Factor Forest model is loading
-  message("Loading Factor Forest model...", appendLF = FALSE)
-  
-  # Initialize object
-  factor_forest_model <- NULL
-  
-  # Load Factor Forest model
-  load(model_file$local_path)
-  
-  # Let user know loading is finished
-  message("done")
 
   # Obtain output
   sink <- capture.output(
     suppressWarnings(
-      out <- predict(get(factor_forest_model), newdata = features)$data
+      out <- predict(factor_forest_model, newdata = features)$data
     )
   )
   
@@ -268,6 +271,23 @@ factor_forest <- function(
     dimensions = dimensions,
     probabilities = probabilities
   )
+  
+  # Let user know that they can store model in workspace
+  if(!exists("factor_forest_model", envir = globalenv())){
+    
+    # Adjust file path
+    adjusted_path <- gsub("\\\\", "/", model_file$local_path)
+    
+    # Let user know how to get the model
+    message(
+      paste0(
+        "\nFor most efficient use, you can load the model ",
+        "into your workspace. Run the following code to ",
+        "load the model:\n\n",
+        "load(\"", adjusted_path, "\")\n" 
+      )
+    )
+  }
   
   # Return results
   return(results)
