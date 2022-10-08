@@ -124,7 +124,7 @@
 #' @export
 #'
 # Add local dependence to simulated data
-# Updated 17.09.2022
+# Updated 07.10.2022
 add_local_dependence <- function(
     lf_object,
     method = c(
@@ -148,6 +148,21 @@ add_local_dependence <- function(
         "\n\nInput class(es) of current `lf_object`:", 
         paste0("\"", class(lf_object), "\"", collapse = ", "),
         "\n\nUse `simulate_factors` to generate your data to input into this function"
+      )
+    )
+    
+  }
+  
+  # Check that population error has not yet been added
+  if(is(lf_object, "lf_pe")){
+    
+    # Produce error
+    stop(
+      paste(
+        "`lf_object` input is class \"lf_pe\" from the `add_population_error` function.",
+        "Population error must be added after any local dependence to ensure proper simulation.",
+        "\n\nUse `simulate_factors` to generate your data to input into this function first,",
+        "then use this output in the `add_population_error` function."
       )
     )
     

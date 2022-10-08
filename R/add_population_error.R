@@ -186,7 +186,7 @@
 #' @export
 #'
 # Add population to simulated data
-# Updated 01.10.2022
+# Updated 07.10.2022
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
@@ -242,6 +242,27 @@ add_population_error <- function(
   # Obtain loadings
   loadings <- parameters$loadings
   
+  # Determine error structure
+  if(is(lf_object, "lf_ld")){
+    
+    # Obtain correlated residuals
+    errors <- lf_object$population_correlation -
+      lf_object$original_results$population_correlation
+    
+  }else{
+    
+    # Initialize correlated residuals
+    errors <- matrix(
+      0, nrow = ncol(lf_object$data),
+      ncol = ncol(lf_object$data)
+    )
+    
+  }
+  
+  # Put uniquenesses on the diagonal of the error matrix
+  uniquenesses <- 1 - rowSums(loadings^2)
+  diag(errors) <- uniquenesses
+  
   # Check for whether cross-loadings should remain
   if(!isTRUE(leave_cross_loadings)){
     
@@ -279,11 +300,10 @@ add_population_error <- function(
       # See `utils-latentFactoR`
       population_error <- cudeck(
         R = lf_object$population_correlation,
-        lambda = parameters$loadings,
+        lambda = loadings,
         Phi = parameters$factor_correlations,
-        uniquenesses = 1 - rowSums(loadings^2),
-        misfit = misfit, method = cfa_method,
-        confirmatory = FALSE
+        Psi = errors, fit = fit,
+        misfit = misfit, method = cfa_method
       )
       
     }else if(error_method == "yuan"){
@@ -293,11 +313,10 @@ add_population_error <- function(
       # See `utils-latentFactoR`
       population_error <- yuan(
         R = lf_object$population_correlation,
-        lambda = parameters$loadings,
+        lambda = loadings,
         Phi = parameters$factor_correlations,
-        uniquenesses = 1 - rowSums(loadings^2),
-        fit = fit, misfit = misfit, method = cfa_method,
-        confirmatory = FALSE
+        Psi = errors, fit = fit,
+        misfit = misfit, method = cfa_method
       )
       
     }
@@ -314,40 +333,52 @@ add_population_error <- function(
     # Obtain SRMR difference
     SRMR_difference <- abs(SRMR - population_error$misfit)
     
-    # Specify model
-    model <- model_CFA(
-      variables = parameters$variables,
-      loadings = loadings
-    )
-    
     # Add row and column names to population error correlation matrix
     colnames(error_correlation) <- paste0("V", 1:ncol(error_correlation))
     row.names(error_correlation) <- colnames(error_correlation)
     
-    # Fit CFA
-    CFA <- lavaan::cfa(
-      model = model,
-      sample.cov = error_correlation,
-      sample.nobs = nrow(lf_object$data),
-      estimator = "ML"
+    # Specify the CFA model
+    # (set 1 to estimate the parameter and 0 to fix it to zero)
+    target <- ifelse(loadings != 0, 1, 0) # For loadings
+    target_phi <- ifelse(parameters$factor_correlations != 0, 1, 0)  # For factor correlations
+    target_psi <- ifelse(errors != 0, 1, 0)  # For uniquenesses and errors
+    
+    # Fit the CFA
+    cfa <- suppressWarnings(
+      CFA(
+        S = lf_object$population_correlation,
+        target = target,
+        targetphi = target_phi,
+        targetpsi = target_psi,
+        method = cfa_method
+      )
     )
     
-    # Obtain loadings
-    error_loadings <- lavaan::inspect(CFA, what = "std")$lambda
+    # Compute the largest absolute residual
+    max_abs_res <- max(abs(cfa$residuals))
+    max_res <- Inf
     
-    # Set names of loadings
-    row.names(loadings) <- paste0("V", 1:nrow(loadings))
+    # Cutoff for the maximum absolute residual
+    if(fit == "rmsr"){
+      max_res <- switch(
+        misfit,
+        "close" = 0.10,
+        "acceptable" = 0.15
+      )
+    }
     
     # Ensure same order of loadings
-    error_loadings <- error_loadings[row.names(loadings),]
+    error_loadings <- cfa$lambda
     
     # Obtain difference between error and population loadings
     MAE <- mean(abs(error_loadings - loadings))
     
     # Check for convergence
-    if(SRMR_difference <= tolerance & MAE <= tolerance){
-      convergence <- TRUE
-    }
+    if(
+      SRMR_difference <= tolerance & 
+      MAE <= tolerance & 
+      max_abs_res < max_res
+    ){convergence <- TRUE}
     
     # Increase stuck count
     stuck_count <- stuck_count + 1
@@ -452,7 +483,9 @@ add_population_error <- function(
     fit = population_error$fit,
     delta = population_error$delta,
     misfit = population_error$misfit,
-    loadings = error_loadings
+    loadings = error_loadings,
+    SRMR_difference = SRMR_difference,
+    MAE_loadings = MAE
   )
   
   # Add population error parameters to results

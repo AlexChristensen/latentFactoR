@@ -189,6 +189,11 @@ gLRhat <- function(Lambda, Phi) {
   g2 <- g21 %*% dxt(Lambda)
   g <- g1 + g2
   
+  # Ensure matrix
+  if(!is.matrix(g)){
+    g <- matrix(g, ncol = 1)
+  }
+  
   return(g)
   
 }
@@ -204,6 +209,11 @@ gPRhat <- function(Lambda, Phi) {
   g2 <- g1 %*% dxt(Phi)
   g <- g1 + g2
   g <- g[, which(lower.tri(Phi))]
+  
+  # Ensure matrix
+  if(!is.matrix(g)){
+    g <- matrix(g, ncol = 1)
+  }
   
   return(g)
   
@@ -230,52 +240,63 @@ guRhat <- function(p) {
 }
 
 #' @noRd
+# Rhat function for Cudeck method
+# Updated 07.10.2022
+# For Psi
+gURhat <- function(p) {
+  
+  pcov <- p*(p+1)*0.5
+  
+  Psi <- diag(p)
+  gPsi <- diag(p) %x% diag(p)
+  gPsi <- gPsi + dxt(Psi) %*% gPsi
+  gPsi <- gPsi[, lower.tri(Psi, diag = TRUE)]
+  gPsi[gPsi != 0] <- 1
+  
+  return(gPsi)
+  
+}
+
+#' @noRd
 #' @importFrom stats lm
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
 # Adds population error using Cudeck method to generated data
-# Updated 17.09.2022
-cudeck <- function(R, lambda, Phi, uniquenesses,
+# Updated 07.10.2022 -- Marcos
+cudeck <- function(R, lambda, Phi, Psi,
                    fit = "rmsr", misfit = "close",
-                   method = "ols", confirmatory = TRUE) {
+                   method = "minres") {
   
   # Method of Cudeck and Browne (1992):
   
-  p <- nrow(R)
+  p <- nrow(lambda)
   q <- ncol(lambda)
+  uniquenesses <- diag(Psi)
   
-  tdiag <- TRUE
+  # Count the number of parameters
+  nlambda <- sum(lambda != 0)
+  nphi <- sum(Phi[lower.tri(Phi)] != 0)
+  npsi <- sum(Psi[lower.tri(Psi, diag = TRUE)] != 0)
+  npars <- nlambda + nphi + npsi
+  df <- p*(p+1)/2 - npars # Degrees of freedom
   
-  if(confirmatory) {
-    
-    # Select the columns corresponding to estimated loadings (only works when
-    # not estimating correlations)
-    # if(!correlation) dS_dL <- dS_dL[, which(lambda > 0)]
-    npars <- sum(lambda > 0) + p + sum(abs(Phi[lower.tri(Phi)]) > 0)
-    dS_du <- guRhat(p)
-    dS_dL <- gLRhat(lambda, Phi)[, which(lambda != 0)]
-    dS_dP <- gPRhat(lambda, Phi)[, which(Phi[lower.tri(Phi)] != 0)]
-    gS <- cbind(dS_dL, dS_dP, dS_du) # matrix of derivatives wrt the correlation model
-    
-  } else {
-    
-    # dS_dP <- gPRhat(lambda, Phi)
-    # gS <- cbind(dS_dL, dS_dP, dS_du)
-    npars <- p*q + p - 0.5*q*(q-1) # Number of model parameters
-    dS_du <- guRhat(p)
-    dS_dL <- gLRhat(lambda, Phi)
-    # dS_dP <- gPRhat(lambda, Phi)
-    # gS <- cbind(dS_dL, dS_dP, dS_du) # matrix of derivatives wrt the correlation model
-    gS <- cbind(dS_dL, dS_du) # matrix of derivatives wrt the correlation model
-    
+  if(nlambda + nphi > p*q - 0.5*q*(q-1)) {
+    warning("The model is not identified. There exists infinite solutions for the model parameters.")
   }
   
-  df <- p*(p+1)/2 - npars # Degrees of freedom
+  if(nlambda + nphi + npsi > p*(p+1)/2) {
+    warning("The true model has negative degrees of freedom.")
+  }
+  
+  # Create the matrix of derivatives wrt the correlation model:
+  
+  dS_dL <- gLRhat(lambda, Phi)[, which(lambda != 0)]
+  dS_dP <- gPRhat(lambda, Phi)[, which(Phi[lower.tri(Phi)] != 0)]
+  dS_dU <- gURhat(p)[, which(Psi[lower.tri(Psi, diag = TRUE)] != 0)]
+  gS <- cbind(dS_dL, dS_dP, dS_dU)
   
   if(method == "minres" || method == "ols") {
     
-    B <- -2*gS[lower.tri(R, diag = tdiag), ]
-    # B <- -2*lambda %*%
+    # Select the nonduplicated elements of the correlation matrix wrt each parameter
+    B <- -gS[lower.tri(R, diag = TRUE), ]
     
   } else if(method == "ml") {
     
@@ -292,83 +313,112 @@ cudeck <- function(R, lambda, Phi, uniquenesses,
     diag(D) <- 2
     diag(D)[indexes] <- 1
     R_inv <- solve(R)
-    vecs <- apply(gS, 2, FUN = function(x) -t(R_inv %*% matrix(x, p, p) %*% R_inv))
-    B <- t(vecs[which(upper.tri(R, diag = tdiag)), ]) %*% D
-    B <- t(B)
+    # vecs <- apply(gS, 2, FUN = function(x) -t(R_inv %*% matrix(x, p, p) %*% R_inv))
+    # B <- t(vecs[which(upper.tri(R, diag = TRUE)), ]) %*% D
+    # B <- t(B)
+    B <- -apply(gS, 2, FUN = function(x) t((R_inv %*% matrix(x, p, p) %*% R_inv)[which(upper.tri(R, diag = TRUE))]) %*% D)
+    # The error must be orthogonal to the derivative of each parameter derivative wrt the correlation model
     
   }
   
+  # Generate random error:
+  
   # BtB <- t(B) %*% B
   m <- p+1
-  U <- replicate(p, runif(m, 0, 1))
+  U <- replicate(p, stats::runif(m, 0, 1))
   A1 <- t(U) %*% U
   sq <- diag(1/sqrt(diag(A1)))
   A2 <- sq %*% A1 %*% sq
   diag_u <- diag(sqrt(uniquenesses))
   y <- diag_u %*% A2 %*% diag_u
-  y <- y[lower.tri(y, diag = tdiag)]
-  # y <- A2[lower.tri(A2, diag = tdiag)]
+  y <- y[lower.tri(y, diag = TRUE)]
+  # y <- A2[lower.tri(A2, diag = TRUE)]
   # y <- stats::runif(p*(p+1)/2, 0, 1)
   # e <- qr.Q(qr(cbind(B, y)))[, ncol(B)+1]
   # v <- MASS::ginv(BtB) %*% t(B) %*% y
   # e <- y - B %*% v # equation 7
   # B.qr <- qr(B)
   # e <- qr.resid(B.qr, y)
-  e <- unname(lm(y ~ B, model = FALSE, qr = TRUE)$residuals)
+  e <- unname(stats::lm(y ~ B, model = FALSE, qr = TRUE)$residuals)
   
-  if(fit == "rmsr") {
-    if(misfit == "close") {
-      r2 <- mean(1-uniquenesses)
-      misfit <- 0.05*r2
-    } else if(misfit == "acceptable") {
-      r2 <- mean(1-uniquenesses)
-      misfit <- 0.10*r2
-    }
-    delta <- misfit^2*0.5*p*(p-1)
-    # delta <- (1-misfit2)*(0.5*(sum(R_error^2) - p))
-  } else if(fit == "cfi") {
-    null_f <- 0.5*(sum(R^2) - p)
-    delta <- (1-misfit)*null_f
-  } else if(fit == "rmsea") {
-    delta <- misfit^2 * df
-  } else if(fit == "raw") {
-    delta <- misfit
-  }
+  # Get the error matrix:
+  
+  # Adjust the error to satisfy the desired amount of misfit:
   
   if(method == "minres" || method == "ols") {
     
     E <- matrix(0, p, p)
-    E[lower.tri(E, diag = tdiag)] <- e
+    E[lower.tri(E, diag = TRUE)] <- e
     E <- t(E) + E
     diag(E) <- 0
+    
+    if(fit == "rmsr") {
+      if(misfit == "close") {
+        r2 <- mean(1-uniquenesses)
+        misfit <- 0.05*r2
+      } else if(misfit == "acceptable") {
+        r2 <- mean(1-uniquenesses)
+        misfit <- 0.10*r2
+      }
+      delta <- misfit^2*0.5*p*(p-1)
+      # delta <- (1-misfit2)*(0.5*(sum(R_error^2) - p))
+    } else if(fit == "cfi") {
+      null_f <- 0.5*(sum(R^2) - p)
+      delta <- (1-misfit)*null_f
+    } else if(fit == "rmsea") {
+      delta <- misfit^2 * df
+    } else if(fit == "raw") {
+      delta <- misfit
+    }
+    
     k <- sqrt(2*delta/sum(E*E))
     E <- k*E
     
   } else if(method == "ml") {
     
     E <- matrix(0, p, p)
-    E[upper.tri(R, diag = tdiag)] <- e
+    E[upper.tri(R, diag = TRUE)] <- e
     E <- t(E) + E
     diag(E) <- 0
-    constant <- 1e-04 / sqrt(mean(E*E))
-    E <- constant*E # Fix this to avoid NAs
-    R_inv <- solve(R)
-    G <- R_inv %*% E
-    x <- suppressWarnings(grid_search(delta, G))
-    k <- opt(x, delta, G)
-    # limits <- c(-1e05, 1e05)
-    # k <- GSS(delta, G, limits)
-    # k <- grad_descend(delta, G)
     
-    E <- k*E
+    if(fit == "rmsr") {
+      delta <- "A given RMSR is compatible with multiple maximum likelihood discrepancy values and is not provided"
+    } else if(fit == "cfi") {
+      null_f <- -log(det(R))
+      delta <- (1-misfit)*null_f
+    } else if(fit == "rmsea") {
+      delta <- misfit^2 * df
+    } else if(fit == "raw") {
+      delta <- misfit
+    }
     
+    if(fit == "rmsr") {
+      
+      k <- sqrt((0.5*p*(p-1))*2*misfit^2/sum(E*E))
+      E <- k*E
+      
+    } else {
+      
+      constant <- 1e-04 / sqrt(mean(E*E))
+      E <- constant*E # Fix this to avoid NAs
+      R_inv <- solve(R)
+      G <- R_inv %*% E
+      x <- suppressWarnings(grid_search(delta, G))
+      # x <- sqrt(2*delta/sum(G*G)) # Initial value suggested by Cudeck
+      k <- opt(x, delta, G)
+      # limits <- c(-1e05, 1e05)
+      # k <- GSS(delta, G, limits)
+      # k <- grad_descend(delta, G)
+      E <- k*E
+      
+    }
   }
   
   R_error <- R + E
   
   # check for positiveness:
   minimum_eigval <- min(eigen(R_error, symmetric = TRUE, only.values = TRUE)$values)
-  if(minimum_eigval <= 0) warning("The matrix was not positive-definite. The amount of error may be too big.")
+  if(minimum_eigval <= 0) warning("The matrix was not positive-definite. The amount of misfit may be too big.")
   
   return(list(R_error = R_error, fit = fit, delta = delta, misfit = misfit))
   
@@ -378,18 +428,28 @@ cudeck <- function(R, lambda, Phi, uniquenesses,
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # Minimum residual function for CFA in Yuan method
-# Updated 17.09.2022
-f_minres <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
+# Updated 07.10.2022
+f_minres <- function(
+    x, S, ldetS, q,
+    indexes_lambda, lambda_p,
+    indexes_phi, phi_p,
+    indexes_psi
+)
+{
   
   p <- nrow(S)
   lambda_parameters <- length(indexes_lambda)
   Lambda <- matrix(0, p, q)
   Lambda[indexes_lambda] <- x[1:lambda_parameters]
   Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[-(1:lambda_parameters)]
+  Phi[indexes_phi] <- x[-c(1:lambda_parameters)]
   Phi <- t(Phi) + Phi
   diag(Phi) <- 1
-  Rhat <- Lambda %*% Phi %*% t(Lambda)
+  # Psi added 07.10.2022 -- Marcos
+  Psi <- matrix(0, p, p)
+  Psi[indexes_psi] <- x[-c(1:(lambda_p + phi_p))]
+  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
+  Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi
   diag(Rhat) <- 1
   res <- S - Rhat
   f <- 0.5*sum(res*res)
@@ -402,24 +462,38 @@ f_minres <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # Minimum residual function for CFA in Yuan method
-# Updated 17.09.2022
-g_minres <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
+# Updated 07.10.2022
+g_minres <- function(
+    x, S, ldetS, q,
+    indexes_lambda, lambda_p,
+    indexes_phi, phi_p,
+    indexes_psi
+)
+{
   
   p <- nrow(S)
   lambda_parameters <- length(indexes_lambda)
   Lambda <- matrix(0, p, q)
   Lambda[indexes_lambda] <- x[1:lambda_parameters]
   Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[-(1:lambda_parameters)]
+  Phi[indexes_phi] <- x[-c(1:lambda_parameters)]
   Phi <- t(Phi) + Phi
   diag(Phi) <- 1
-  Rhat <- Lambda %*% Phi %*% t(Lambda)
+  # Psi added 07.10.2022 -- Marcos
+  Psi <- matrix(0, p, p)
+  Psi[indexes_psi] <- x[-c(1:(lambda_p + phi_p))]
+  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
+  Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi
   diag(Rhat) <- 1
   res <- S - Rhat
   
+  # Change 07.10.2022 -- Marcos
   g1 <- (res %*% Lambda %*% Phi)[indexes_lambda]
   g2 <- (t(Lambda) %*% res %*% Lambda)[indexes_phi]
-  g <- -2*c(g1, g2)
+  # g <- -2*c(g1, g2, 0.5*diag(res))
+  res2 <- res
+  res2[lower.tri(res2)] <- 2*res[lower.tri(res)]
+  g <- -2*c(g1, g2, 0.5*res2[indexes_psi])
   
   return(g)
   
@@ -429,8 +503,14 @@ g_minres <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # Maximum likelihood function for CFA in Yuan method
-# Updated 17.09.2022
-f_ml <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
+# Updated 07.10.2022
+f_ml <- function(
+    x, S, ldetS, q,
+    indexes_lambda, lambda_p,
+    indexes_phi, phi_p,
+    indexes_psi
+)
+{
   
   p <- nrow(S)
   lambda_p <- length(indexes_lambda)
@@ -441,8 +521,11 @@ f_ml <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
   Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
   Phi <- t(Phi) + Phi
   diag(Phi) <- 1
-  u <- x[-(1:(lambda_p + phi_p))]
-  Rhat <- Lambda %*% Phi %*% t(Lambda) + diag(u)
+  # Psi added 07.10.2022 -- Marcos
+  Psi <- matrix(0, p, p)
+  Psi[indexes_psi] <- x[-c(1:(lambda_p + phi_p))]
+  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
+  Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi
   f <- log(det(Rhat)) - ldetS + sum(S*solve(Rhat)) - p
   
   return(f)
@@ -453,8 +536,14 @@ f_ml <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # Maximum likelihood function for CFA in Yuan method
-# Updated 17.09.2022
-g_ml <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
+# Updated 07.10.2022
+g_ml <- function(
+    x, S, ldetS, q,
+    indexes_lambda, lambda_p,
+    indexes_phi, phi_p,
+    indexes_psi
+)
+{
   
   p <- nrow(S)
   lambda_p <- length(indexes_lambda)
@@ -465,16 +554,23 @@ g_ml <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
   Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
   Phi <- t(Phi) + Phi
   diag(Phi) <- 1
-  u <- x[-(1:(lambda_p + phi_p))]
+  Psi <- matrix(0, p, p)
+  Psi[indexes_psi] <- x[-c(1:(lambda_p + phi_p))]
+  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
   
-  Rhat <- Lambda %*% Phi %*% t(Lambda) + diag(u)
+  Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi
   Rhat_inv <- solve(Rhat)
   Ri_res_Ri <- 2*Rhat_inv %*% (Rhat - S) %*% Rhat_inv
+  Ri_res_Ri2 <- Ri_res_Ri
+  Ri_res_Ri2[lower.tri(Ri_res_Ri2)] <- 2*Ri_res_Ri[lower.tri(Ri_res_Ri)]
   
   # Joreskog (page 10; 1965) Testing a simple structure in factor analysis
+  # g <- c(c(Ri_res_Ri %*% Lambda %*% Phi)[indexes_lambda],
+  #        c(t(Lambda) %*% Ri_res_Ri %*% Lambda)[indexes_phi],
+  #        diag(Ri_res_Ri)*0.5)
   g <- c(c(Ri_res_Ri %*% Lambda %*% Phi)[indexes_lambda],
          c(t(Lambda) %*% Ri_res_Ri %*% Lambda)[indexes_phi],
-         diag(Ri_res_Ri)*0.5) # omitting the sample size constant
+         Ri_res_Ri2[indexes_psi]*0.5)
   
   return(g)
   
@@ -484,74 +580,87 @@ g_ml <- function(x, S, ldetS, q, indexes_lambda, indexes_phi) {
 #' @importFrom stats runif nlminb
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
-# CFA function for Yuan method
-# Updated 17.09.2022
-CFA <- function(S, target, targetphi, method = "minres") {
+# CFA function
+# Updated 07.10.2022 -- Marcos
+CFA <- function(S, target, targetphi, targetpsi = diag(nrow(target)), method = "minres") {
   
   p <- nrow(target)
   q <- ncol(target)
-  indexes_lambda <- which(target != 0)
-  indexes_phi <- which(targetphi != 0 & lower.tri(targetphi))
-  lambda_p <- length(indexes_lambda)
-  phi_p <- length(indexes_phi)
-  init <- 1/diag(solve(S))
+  indexes_lambda <- which(target != 0) # Which lambdas are estimated
+  indexes_phi <- which(targetphi != 0 & lower.tri(targetphi)) # Which phis are estimated
+  indexes_psi <- which(targetpsi != 0 & lower.tri(targetpsi, diag = TRUE)) # Which psies are estimated
+  lambda_p <- length(indexes_lambda) # Number of lambda parameters
+  phi_p <- length(indexes_phi) # Number of phi parameters
+  psi_p <- length(indexes_psi) # Number of psi parameters
+  
+  init_diag_psi <- 1/diag(solve(S)) # Initial diagonal psi parameter values
+  init_psi <- rep(0, times = psi_p)
+  diag_indexes <- (p+1)*0:(p-1)+1 # Indexes for the diagonal of Psi
+  offdiag_indexes <- which(targetpsi != 0 & lower.tri(targetpsi)) # Indexes for the off-diagonal of Psi
+  cor_res_indexes <- which(indexes_psi %in% offdiag_indexes) # Indexes for correlated residuals
+  # Allocate init_diag_psi in the positions of the vector corresponding to the diagonal of Psi:
+  init_psi[-cor_res_indexes] <- init_diag_psi
+  
+  lower_psi <- rep(0.005, psi_p) # Lower bounds for the uniquenessess
+  lower_psi[cor_res_indexes] <- -0.995 # Lower bounds for correlated residuals
+  upper_psi <- rep(0.995, psi_p) # Upper bounds for correlated residuals
+  lower <- c(rep(-Inf, lambda_p), rep(-1, phi_p), lower_psi)
+  upper <- c(rep(Inf, lambda_p), rep(1, phi_p), upper_psi)
+  
+  x <- c(runif(lambda_p), rep(0, phi_p), init_psi)
   
   if(method == "minres") {
     
-    x <- c(runif(lambda_p), rep(0, phi_p))
     ldetS <- NULL
     f <- f_minres
     g <- g_minres
-    lower <- c(rep(-Inf, lambda_p), rep(-1, phi_p))
-    upper <- c(rep(Inf, lambda_p), rep(1, phi_p))
     
   } else if(method == "ml") {
     
-    x <- c(runif(lambda_p), rep(0, phi_p), init)
     ldetS <- log(det(S))
     f <- f_ml
     g <- g_ml
-    lower <- c(rep(-Inf, lambda_p), rep(-1, phi_p), rep(0, p))
-    upper <- c(rep(Inf, lambda_p), rep(1, phi_p + p))
     
   }
   
-  cfa <- nlminb(x, objective = f, gradient = g,
-                       lower = lower, upper = upper,
-                       S = S, ldetS = ldetS, q = q, indexes_lambda = indexes_lambda,
-                       indexes_phi = indexes_phi,
-                       control = list(iter.max = 1e4, eval.max = 1e4))
+  cfa <- nlminb(
+    start = x, objective = f, gradient = g,
+    lower = lower, upper = upper,
+    S = S, ldetS = ldetS, q = q,
+    indexes_lambda = indexes_lambda, lambda_p = lambda_p,
+    indexes_phi = indexes_phi, phi_p = phi_p,
+    indexes_psi = indexes_psi,
+    control = list(iter.max = 1e4, eval.max = 1e4)
+  )
   
+  # Arrange lambda parameter estimates:
   lambda_hat <- matrix(0, p, q)
   lambda_hat[indexes_lambda] <- cfa$par[1:lambda_p]
+  
+  # Arrange phi parameter estimates:
   phi_hat <- matrix(0, q, q)
+  phi_hat[indexes_phi] <- cfa$par[(lambda_p+1):(lambda_p + phi_p)]
+  phi_hat <- t(phi_hat) + phi_hat
+  diag(phi_hat) <- 1
   
-  if(method == "minres") {
-    
-    phi_hat[indexes_phi] <- cfa$par[-(1:lambda_p)]
-    phi_hat <- phi_hat + t(phi_hat)
-    diag(phi_hat) <- 1
-    
-  } else if(method == "ml") {
-    
-    phi_hat[indexes_phi] <- cfa$par[(lambda_p+1):(lambda_p + phi_p)]
-    phi_hat <- t(phi_hat) + phi_hat
-    diag(phi_hat) <- 1
-    u <- cfa$par[-(1:(lambda_p + phi_p))]
-    
-  }
+  # Arrange psi parameter estimates:
+  psi_hat <- matrix(0, p, p)
+  psi_hat[indexes_psi] <- cfa$par[-(1:(lambda_p + phi_p))]
+  psi_hat[upper.tri(psi_hat)] <- t(psi_hat)[upper.tri(psi_hat)]
   
-  S_hat <- lambda_hat %*% phi_hat %*% t(lambda_hat)
-  uniquenesses_hat <- 1 - diag(S_hat)
-  diag(S_hat) <- 1
+  # Model matrix:
+  S_hat <- lambda_hat %*% phi_hat %*% t(lambda_hat) + psi_hat
+  uniquenesses_hat <- diag(psi_hat)
+  diag(S_hat) <- 1 # Fix rounding errors from the optimization
   residuals <- S - S_hat
   
-  df <- p*(p+1)/2 - (length(indexes_lambda) + length(indexes_phi) + p)
+  # Degrees of freedom:
+  df <- p*(p+1)/2 - (lambda_p + phi_p + psi_p)
   
   results <- list(f = cfa$objective, convergence = cfa$convergence,
                   iterations = cfa$iterations, df = df,
                   lambda = lambda_hat, phi = phi_hat,
-                  uniquenesses = uniquenesses_hat,
+                  psi = psi_hat, uniquenesses = uniquenesses_hat,
                   model = S_hat, residuals = residuals)
   
   return(results)
@@ -562,87 +671,114 @@ CFA <- function(S, target, targetphi, method = "minres") {
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # Adds population error using Yuan method to generated data
-# Updated 17.09.2022
-yuan <- function(
-    R, lambda, Phi, uniquenesses,
-    fit = "rmsr", misfit = "close",
-    method = "minres", confirmatory = TRUE
-)
-{
+# Updated 07.10.2022 -- Marcos
+yuan <- function(R, lambda, Phi, Psi,
+                 fit = "rmsr", misfit = "close",
+                 method = "minres") {
   
   p <- nrow(R)
   q <- ncol(lambda)
+  uniquenesses <- diag(Psi)
   
-  tdiag <- TRUE
-  
-  if(confirmatory) {
-    
-    npars <- sum(lambda > 0) + p + sum(abs(Phi[lower.tri(Phi)]) > 0)
-    
-  } else {
-    
-    npars <- p*q + p - 0.5*q*(q-1) # Number of model parameters
-    
-  }
-  
+  # Count the number of parameters
+  nlambda <- sum(lambda != 0)
+  nphi <- sum(Phi[lower.tri(Phi)] != 0)
+  npsi <- sum(Psi[lower.tri(Psi, diag = TRUE)] != 0)
+  npars <- nlambda + nphi + npsi
   df <- p*(p+1)/2 - npars # Degrees of freedom
   
-  if(fit == "rmsr") {
-    if(misfit == "close") {
-      r2 <- mean(1-uniquenesses)
-      misfit <- 0.05*r2
-    } else if(misfit == "acceptable") {
-      r2 <- mean(1-uniquenesses)
-      misfit <- 0.10*r2
-    }
-    delta <- misfit^2*0.5*p*(p-1)
-    # delta <- (1-misfit2)*(0.5*(sum(R_error^2) - p))
-  } else if(fit == "cfi") {
-    null_f <- 0.5*(sum(R^2) - p)
-    delta <- (1-misfit)*null_f
-  } else if(fit == "rmsea") {
-    delta <- misfit^2 * df
-  } else if(fit == "raw") {
-    delta <- misfit
+  if(nlambda + nphi > p*q - 0.5*q*(q-1)) {
+    warning("The population model is not identified. There exists infinite solutions for the model parameters.")
   }
   
-  p <- nrow(R)
-  L <- lambda + 1e-06
-  R1 <- R
-  R <- L %*% Phi %*% t(L); diag(R) <- 1
+  if(nlambda + nphi + npsi > p*(p+1)/2) {
+    warning("The population model has negative degrees of freedom.")
+  }
+  
+  # Add an small error to the population parameters
+  # lambda_error <- lambda - 1e-04
+  # Rerror <- lambda_error %*% Phi %*% t(lambda_error) + Psi; diag(Rerror) <- 1
+  Rerror <- R
+  Rerror[lower.tri(R)] <- Rerror[lower.tri(R)] + runif(0.5*p*(p-1), -1e-06, 1e-06)
+  Rerror[upper.tri(R)] <- t(Rerror)[upper.tri(R)]
+  
+  # Create the FA model
   target <- ifelse(lambda != 0, 1, 0)
   targetphi <- ifelse(Phi != 0, 1, 0)
-  fit <- CFA(R, target, targetphi, method = method)
-  Phat <- fit$model
+  targetpsi <- ifelse(Psi != 0, 1, 0)
+  cfa <- CFA(Rerror, target, targetphi, targetpsi, method = method)
+  Phat <- cfa$model
   
-  # from delta to tau:
-  E <- R - Phat
+  # Get the error matrix:
+  E <- Rerror - Phat
+  # Hopefully, the error is orthogonal to the derivative of each parameter derivative wrt the discrepancy function
+  
+  # Adjust the error to satisfy the desired amount of misfit:
   
   if(method == "minres" || method == "ols") {
     
-    tau <- sqrt(2*delta/sum(E*E))
-    R_error <- Phat + tau*E
+    if(fit == "rmsr") {
+      if(misfit == "close") {
+        r2 <- mean(1-uniquenesses)
+        misfit <- 0.05*r2
+      } else if(misfit == "acceptable") {
+        r2 <- mean(1-uniquenesses)
+        misfit <- 0.10*r2
+      }
+      delta <- misfit^2*0.5*p*(p-1)
+      # delta <- (1-misfit2)*(0.5*(sum(R_error^2) - p))
+    } else if(fit == "cfi") {
+      null_f <- 0.5*(sum(R^2) - p)
+      delta <- (1-misfit)*null_f
+    } else if(fit == "rmsea") {
+      delta <- misfit^2 * df
+    } else if(fit == "raw") {
+      delta <- misfit
+    }
+    
+    k <- sqrt(2*delta/sum(E*E))
+    E <- k*E
     
   } else if(method == "ml") {
     
-    R_inv <- solve(R1)
-    constant <- 1e-04 / sqrt(mean(E*E))
-    E <- constant*E # Fix this to avoid NAs
-    G <- R_inv %*% E
+    if(fit == "rmsr") {
+      delta <- "A given RMSR is compatible with multiple maximum likelihood discrepancy values and is not provided"
+    } else if(fit == "cfi") {
+      null_f <- -log(det(R))
+      delta <- (1-misfit)*null_f
+    } else if(fit == "rmsea") {
+      delta <- misfit^2 * df
+    } else if(fit == "raw") {
+      delta <- misfit
+    }
     
-    tau <- suppressWarnings(grid_search(delta, G))
-    tau <- opt_error(tau, delta, G)
-    # limits <- c(-1e3, 1e3)
-    # tau <- GSS(delta, G, limits)
-    # tau <- grad_descend(delta, G)
-    
-    R_error <- Phat + tau*E
-    
+    if(fit == "rmsr") {
+      
+      k <- sqrt((0.5*p*(p-1))*2*misfit^2/sum(E*E))
+      E <- k*E
+      
+    } else {
+      
+      constant <- 1e-04 / sqrt(mean(E*E))
+      E <- constant*E # Fix this to avoid NAs
+      R_inv <- solve(R)
+      G <- R_inv %*% E
+      x <- suppressWarnings(grid_search(delta, G))
+      # x <- sqrt(2*delta/sum(G*G)) # Initial value suggested by Cudeck
+      k <- opt(x, delta, G)
+      # limits <- c(-1e05, 1e05)
+      # k <- GSS(delta, G, limits)
+      # k <- grad_descend(delta, G)
+      E <- k*E
+      
+    }
   }
+  
+  R_error <- Phat + E
   
   # check for positiveness:
   minimum_eigval <- min(eigen(R_error, symmetric = TRUE, only.values = TRUE)$values)
-  if(minimum_eigval <= 0) warning("The matrix was not positive-definite. The amount of error may be too big.")
+  if(minimum_eigval <= 0) warning("The matrix was not positive-definite. The amount of misfit may be too big.")
   
   return(list(R_error = R_error, fit = fit, delta = delta, misfit = misfit))
   
@@ -949,7 +1085,7 @@ correlate_residuals <- function(
   results <- list(
     data = data,
     population_correlation = population_correlation,
-    original_correlation = original_correlation,
+    parameters = parameters,
     correlated_residuals = correlated_residuals_df,
     original_results = lf_object
   )
