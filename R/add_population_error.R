@@ -357,12 +357,14 @@ add_population_error <- function(
     max_res <- Inf
     
     # Cutoff for the maximum absolute residual
-    if(fit == "rmsr"){
+    if(is.character(misfit)){
       max_res <- switch(
         misfit,
         "close" = 0.10,
         "acceptable" = 0.15
       )
+    }else{
+      max_res <- misfit
     }
     
     # Ensure same order of loadings
