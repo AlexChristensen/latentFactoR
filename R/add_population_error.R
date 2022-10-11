@@ -344,14 +344,12 @@ add_population_error <- function(
     target_psi <- ifelse(errors != 0, 1, 0)  # For uniquenesses and errors
     
     # Fit the CFA
-    cfa <- suppressWarnings(
-      CFA(
-        S = lf_object$population_correlation,
-        target = target,
-        targetphi = target_phi,
-        targetpsi = target_psi,
-        method = cfa_method
-      )
+    cfa <- CFA(
+      S = lf_object$population_correlation,
+      target = target,
+      targetphi = target_phi,
+      targetpsi = target_psi,
+      method = cfa_method
     )
     
     # Compute the largest absolute residual
