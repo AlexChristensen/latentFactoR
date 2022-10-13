@@ -260,7 +260,7 @@ gURhat <- function(p) {
 #' @noRd
 #' @importFrom stats lm
 # Adds population error using Cudeck method to generated data
-# Updated 07.10.2022 -- Marcos
+# Updated 13.10.2022 -- Marcos
 cudeck <- function(R, lambda, Phi, Psi,
                    fit = "rmsr", misfit = "close",
                    method = "minres") {
@@ -323,7 +323,6 @@ cudeck <- function(R, lambda, Phi, Psi,
   
   # Generate random error:
   
-  # BtB <- t(B) %*% B
   m <- p+1
   U <- replicate(p, stats::runif(m, 0, 1))
   A1 <- t(U) %*% U
@@ -333,13 +332,9 @@ cudeck <- function(R, lambda, Phi, Psi,
   y <- diag_u %*% A2 %*% diag_u
   y <- y[lower.tri(y, diag = TRUE)]
   # y <- A2[lower.tri(A2, diag = TRUE)]
-  # y <- stats::runif(p*(p+1)/2, 0, 1)
-  # e <- qr.Q(qr(cbind(B, y)))[, ncol(B)+1]
-  # v <- MASS::ginv(BtB) %*% t(B) %*% y
-  # e <- y - B %*% v # equation 7
-  # B.qr <- qr(B)
-  # e <- qr.resid(B.qr, y)
-  e <- unname(stats::lm(y ~ B, model = FALSE, qr = TRUE)$residuals)
+  # e <- y - B %*% v # equation 7 from Cudeck and Browne (1992)
+  Q <- qr.Q(qr(B))
+  e <- y - Q %*% t(Q) %*% y
   
   # Get the error matrix:
   
@@ -400,7 +395,7 @@ cudeck <- function(R, lambda, Phi, Psi,
     } else {
       
       constant <- 1e-04 / sqrt(mean(E*E))
-      E <- constant*E # Fix this to avoid NAs
+      E <- constant*E
       R_inv <- solve(R)
       G <- R_inv %*% E
       x <- suppressWarnings(grid_search(delta, G))
@@ -428,7 +423,7 @@ cudeck <- function(R, lambda, Phi, Psi,
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # Minimum residual function for CFA in Yuan method
-# Updated 07.10.2022
+# Updated 13.10.2022
 f_minres <- function(
     x, S, ldetS, q,
     indexes_lambda, lambda_p,
@@ -438,19 +433,19 @@ f_minres <- function(
 {
   
   p <- nrow(S)
-  lambda_parameters <- length(indexes_lambda)
+  lambda_p <- length(indexes_lambda)
   Lambda <- matrix(0, p, q)
-  Lambda[indexes_lambda] <- x[1:lambda_parameters]
+  Lambda[indexes_lambda] <- x[1:lambda_p]
+  phi_p <- length(indexes_phi)
   Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[-c(1:lambda_parameters)]
+  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
   Phi <- t(Phi) + Phi
   diag(Phi) <- 1
   # Psi added 07.10.2022 -- Marcos
   Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-c(1:(lambda_p + phi_p))]
+  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
   Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
   Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi
-  diag(Rhat) <- 1
   res <- S - Rhat
   f <- 0.5*sum(res*res)
   
@@ -472,19 +467,19 @@ g_minres <- function(
 {
   
   p <- nrow(S)
-  lambda_parameters <- length(indexes_lambda)
+  lambda_p <- length(indexes_lambda)
   Lambda <- matrix(0, p, q)
-  Lambda[indexes_lambda] <- x[1:lambda_parameters]
+  Lambda[indexes_lambda] <- x[1:lambda_p]
+  phi_p <- length(indexes_phi)
   Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[-c(1:lambda_parameters)]
+  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
   Phi <- t(Phi) + Phi
   diag(Phi) <- 1
   # Psi added 07.10.2022 -- Marcos
   Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-c(1:(lambda_p + phi_p))]
+  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
   Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
   Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi
-  diag(Rhat) <- 1
   res <- S - Rhat
   
   # Change 07.10.2022 -- Marcos
@@ -523,7 +518,7 @@ f_ml <- function(
   diag(Phi) <- 1
   # Psi added 07.10.2022 -- Marcos
   Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-c(1:(lambda_p + phi_p))]
+  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
   Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
   Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi
   f <- log(det(Rhat)) - ldetS + sum(S*solve(Rhat)) - p
@@ -555,7 +550,7 @@ g_ml <- function(
   Phi <- t(Phi) + Phi
   diag(Phi) <- 1
   Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-c(1:(lambda_p + phi_p))]
+  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
   Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
   
   Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi

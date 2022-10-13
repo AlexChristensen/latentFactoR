@@ -186,7 +186,7 @@
 #' @export
 #'
 # Add population to simulated data
-# Updated 07.10.2022
+# Updated 13.10.2022
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
@@ -259,10 +259,6 @@ add_population_error <- function(
     
   }
   
-  # Put uniquenesses on the diagonal of the error matrix
-  uniquenesses <- 1 - rowSums(loadings^2)
-  diag(errors) <- uniquenesses
-  
   # Check for whether cross-loadings should remain
   if(!isTRUE(leave_cross_loadings)){
     
@@ -282,6 +278,17 @@ add_population_error <- function(
     }
     
   }
+  
+  # Re-compute population correlation matrix
+  lf_object$population_correlation <- loadings %*% 
+    factor_correlations %*%
+    t(loadings)
+  
+  # Obtain uniquenesses and put them on the diagonal of errors
+  diag(errors) <- 1 - diag(lf_object$population_correlation)
+  
+  # Reset diagonal of population correlation matrix
+  diag(lf_object$population_correlation) <- 1
   
   # Initialize convergence
   convergence <- FALSE
@@ -324,15 +331,6 @@ add_population_error <- function(
     # Obtain population error correlation matrix
     error_correlation <- population_error$R_error
     
-    # Check SRMR
-    SRMR <- srmr(
-      population = lf_object$population_correlation,
-      error = error_correlation
-    )
-    
-    # Obtain SRMR difference
-    SRMR_difference <- abs(SRMR - population_error$misfit)
-    
     # Add row and column names to population error correlation matrix
     colnames(error_correlation) <- paste0("V", 1:ncol(error_correlation))
     row.names(error_correlation) <- colnames(error_correlation)
@@ -345,12 +343,18 @@ add_population_error <- function(
     
     # Fit the CFA
     cfa <- CFA(
-      S = lf_object$population_correlation,
+      S = error_correlation,
       target = target,
       targetphi = target_phi,
       targetpsi = target_psi,
       method = cfa_method
     )
+    
+    # Check SRMR
+    SRMR <- sqrt(mean(cfa$residuals[lower.tri(cfa$residuals)]^2))
+    
+    # Obtain SRMR difference
+    SRMR_difference <- abs(SRMR - population_error$misfit)
     
     # Compute the largest absolute residual
     max_abs_res <- max(abs(cfa$residuals))
