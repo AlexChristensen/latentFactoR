@@ -281,7 +281,7 @@ add_population_error <- function(
   
   # Re-compute population correlation matrix
   lf_object$population_correlation <- loadings %*% 
-    factor_correlations %*%
+    parameters$factor_correlations %*%
     t(loadings)
   
   # Obtain uniquenesses and put them on the diagonal of errors
