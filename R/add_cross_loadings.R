@@ -321,8 +321,22 @@ add_cross_loadings <- function(
       # Decrease maximum loadings by 0.01
       replace_loadings <- matrix(
         apply(target_loadings, 1, function(x){
+          
+          # Obtain signs
+          signs <- sign(x)
+          
+          # Compute absolute max
+          x <- abs(x)
+          
+          # Decrease by 0.01
           x[which.max(x)] <- x[which.max(x)] - 0.01
+          
+          # Add back signs
+          x <- x * signs
+          
+          # Return loadings
           return(x)
+          
         }),
         ncol = ncol(loadings),
         byrow = TRUE
