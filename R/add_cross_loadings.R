@@ -88,7 +88,7 @@
 #' @export
 #'
 # Add substantial cross-loadings to simulated data
-# Updated 30.09.2022
+# Updated 24.10.2022
 add_cross_loadings <- function(
     lf_object,
     proportion_cross_loadings,
@@ -234,6 +234,9 @@ add_cross_loadings <- function(
     
   })
   
+  # Obtain factor correlations
+  factor_correlations <- parameters$factor_correlations
+  
   # Set cross-loadings on the factors
   for(i in 1:ncol(loadings)){
     
@@ -274,9 +277,71 @@ add_cross_loadings <- function(
     
     # Populate cross-loading structure
     loadings[start_variables[i]:end_variables[i],-i] <- cross_loading_structure
+
+    # Check communalities
+    communalities <- diag(
+      loadings %*%
+        factor_correlations %*%
+        t(loadings)
+    )
+    
+    # Initialize break count
+    break_count <- 0
+    
+    # Loop through until all communalities < 0.90
+    while(any(communalities >= 0.90)){
+      
+      # Increase break count
+      break_count <- break_count + 1
+      
+      # Message about adjustment
+      if(break_count == 1){
+        
+        message(
+          paste(
+            "Communalities for the following variable(s) were >= 0.90:",
+            paste0(
+              which(communalities >= 0.90),
+              collapse = ", "
+            ),
+            "\nThe dominant loadings on these variable(s) were decreased",
+            "incrementally by 0.01 until their communalities were < 0.90"
+          )
+        )
+        
+      }
+      
+      # Identify loadings with communalities greater than 0.90
+      target_loadings <- matrix(
+        loadings[which(communalities >= 0.90),],
+        ncol = ncol(loadings),
+        byrow = FALSE
+      )
+      
+      # Decrease maximum loadings by 0.01
+      replace_loadings <- matrix(
+        apply(target_loadings, 1, function(x){
+          x[which.max(x)] <- x[which.max(x)] - 0.01
+          return(x)
+        }),
+        ncol = ncol(loadings),
+        byrow = TRUE
+      )
+      
+      # Replace loadings
+      loadings[which(communalities >= 0.90),] <- replace_loadings
+      
+      # Check communalities
+      communalities <- diag(
+        loadings %*%
+          factor_correlations %*%
+          t(loadings)
+      )
+      
+    }
     
   }
-  
+
   # Re-simulate data
   results <- simulate_factors(
     factors = parameters$factors,
