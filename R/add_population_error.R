@@ -88,7 +88,7 @@
 #' @param convergence_iterations Numeric (length = 1).
 #' Number of iterations to reach parameter convergence
 #' within the specified `tolerance`.
-#' Defaults to \code{100}
+#' Defaults to \code{10}
 #' 
 #' @param leave_cross_loadings Boolean.
 #' Should cross-loadings be kept?
@@ -199,7 +199,7 @@ add_population_error <- function(
     misfit = c("close", "acceptable"),
     error_method = c("cudeck", "yuan"),
     tolerance = 0.01,
-    convergence_iterations = 100,
+    convergence_iterations = 10,
     leave_cross_loadings = FALSE
 )
 {
@@ -367,32 +367,14 @@ add_population_error <- function(
     max_res <- Inf
     
     # Cutoff for the maximum absolute residual
-    if(is(lf_object, "lf_cl")){
-      
-      # Misfit for simple/small cross-loading structure
-      if(is.character(misfit)){
-        max_res <- switch(
-          misfit,
-          "close" = 0.15,
-          "acceptable" = 0.20
-        )
-      }else{
-        max_res <- misfit
-      }
-      
+    if(is.character(misfit)){
+      max_res <- switch(
+        misfit,
+        "close" = 0.10,
+        "acceptable" = 0.15
+      )
     }else{
-      
-      # Misfit for simple/small cross-loading structure
-      if(is.character(misfit)){
-        max_res <- switch(
-          misfit,
-          "close" = 0.10,
-          "acceptable" = 0.15
-        )
-      }else{
-        max_res <- misfit
-      }
-      
+      max_res <- misfit
     }
     
     # Ensure same order of loadings
