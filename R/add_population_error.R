@@ -367,14 +367,32 @@ add_population_error <- function(
     max_res <- Inf
     
     # Cutoff for the maximum absolute residual
-    if(is.character(misfit)){
-      max_res <- switch(
-        misfit,
-        "close" = 0.10,
-        "acceptable" = 0.15
-      )
+    if(is(lf_object, "lf_cl")){
+      
+      # Misfit for simple/small cross-loading structure
+      if(is.character(misfit)){
+        max_res <- switch(
+          misfit,
+          "close" = 0.15,
+          "acceptable" = 0.20
+        )
+      }else{
+        max_res <- misfit
+      }
+      
     }else{
-      max_res <- misfit
+      
+      # Misfit for simple/small cross-loading structure
+      if(is.character(misfit)){
+        max_res <- switch(
+          misfit,
+          "close" = 0.10,
+          "acceptable" = 0.15
+        )
+      }else{
+        max_res <- misfit
+      }
+      
     }
     
     # Ensure same order of loadings
