@@ -85,6 +85,11 @@
 #' ensuring proper convergence.
 #' Defaults to \code{0.01}
 #' 
+#' @param convergence_iterations Numeric (length = 1).
+#' Number of iterations to reach parameter convergence
+#' within the specified `tolerance`.
+#' Defaults to \code{100}
+#' 
 #' @param leave_cross_loadings Boolean.
 #' Should cross-loadings be kept?
 #' Defaults to \code{FALSE}.
@@ -186,7 +191,7 @@
 #' @export
 #'
 # Add population to simulated data
-# Updated 13.10.2022
+# Updated 25.10.2022
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
@@ -194,6 +199,7 @@ add_population_error <- function(
     misfit = c("close", "acceptable"),
     error_method = c("cudeck", "yuan"),
     tolerance = 0.01,
+    convergence_iterations = 100,
     leave_cross_loadings = FALSE
 )
 {
@@ -388,13 +394,13 @@ add_population_error <- function(
     stuck_count <- stuck_count + 1
     
     # Check if a break is necessary
-    if(stuck_count >= 10){
+    if(stuck_count >= convergence_iterations){
       stop(
         paste(
           "Convergence counter has exceeded its limit.",
           "There were issues converging the model with proper",
           "population error. Consider increasing the `tolerance`",
-          "by small amounts (e.g., 0.001); otherwise, model",
+          "by small amounts (e.g., 0.01); otherwise, model",
           "may not be adequate to add population error."
         )
       )

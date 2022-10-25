@@ -11,6 +11,7 @@ add_population_error(
   misfit = c("close", "acceptable"),
   error_method = c("cudeck", "yuan"),
   tolerance = 0.01,
+  convergence_iterations = 100,
   leave_cross_loadings = FALSE
 )
 }
@@ -96,6 +97,11 @@ was added. Similarly, verifies that the MAE of the
 loadings are not greater than the specified amount,
 ensuring proper convergence.
 Defaults to \code{0.01}}
+
+\item{convergence_iterations}{Numeric (length = 1).
+Number of iterations to reach parameter convergence
+within the specified `tolerance`.
+Defaults to \code{100}}
 
 \item{leave_cross_loadings}{Boolean.
 Should cross-loadings be kept?
