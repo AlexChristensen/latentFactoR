@@ -74,7 +74,7 @@
 #' @export
 #'
 # Next Eigenvalue Sufficiency Test
-# Updated 30.09.2022
+# Updated 26.10.2022
 NEST <- function(
     data, sample_size,
     iterations = 1000,
@@ -99,9 +99,14 @@ NEST <- function(
   # Obtain correlation matrix (if not already)
   if(!isSymmetric(data)){
     
-    # Compute correlations
-    correlation <- qgraph::cor_auto(
-      data, forcePD = TRUE, verbose = FALSE
+    # # Compute correlations
+    # correlation <- qgraph::cor_auto(
+    #   data, forcePD = TRUE, verbose = FALSE
+    # )
+    
+    # Pearson's correlation only
+    correlation <- cor(
+      data, use = "pairwise", method = "pearson"
     )
     
     # Set sample size
@@ -118,6 +123,12 @@ NEST <- function(
     }
     
   }
+  
+  # Ensure positive-definite matrix
+  correlation <- Matrix::nearPD(
+    x = correlation, corr = TRUE,
+    keepDiag = TRUE, base.matrix = TRUE
+  )$mat
   
   # Check for appropriate sample size
   type_error(sample_size, "numeric"); length_error(sample_size, 1);

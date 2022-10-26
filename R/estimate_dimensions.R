@@ -74,7 +74,7 @@
 #' @export
 #'
 # Estimate several different factor recovery methods
-# Updated 01.10.2022
+# Updated 26.10.2022
 estimate_dimensions <- function(
     data, sample_size,
     EGA_args = list(
@@ -120,6 +120,17 @@ estimate_dimensions <- function(
     correlation <- qgraph::cor_auto(
       data, forcePD = TRUE, verbose = FALSE
     )
+    
+    ## Must use Pearson's correlation
+    correlation_NEST <- cor(
+      data, use = "pairwise", method = "pearson"
+    )
+    
+    ## Ensure positive-definite matrix
+    correlation_NEST <- Matrix::nearPD(
+      x = correlation_NEST, corr = TRUE,
+      keepDiag = TRUE, base.matrix = TRUE
+    )$mat
     
     # Set sample size
     sample_size <- nrow(data)
@@ -381,7 +392,7 @@ estimate_dimensions <- function(
   )
   
   ## Set data and sample size
-  NEST_args$data <- correlation
+  NEST_args$data <- correlation_NEST
   NEST_args$sample_size <- sample_size
   
   ## Estimate NEST
