@@ -95,8 +95,8 @@ estimate_dimensions <- function(
       convergence = 0.00001
     ),
     PA_args = list(
-      fm = "minres", fa = "both", n.iter = 20,
-      sim = TRUE, plot = FALSE
+      fm = "minres", fa = "both", cor = "cor",
+      n.iter = 20, sim = TRUE, plot = FALSE
     )
 )
 {
@@ -289,7 +289,7 @@ estimate_dimensions <- function(
   )
   
   ## Set data and sample size
-  FF_args$data <- correlation
+  FF_args$data <- data
   FF_args$sample_size <- sample_size
   
   ## Estimate Factor Forest
@@ -433,7 +433,7 @@ estimate_dimensions <- function(
   )
   
   ## Set data and sample size
-  PA_args$x <- correlation
+  PA_args$x <- data
   PA_args$n.obs <- sample_size
   
   ## Estimate Parallel Analysis
