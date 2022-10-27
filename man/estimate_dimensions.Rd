@@ -12,8 +12,9 @@ estimate_dimensions(
   FF_args = list(maximum_factors = 8),
   FSPE_args = list(maxK = 8, rep = 1, method = "PE", pbar = FALSE),
   NEST_args = list(iterations = 1000, maximum_iterations = 500, alpha = 0.05, convergence
-    = 1e-05),
-  PA_args = list(fm = "minres", fa = "both", n.iter = 20, sim = TRUE, plot = FALSE)
+    = 0.00001),
+  PA_args = list(fm = "minres", fa = "both", cor = "cor", n.iter = 20, sim = TRUE, plot =
+    FALSE)
 )
 }
 \arguments{
