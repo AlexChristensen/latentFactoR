@@ -74,7 +74,7 @@
 #' @export
 #'
 # Estimate several different factor recovery methods
-# Updated 26.10.2022
+# Updated 27.10.2022
 estimate_dimensions <- function(
     data, sample_size,
     EGA_args = list(
@@ -96,7 +96,7 @@ estimate_dimensions <- function(
     ),
     PA_args = list(
       fm = "minres", fa = "both", cor = "cor",
-      n.iter = 20, sim = TRUE, plot = FALSE
+      n.iter = 20, sim = FALSE, plot = FALSE
     )
 )
 {

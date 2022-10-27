@@ -10,7 +10,7 @@ NEST(
   iterations = 1000,
   maximum_iterations = 500,
   alpha = 0.05,
-  convergence = 0.00001
+  convergence = 1e-05
 )
 }
 \arguments{
