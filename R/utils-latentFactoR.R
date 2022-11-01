@@ -786,7 +786,7 @@ yuan <- function(R, lambda, Phi, Psi,
 
 #' @noRd
 # Adds correlated residuals to generated data
-# Updated 01.10.2022
+# Updated 01.11.2022
 correlate_residuals <- function(
     lf_object,
     proportion_LD, allow_multiple = FALSE,
@@ -815,7 +815,10 @@ correlate_residuals <- function(
   # If variables cannot have multiple local dependencies,
   # then number of local dependencies needs to be cut in half (per factor)
   if(!isTRUE(allow_multiple)){
-    variables_LD <- floor(variables_LD / 2) 
+    variables_LD <- ifelse(
+      variables_LD == 1, variables_LD,
+      floor(variables_LD / 2) 
+    )
   }
   
   # Check for add residual range
