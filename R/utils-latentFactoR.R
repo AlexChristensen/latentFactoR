@@ -922,16 +922,19 @@ correlate_residuals <- function(
       for(i in 1:nrow(correlated_residuals)){
         
         # Add residuals to correlation matrix
-        original_correlation[
+        population_correlation[
           correlated_residuals[i,1],
           correlated_residuals[i,2]
-        ] <- add_residuals[i]
+        ] <- original_correlation[
+          correlated_residuals[i,1],
+          correlated_residuals[i,2]
+        ] + add_residuals[i]
         
         # Ensure symmetric
-        original_correlation[
+        population_correlation[
           correlated_residuals[i,2],
           correlated_residuals[i,1]
-        ] <- original_correlation[
+        ] <- population_correlation[
           correlated_residuals[i,1],
           correlated_residuals[i,2]
         ]
