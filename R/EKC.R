@@ -48,7 +48,7 @@
 #' @export
 #'
 # Empirical Kaiser Criterion
-# Updated 30.09.2022
+# Updated 03.11.2022
 EKC <- function(
     data, sample_size
 )
@@ -106,7 +106,7 @@ EKC <- function(
   for(i in 1:variables){
     reference[i] <- max(
       ((1 + sqrt(variables / sample_size))^2) *
-        (variables - sum(reference)) /
+        (variables - sum(eigenvalues)) /
         (variables - i + 1), 1
     )
   }
