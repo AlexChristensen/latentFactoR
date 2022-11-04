@@ -1580,6 +1580,14 @@ skew_continuous <- function(
   # Original skewness
   original_skewness <- skewness
   
+  # Check for negative sign
+  if(sign(original_skewness) == -1){
+    original_skewness <- abs(original_skewness)
+    flip <- TRUE
+  }else{
+    flip <- FALSE
+  }
+  
   # Generate data
   if(is.null(data)){
     data <- rnorm(sample_size)
@@ -1669,6 +1677,11 @@ skew_continuous <- function(
   skew_data <- sinh(
     kurtosis * (asinh(data) + skew_values[minimum]) 
   )
+  
+  # Check for flip
+  if(isTRUE(flip)){
+    skew_data <- -skew_data
+  }
   
   # Return skewed data
   return(skew_data)
