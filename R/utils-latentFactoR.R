@@ -1577,14 +1577,13 @@ skew_continuous <- function(
 )
 {
   
-  # Original skewness
-  original_skewness <- skewness
-  
   # Check for negative sign
-  if(sign(original_skewness) == -1){
-    original_skewness <- abs(original_skewness)
+  if(sign(skewness) == -1){
+    skewness <- abs(skewness)
+    original_skewness <- skewness
     flip <- TRUE
   }else{
+    original_skewness <- skewness
     flip <- FALSE
   }
   
@@ -1594,7 +1593,7 @@ skew_continuous <- function(
   }
   
   # Kurtosis
-  kurtosis <- 1
+  kurtosis <- ifelse(skewness > 0.90, 1.1, 1)
   
   # Skew data
   skew_data <- sinh(
@@ -1629,7 +1628,7 @@ skew_continuous <- function(
       
       # Set bounds (expand range downward)
       bounds <- c(
-        skew_values[minimum] - 0.20,
+        skew_values[minimum] - 0.50,
         skew_values[minimum + 1]
       )
       
@@ -1638,7 +1637,7 @@ skew_continuous <- function(
       # Set bounds (expand range upward)
       bounds <- c(
         skew_values[minimum],
-        skew_values[minimum] + 0.20
+        skew_values[minimum] + 0.50
       )
       
     }else{
@@ -1682,6 +1681,9 @@ skew_continuous <- function(
   if(isTRUE(flip)){
     skew_data <- -skew_data
   }
+  
+  # Re-scale
+  skew_data <- scale(skew_data)
   
   # Return skewed data
   return(skew_data)
