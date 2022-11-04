@@ -1577,34 +1577,21 @@ skew_continuous <- function(
 )
 {
   
-  # Check for negative sign
-  if(sign(skewness) == -1){
-    skewness <- abs(skewness)
-    original_skewness <- skewness
-    flip <- TRUE
-  }else{
-    original_skewness <- skewness
-    flip <- FALSE
-  }
-  
   # Generate data
   if(is.null(data)){
     data <- rnorm(sample_size)
   }
   
   # Kurtosis
-  kurtosis <- ifelse(skewness > 0.90, 1.1, 1)
+  kurtosis <- 1
   
-  # Skew data
-  skew_data <- sinh(
-    kurtosis * (asinh(data) + skewness) 
+  # Initialize increments
+  increments <- 0.01
+  
+  # Seek along a range of skews
+  skew_values <- seq(
+    -2, 2, increments
   )
-  
-  # Observed skew in data
-  observed_skew <- psych::skew(skew_data)
-  
-  # Search along skew values
-  skew_values <- seq(skewness - 0.20, skewness + 0.20, 0.01)
   
   # Compute skews
   skews <- unlist(lapply(skew_values, function(x){
@@ -1620,41 +1607,27 @@ skew_continuous <- function(
   # Compute minimum index
   minimum <- which.min(abs(original_skewness - skews))
   
-  # Minimize difference
+  # Check for whether skewness is found
   while(abs(skews[minimum] - original_skewness) > tolerance){
     
-    # Check for lowest or highest minimum
+    # Check for minimum value
     if(minimum == 1){
-      
-      # Set bounds (expand range downward)
-      bounds <- c(
-        skew_values[minimum] - 0.50,
-        skew_values[minimum + 1]
-      )
-      
+      kurtosis <- kurtosis - 0.1
     }else if(minimum == length(skews)){
-      
-      # Set bounds (expand range upward)
-      bounds <- c(
-        skew_values[minimum],
-        skew_values[minimum] + 0.50
-      )
-      
+      kurtosis <- kurtosis + 0.1
     }else{
       
-      # Set bounds
-      bounds <- c(
+      # Decrease increments
+      increments <- 0.01 * 0.1
+      
+      # Seek along a range of skews
+      skew_values <- seq(
         skew_values[minimum - 1],
-        skew_values[minimum + 1]
+        skew_values[minimum + 1],
+        length.out = 100
       )
 
     }
-    
-    # Search along skew values
-    skew_values <- seq(
-      bounds[1], bounds[2],
-      diff(bounds) / 20
-    )
     
     # Compute skews
     skews <- unlist(lapply(skew_values, function(x){
@@ -1670,17 +1643,13 @@ skew_continuous <- function(
     # Compute minimum index
     minimum <- which.min(abs(original_skewness - skews))
     
+    
   }
   
   # Compute final skew data
   skew_data <- sinh(
     kurtosis * (asinh(data) + skew_values[minimum]) 
   )
-  
-  # Check for flip
-  if(isTRUE(flip)){
-    skew_data <- -skew_data
-  }
   
   # Re-scale
   skew_data <- scale(skew_data)
