@@ -1568,7 +1568,7 @@ range_error <- function(input, expected_ranges){
 #
 #' @noRd
 # Generates skewed data for continuous data
-# Updated 09.08.2022
+# Updated 04.11.2022
 skew_continuous <- function(
     skewness,
     data = NULL,
@@ -1597,10 +1597,10 @@ skew_continuous <- function(
   observed_skew <- psych::skew(skew_data)
   
   # Minimize difference
-  while(abs(observed_skew - original_skewness) > tolerance){
+  while(abs(observed_skew + original_skewness) > tolerance){
     
     # Obtain difference
-    difference <- observed_skew - original_skewness
+    difference <- observed_skew + original_skewness
     
     # Decrease skewness
     # Negative values increase
@@ -1615,6 +1615,11 @@ skew_continuous <- function(
     # Observed skew in data
     observed_skew <- psych::skew(skew_data)
     
+  }
+  
+  # Check for reverse signs
+  if(sign(observed_skew) != sign(original_skewness)){
+    skew_data <- -skew_data
   }
   
   # Return skewed data
