@@ -1577,6 +1577,14 @@ skew_continuous <- function(
 )
 {
   
+  # Obtain absolute skewness
+  if(sign(skewness) == -1){
+    skewness <- abs(skewness)
+    flip <- TRUE
+  }else{
+    flip <- FALSE
+  }
+  
   # Generate data
   if(is.null(data)){
     data <- rnorm(sample_size)
@@ -1605,10 +1613,10 @@ skew_continuous <- function(
   }))
   
   # Compute minimum index
-  minimum <- which.min(abs(original_skewness - skews))
+  minimum <- which.min(abs(skewness - skews))
   
   # Check for whether skewness is found
-  while(abs(skews[minimum] - original_skewness) > tolerance){
+  while(abs(skewness - skews[minimum]) > tolerance){
     
     # Check for minimum value
     if(minimum == 1){
@@ -1641,8 +1649,7 @@ skew_continuous <- function(
     }))
     
     # Compute minimum index
-    minimum <- which.min(abs(original_skewness - skews))
-    
+    minimum <- which.min(abs(skewness - skews))
     
   }
   
@@ -1653,6 +1660,11 @@ skew_continuous <- function(
   
   # Re-scale
   skew_data <- scale(skew_data)
+  
+  # Flip skew?
+  if(isTRUE(flip)){
+    skew_data <- -skew_data
+  }
   
   # Return skewed data
   return(skew_data)
