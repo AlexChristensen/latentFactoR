@@ -1596,47 +1596,78 @@ skew_continuous <- function(
   # Observed skew in data
   observed_skew <- psych::skew(skew_data)
   
-  # Absolute difference
-  # if(sign(original_skewness) == 1){
-  #   absolute <- abs(observed_skew - original_skewness)
-  # }else{
-  #   absolute <- abs(observed_skew + original_skewness)
-  # }
-  absolute <- abs(observed_skew + original_skewness)
+  # Search along skew values
+  skew_values <- seq(skewness - 0.20, skewness + 0.20, 0.01)
   
-  # Minimize difference
-  while(absolute > tolerance){
-    
-    # Obtain difference
-    difference <- observed_skew + original_skewness
-    
-    # Decrease skewness
-    # Negative values increase
-    # Positive values decrease
-    skewness <- skewness - difference
-    
+  # Compute skews
+  skews <- unlist(lapply(skew_values, function(x){
     # Skew data
     skew_data <- sinh(
-      kurtosis * (asinh(skew_data) + skewness) 
+      kurtosis * (asinh(data) + x) 
     )
     
     # Observed skew in data
-    observed_skew <- psych::skew(skew_data)
+    psych::skew(skew_data)
+  }))
+  
+  # Compute minimum index
+  minimum <- which.min(abs(original_skewness - skews))
+  
+  # Minimize difference
+  while(abs(skews[minimum] - original_skewness) > tolerance){
     
-    # Absolute difference
-    # if(sign(original_skewness) == 1){
-    #   absolute <- abs(observed_skew - original_skewness)
-    # }else{
-    #   absolute <- abs(observed_skew + original_skewness)
-    # }
-    absolute <- abs(observed_skew + original_skewness)
+    # Check for lowest or highest minimum
+    if(minimum == 1){
+      
+      # Set bounds
+      bounds <- c(
+        skew_values[minimum] -
+          diff(c(skew_values[minimum], skew_values[minimum + 1])),
+        skew_values[minimum + 1]
+      )
+      
+    }else if(minimum == length(skews)){
+      
+      # Set bounds
+      bounds <- c(
+        skew_values[minimum - 1],
+        skew_values[minimum] +
+        diff(c(skew_values[minimum - 1], skew_values[minimum]))
+      )
+      
+    }else{
+      
+      # Set bounds
+      bounds <- c(skew_values[minimum - 1], skew_values[minimum + 1])
+
+    }
+    
+    # Search along skew values
+    skew_values <- seq(
+      bounds[1], bounds[2],
+      diff(bounds) / 20
+    )
+    
+    # Compute skews
+    skews <- unlist(lapply(skew_values, function(x){
+      # Skew data
+      skew_data <- sinh(
+        kurtosis * (asinh(data) + x) 
+      )
+      
+      # Observed skew in data
+      psych::skew(skew_data)
+    }))
+    
+    # Compute minimum index
+    minimum <- which.min(abs(original_skewness - skews))
     
   }
   
-  # Check for reverse signs
-  if(sign(observed_skew) != sign(original_skewness)){
-    skew_data <- -skew_data
-  }
+  # Compute final skew data
+  skew_data <- sinh(
+    kurtosis * (asinh(data) + skew_values[minimum]) 
+  )
   
   # Return skewed data
   return(skew_data)
