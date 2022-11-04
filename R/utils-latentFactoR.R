@@ -1596,8 +1596,16 @@ skew_continuous <- function(
   # Observed skew in data
   observed_skew <- psych::skew(skew_data)
   
+  # Absolute difference
+  # if(sign(original_skewness) == 1){
+  #   absolute <- abs(observed_skew - original_skewness)
+  # }else{
+  #   absolute <- abs(observed_skew + original_skewness)
+  # }
+  absolute <- abs(observed_skew + original_skewness)
+  
   # Minimize difference
-  while(abs(observed_skew + original_skewness) > tolerance){
+  while(absolute > tolerance){
     
     # Obtain difference
     difference <- observed_skew + original_skewness
@@ -1609,11 +1617,19 @@ skew_continuous <- function(
     
     # Skew data
     skew_data <- sinh(
-      kurtosis * (asinh(data) + skewness) 
+      kurtosis * (asinh(skew_data) + skewness) 
     )
     
     # Observed skew in data
     observed_skew <- psych::skew(skew_data)
+    
+    # Absolute difference
+    # if(sign(original_skewness) == 1){
+    #   absolute <- abs(observed_skew - original_skewness)
+    # }else{
+    #   absolute <- abs(observed_skew + original_skewness)
+    # }
+    absolute <- abs(observed_skew + original_skewness)
     
   }
   
