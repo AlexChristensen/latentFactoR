@@ -1619,26 +1619,27 @@ skew_continuous <- function(
     # Check for lowest or highest minimum
     if(minimum == 1){
       
-      # Set bounds
+      # Set bounds (expand range downward)
       bounds <- c(
-        skew_values[minimum] -
-          diff(c(skew_values[minimum], skew_values[minimum + 1])),
+        skew_values[minimum] - 0.20,
         skew_values[minimum + 1]
       )
       
     }else if(minimum == length(skews)){
       
-      # Set bounds
+      # Set bounds (expand range upward)
       bounds <- c(
-        skew_values[minimum - 1],
-        skew_values[minimum] +
-        diff(c(skew_values[minimum - 1], skew_values[minimum]))
+        skew_values[minimum],
+        skew_values[minimum] + 0.20
       )
       
     }else{
       
       # Set bounds
-      bounds <- c(skew_values[minimum - 1], skew_values[minimum + 1])
+      bounds <- c(
+        skew_values[minimum - 1],
+        skew_values[minimum + 1]
+      )
 
     }
     
