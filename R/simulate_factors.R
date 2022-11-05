@@ -208,7 +208,7 @@ simulate_factors <- function(
   if(!is.null(cross_loadings_range)){
     type_error(cross_loadings_range, "numeric") # object type error
     length_error(cross_loadings_range, 2) # object length error
-    range_error(cross_loadings_range, c(0, 1)) # object range error
+    range_error(cross_loadings_range, c(-1, 1)) # object range error
     cross_loadings <- runif(
       factors,
       min = min(cross_loadings_range),
