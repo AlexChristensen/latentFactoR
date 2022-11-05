@@ -363,13 +363,24 @@ simulate_factors <- function(
             # Ignore dominant factor
             if(i != j){
               
-              loading_matrix[
-                start_variables[j]:end_variables[j], i # cross-loadings
-              ] <- rnorm(
-                variables[j],
-                mean = 0,
-                cross_loadings[j]
-              )
+              # Check for range of cross-loadings
+              if(!is.null(cross_loadings_range)){
+                loading_matrix[
+                  start_variables[j]:end_variables[j], i # cross-loadings
+                ] <- runif(
+                  variables[j],
+                  min = min(cross_loadings_range),
+                  max = max(cross_loadings_range)
+                )
+              }else{
+                loading_matrix[
+                  start_variables[j]:end_variables[j], i # cross-loadings
+                ] <- rnorm(
+                  variables[j],
+                  mean = 0,
+                  cross_loadings[j]
+                )
+              }
               
             }
             
