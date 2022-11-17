@@ -66,7 +66,7 @@
 #' @export
 #'
 # Factor Forest
-# Updated 01.10.2022
+# Updated 17.11.2022
 factor_forest <- function(
     data, sample_size,
     maximum_factors = 8
@@ -174,10 +174,29 @@ factor_forest <- function(
   
   
   # empirical kaiser criterion
-  ekc <- EKC(
-    data = correlation,
-    sample_size = sample_size
-  )$dimensions
+
+  # Obtain number of variables
+  variables <- ncol(correlation)
+  
+  # Obtain eigenvalues
+  eigenvalues <- eigen(correlation)$values
+  
+  # Initialize reference criterion
+  reference <- numeric(length = variables)
+  
+  # Loop over variables
+  for(i in 1:variables){
+    reference[i] <- max(
+      ((1 + sqrt(variables / sample_size))^2) *
+        (variables - sum(reference)) / # note difference with `EKC`
+        (variables - i + 1), 1
+    )
+  }
+  # Model was trained with `reference` but proper uses `eigenvalues`
+  
+  
+  # Identify last eigenvalue greater than reference
+  ekc <- max(which(eigenvalues >= reference))
   
   # setting missing eigenvalues to -1000
   

@@ -19,4 +19,4 @@ Imports: BBmisc, EGAnet, fspe, googledrive, ineq,
 	   methods, mlr, mvtnorm, psych,
 	   qgraph, rstudioapi, xgboost
 Encoding: UTF-8
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.2
