@@ -191,7 +191,7 @@
 #' @export
 #'
 # Add population to simulated data
-# Updated 25.10.2022
+# Updated 22.11.2022
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
@@ -280,6 +280,87 @@ add_population_error <- function(
         start_variables[i]:end_variables[i],
         -i
       ] <- 0
+      
+    }
+    
+  }else if(is(lf_object, "lf_cl")){
+    
+    # Set factor correlations
+    factor_correlations <- parameters$factor_correlations
+    
+    # Check communalities
+    communalities <- diag(
+      loadings %*%
+        factor_correlations %*%
+        t(loadings)
+    )
+    
+    # Initialize break count
+    break_count <- 0
+    
+    # Loop through until all communalities < 0.80
+    while(any(communalities >= 0.80)){
+      
+      # Increase break count
+      break_count <- break_count + 1
+      
+      # Message about adjustment
+      if(break_count == 1){
+        
+        message(
+          paste(
+            "Communalities for the following variable(s) were >= 0.80:",
+            paste0(
+              which(communalities >= 0.80),
+              collapse = ", "
+            ),
+            "\nThe dominant loadings on these variable(s) were decreased",
+            "incrementally by 0.01 until their communalities were < 0.80"
+          )
+        )
+        
+      }
+      
+      # Identify loadings with communalities greater than 0.90
+      target_loadings <- matrix(
+        loadings[which(communalities >= 0.80),],
+        ncol = ncol(loadings),
+        byrow = FALSE
+      )
+      
+      # Decrease maximum loadings by 0.01
+      replace_loadings <- matrix(
+        apply(target_loadings, 1, function(x){
+          
+          # Obtain signs
+          signs <- sign(x)
+          
+          # Compute absolute max
+          x <- abs(x)
+          
+          # Decrease by 0.01
+          x[which.max(x)] <- x[which.max(x)] - 0.01
+          
+          # Add back signs
+          x <- x * signs
+          
+          # Return loadings
+          return(x)
+          
+        }),
+        ncol = ncol(loadings),
+        byrow = TRUE
+      )
+      
+      # Replace loadings
+      loadings[which(communalities >= 0.80),] <- replace_loadings
+      
+      # Check communalities
+      communalities <- diag(
+        loadings %*%
+          factor_correlations %*%
+          t(loadings)
+      )
       
     }
     

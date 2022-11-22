@@ -1568,7 +1568,7 @@ range_error <- function(input, expected_ranges){
 #
 #' @noRd
 # Generates skewed data for continuous data
-# Updated 04.11.2022
+# Updated 22.11.2022
 skew_continuous <- function(
     skewness,
     data = NULL,
@@ -1576,6 +1576,11 @@ skew_continuous <- function(
     tolerance = 0.00001
 )
 {
+  
+  # Check for zero skew (skip adding skew)
+  if(skewness == 0){
+    return(data)
+  }
   
   # Obtain absolute skewness
   if(sign(skewness) == -1){

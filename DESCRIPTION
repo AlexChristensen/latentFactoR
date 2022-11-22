@@ -1,7 +1,7 @@
 Package: latentFactoR
 Title: Data Simulation Based on Latent Factors
-Version: 0.0.3
-Date: 2022-10-13
+Version: 0.0.4
+Date: 2022-11-22
 Authors@R: c(
 	person("Alexander", "Christensen", email = "alexpaulchristensen@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-9798-7037")),
 	person("Maria Dolores", "Nieto Canaveras", email = "mnietoca@nebrija.es", role = "aut"),
@@ -16,7 +16,7 @@ Description: Generates data based on latent factor models. Data can be continuou
 Depends: R (>= 3.6.0)
 License: GPL (>= 3.0)
 Imports: BBmisc, EGAnet, fspe, googledrive, ineq,
-	   methods, mlr, mvtnorm, psych,
+	   Matrix, methods, mlr, mvtnorm, psych,
 	   qgraph, rstudioapi, xgboost
 Encoding: UTF-8
 RoxygenNote: 7.2.2

@@ -1,3 +1,12 @@
+Changes in version 0.0.4
+
+o FIX: correction to `EKC` (used `factor_forest`'s version of EKC which used reference values rather than eigenvalues); `EKC` uses eigenvalues (proper implementation) whereas `factor_forest` uses reference (which was what the random forest model was trained on)
+
+o FIX: cross-loadings with population error are screened for communalities >= 0.80; communalities near 0.90 prior to population error would often get stuck and not converge
+
+o ADD: `skew` argument for continuous data
+
+
 Changes in version 0.0.3
 
 o ADD: `add_population_error` will add population error, using {bifactor}, from a simulated factor model

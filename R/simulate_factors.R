@@ -179,7 +179,7 @@
 #' @export
 #'
 # Main factor simulation function
-# Updated 05.09.2022
+# Updated 22.11.2022
 simulate_factors <- function(
   factors,
   variables, variables_range = NULL,
@@ -453,24 +453,46 @@ simulate_factors <- function(
   
   }
   
-  # Find categories
-  if(any(variable_categories <= categorical_limit)){
-    
-    # Target columns to categorize
-    columns <- which(variable_categories <= categorical_limit)
+  # Set skew/categories
+  ## Target columns to categorize and/or add skew
+  categorize_columns <- which(variable_categories <= categorical_limit)
+  continuous_columns <- setdiff(1:ncol(data), categorize_columns)
+  
+  ## Check for categories
+  if(length(categorize_columns) != 0){
     
     # Set skew
-    if(length(skew) != length(columns)){
-      skew <- sample(skew, length(columns), replace = TRUE)
+    if(length(skew) != ncol(data)){
+      skew <- sample(skew, length(categorize_columns), replace = TRUE)
     }
     
     # Loop through columns
-    for(i in columns){
+    for(i in categorize_columns){
       
       data[,i] <- categorize(
         data = data[,i],
         categories = variable_categories[i],
         skew_value = skew[i]
+      )
+      
+    }
+    
+  }
+  
+  ## Check for continuous
+  if(length(continuous_columns) != 0){
+    
+    # Set skew
+    if(length(skew) != ncol(data)){
+      skew <- sample(skew, length(continuous_columns), replace = TRUE)
+    }
+    
+    # Loop through columns
+    for(i in continuous_columns){
+      
+      data[,i] <- skew_continuous( # function in `utils-latentFactoR`
+        skewness = skew[i],
+        data = data[,i]
       )
       
     }
