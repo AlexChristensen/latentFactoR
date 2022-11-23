@@ -1,3 +1,8 @@
+Changes in version 0.0.5
+
+o FIX: bug in skew when only providing 1 value
+
+
 Changes in version 0.0.4
 
 o FIX: correction to `EKC` (used `factor_forest`'s version of EKC which used reference values rather than eigenvalues); `EKC` uses eigenvalues (proper implementation) whereas `factor_forest` uses reference (which was what the random forest model was trained on)

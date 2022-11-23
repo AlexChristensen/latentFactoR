@@ -179,7 +179,7 @@
 #' @export
 #'
 # Main factor simulation function
-# Updated 22.11.2022
+# Updated 23.11.2022
 simulate_factors <- function(
   factors,
   variables, variables_range = NULL,
@@ -462,7 +462,9 @@ simulate_factors <- function(
   if(length(categorize_columns) != 0){
     
     # Set skew
-    if(length(skew) != ncol(data)){
+    if(length(skew) == 1){
+      skew <- rep(skew, length(categorize_columns))
+    }else if(length(skew) != ncol(data)){
       skew <- sample(skew, length(categorize_columns), replace = TRUE)
     }
     
@@ -483,7 +485,9 @@ simulate_factors <- function(
   if(length(continuous_columns) != 0){
     
     # Set skew
-    if(length(skew) != ncol(data)){
+    if(length(skew) == 1){
+      skew <- rep(skew, length(continuous_columns))
+    }else if(length(skew) != ncol(data)){
       skew <- sample(skew, length(continuous_columns), replace = TRUE)
     }
     
