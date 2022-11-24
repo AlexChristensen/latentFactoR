@@ -99,17 +99,21 @@ EKC <- function(
   # Obtain eigenvalues
   eigenvalues <- eigen(correlation)$values
   
-  # Initialize reference criterion
-  reference <- numeric(length = variables)
+  # Set null model
+  l_up <- (1 + sqrt(variables / sample_size)^2)
   
-  # Loop over variables
-  for(i in 1:variables){
-    reference[i] <- max(
-      ((1 + sqrt(variables / sample_size))^2) *
-        (variables - cumsum(eigenvalues)[i]) /
-        (variables - i + 1), 1
-    )
-  }
+  # Set eigenvalue criterion
+  V <- c(0, eigenvalues[-variables])
+  
+  # Set order of variables
+  W <- variables:1
+  
+  # Initialize reference criterion
+  reference <- sapply(
+    (variables - V) / W * l_up, function(x){
+      max(x, 1)
+    }
+  )
   
   # Identify last eigenvalue greater than reference
   dimensions <- which(eigenvalues < reference)[1] - 1
