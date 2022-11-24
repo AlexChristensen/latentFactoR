@@ -2,10 +2,12 @@ Changes in version 0.0.5
 
 o FIX: bug in skew when only providing 1 value
 
+o FIX: further correction to `EKC` (uses `cumsum(eigenvalues)` rather than `sum(eigenvalues)`)
+
 
 Changes in version 0.0.4
 
-o FIX: correction to `EKC` (used `factor_forest`'s version of EKC which used reference values rather than eigenvalues); `EKC` uses eigenvalues (proper implementation) whereas `factor_forest` uses reference (which was what the random forest model was trained on)
+o FIX: correction to `EKC` (used `factor_forest`'s version of EKC which used reference values rather than eigenvalues); `EKC` uses eigenvalues whereas `factor_forest` uses reference (which was what the random forest model was trained on)
 
 o FIX: cross-loadings with population error are screened for communalities >= 0.80; communalities near 0.90 prior to population error would often get stuck and not converge
 
