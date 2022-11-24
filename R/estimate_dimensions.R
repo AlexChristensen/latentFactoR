@@ -158,6 +158,11 @@ estimate_dimensions <- function(
   ## Obtain original EGA arguments
   original_EGA_args <- EGA_args
   
+  ## Update default EGA arguments
+  original_EGA_args <- update_defaults(
+    FUN = "EGA", FUN_args = original_EGA_args
+  )
+  
   ## Obtain EGA arguments
   EGA_args <- obtain_arguments(
     FUN = EGAnet::EGA,
@@ -282,6 +287,11 @@ estimate_dimensions <- function(
   ## Factor Forest
   message("Estimating Factor Forest...", appendLF = FALSE)
   
+  ## Update default Factor Forest arguments
+  FF_args <- update_defaults(
+    FUN = "FF", FUN_args = FF_args
+  )
+  
   ## Obtain Factor Forest arguments
   FF_args <- obtain_arguments(
     FUN = factor_forest,
@@ -395,6 +405,11 @@ estimate_dimensions <- function(
   ## NEST
   message("Estimating NEST...", appendLF = FALSE)
   
+  ## Update default NEST arguments
+  NEST_args <- update_defaults(
+    FUN = "NEST", FUN_args = NEST_args
+  )
+  
   ## Obtain NEST arguments
   NEST_args <- obtain_arguments(
     FUN = NEST,
@@ -435,6 +450,11 @@ estimate_dimensions <- function(
   
   ## Parallel Analysis
   message("Estimating Parallel Analysis...", appendLF = FALSE)
+  
+  ## Update default Parallel Analysis arguments
+  PA_args <- update_defaults(
+    FUN = "PA", FUN_args = PA_args
+  )
   
   ## Obtain Parallel Analysis arguments
   PA_args <- obtain_arguments(

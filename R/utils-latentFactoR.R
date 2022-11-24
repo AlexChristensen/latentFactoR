@@ -2098,6 +2098,84 @@ match_row <- function(data)
 }
 
 #' @noRd
+# Function update default arguments
+# Updated 24.11.2022
+update_defaults <- function(FUN, FUN_args)
+{
+  
+  # Exploratory Graph Analysis
+  if(FUN == "EGA"){
+    
+    # Defaults
+    defaults <- list(
+      corr = "cor_auto", uni.method = "louvain",
+      model = "glasso", consensus.method = "most_common",
+      plot.EGA = FALSE
+    )
+    
+  }
+  
+  # Factor Forest
+  if(FUN == "FF"){
+    
+    # Defaults
+    defaults <- list(
+      maximum_factors = 8
+    )
+    
+  }
+  
+  # Out-of-sample Factor Analysis
+  if(FUN == "FSPE"){
+    
+    # Defaults
+    defaults <- list(
+      maxK = 8, rep = 1, method = "PE", pbar = FALSE
+    )
+    
+  }
+  
+  # Next Eigenvalue Sufficiency Test
+  if(FUN == "NEST"){
+    
+    # Defaults
+    defaults <- list(
+      iterations = 1000,
+      maximum_iterations = 500,
+      alpha = 0.05,
+      convergence = 0.00001
+    )
+    
+  }
+  
+  # Parallel Analysis
+  if(FUN == "PA"){
+    
+    # Defaults
+    defaults <- list(
+      fm = "minres", fa = "both", cor = "cor",
+      n.iter = 20, sim = FALSE, plot = FALSE
+    )
+    
+  }
+  
+  # Check for any function arguments
+  if(any(names(FUN_args) %in% names(defaults))){
+    
+    # Obtain indices
+    args_index <- which(names(FUN_args) %in% names(defaults))
+    
+    # Replace arguments
+    defaults[names(FUN_args)[args_index]] <- FUN_args[args_index]
+    
+  }
+  
+  # Return arguments
+  return(defaults)
+  
+}
+
+#' @noRd
 #' @importFrom stats na.omit
 # Function to obtain arguments
 # Updated 30.09.2022
