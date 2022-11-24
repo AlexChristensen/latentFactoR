@@ -74,7 +74,7 @@
 #' @export
 #'
 # Estimate several different factor recovery methods
-# Updated 27.10.2022
+# Updated 24.11.2022
 estimate_dimensions <- function(
     data, sample_size,
     EGA_args = list(
@@ -361,6 +361,16 @@ estimate_dimensions <- function(
     
     ## Catch error
     if(is(fspe_results, "try-error")){
+      
+      ## Return bad result
+      fspe_results <- list(
+        nfactor = NA
+      )
+      
+      ## FSPE finished
+      message("could not be estimated properly.")
+      
+    }else if(length(fspe_results$nfactor) == 0){
       
       ## Return bad result
       fspe_results <- list(
