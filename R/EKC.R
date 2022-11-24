@@ -106,13 +106,13 @@ EKC <- function(
   for(i in 1:variables){
     reference[i] <- max(
       ((1 + sqrt(variables / sample_size))^2) *
-        (variables - cumsum(eigenvalues)) /
+        (variables - cumsum(eigenvalues)[i]) /
         (variables - i + 1), 1
     )
   }
   
   # Identify last eigenvalue greater than reference
-  dimensions <- max(which(eigenvalues >= reference))
+  dimensions <- which(eigenvalues < reference)[1] - 1
 
   # Set up results list
   results <- list(
