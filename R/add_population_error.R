@@ -191,7 +191,7 @@
 #' @export
 #'
 # Add population to simulated data
-# Updated 22.11.2022
+# Updated 28.11.2022
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
@@ -383,6 +383,12 @@ add_population_error <- function(
   # Initialize count so it doesn't get stuck
   stuck_count <- 0
   
+  # Initialize maximum absolute residual vector 
+  residual <- rep(NA, length = convergence_iterations)
+  
+  # Initialize previous minimum
+  previous_minimum <- Inf
+  
   # Ensure proper convergence
   while(!convergence){
     
@@ -445,7 +451,6 @@ add_population_error <- function(
     
     # Compute the largest absolute residual
     max_abs_res <- max(abs(cfa$residuals))
-    max_res <- Inf
     
     # Cutoff for the maximum absolute residual
     if(is.character(misfit)){
@@ -474,17 +479,45 @@ add_population_error <- function(
     # Increase stuck count
     stuck_count <- stuck_count + 1
     
+    # Add residual
+    residual[stuck_count] <- max_abs_res
+    
+    # Check for minimum
+    if(min(residual, na.rm = TRUE) < previous_minimum){
+      
+      # Update minimum
+      previous_minimum <- round(min(residual, na.rm = TRUE), 3)
+      
+      # Store results
+      pe_stored <- population_error
+      loadings_stored <- error_loadings
+      SRMR_stored <- SRMR_difference
+      MAE_loadings <- MAE
+      
+    }
+    
     # Check if a break is necessary
     if(stuck_count >= convergence_iterations){
-      stop(
+      
+      warning(
         paste(
           "Convergence counter has exceeded its limit.",
           "There were issues converging the model with proper",
-          "population error. Consider increasing the `tolerance`",
-          "by small amounts (e.g., 0.01); otherwise, model",
-          "may not be adequate to add population error."
+          "population error. \n\n",
+          "Using the solution with the minimum maximum absolute residual =",
+          previous_minimum
         )
       )
+      
+      # Restore stored values
+      population_error <- pe_stored
+      error_loadings <- loadings_stored
+      SRMR_difference <- SRMR_stored
+      MAE <- MAE_loadings
+      
+      # Break out of loop
+      break
+      
     }
     
   }
