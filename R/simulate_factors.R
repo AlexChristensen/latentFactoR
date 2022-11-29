@@ -179,7 +179,7 @@
 #' @export
 #'
 # Main factor simulation function
-# Updated 23.11.2022
+# Updated 29.11.2022
 simulate_factors <- function(
   factors,
   variables, variables_range = NULL,
@@ -434,6 +434,9 @@ simulate_factors <- function(
   # Make data based on factor structure
   data <- data %*% cholesky
   
+  # Store continuous data
+  continuous_data <- data
+  
   # Ensure appropriate type and length for categories
   type_error(variable_categories, "numeric")
   length_error(variable_categories, c(1, total_variables))
@@ -528,6 +531,7 @@ simulate_factors <- function(
   results <- list(
     data = data,
     population_correlation = population_correlation,
+    continuous_data = continuous_data,
     parameters = parameters
   )
   
