@@ -190,7 +190,7 @@
 #'
 #' @export
 #'
-# Add population to simulated data
+# Add population error to simulated data
 # Updated 28.11.2022
 add_population_error <- function(
     lf_object,

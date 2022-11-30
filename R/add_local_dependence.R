@@ -124,7 +124,7 @@
 #' @export
 #'
 # Add local dependence to simulated data
-# Updated 07.10.2022
+# Updated 29.11.2022
 add_local_dependence <- function(
     lf_object,
     method = c(
@@ -182,10 +182,10 @@ add_local_dependence <- function(
     length_error(proportion_LD_range, 2) # object length error
     
     # Check for number of variables in range
-    if(any(proportion_LD_range >= 1)){
+    if(any(proportion_LD_range > 1)){
       
       # Target values
-      target_LD <- which(proportion_LD_range >= 1)
+      target_LD <- which(proportion_LD_range > 1)
       
       # Ensure proportions
       proportion_LD_range[target_LD] <-
@@ -214,10 +214,10 @@ add_local_dependence <- function(
   }
   
   # Convert local dependence proportions to proportions
-  if(any(proportion_LD >= 1)){
+  if(any(proportion_LD > 1)){
     
     # Target values
-    target_LD <- which(proportion_LD >= 1)
+    target_LD <- which(proportion_LD > 1)
     
     # Ensure proportions
     proportion_LD[target_LD] <-

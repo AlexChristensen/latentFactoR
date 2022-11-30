@@ -66,7 +66,7 @@
 #' @export
 #'
 # Categorization function
-# Updated 04.09.2022
+# Updated 30.11.2022
 categorize <- function(data, categories, skew_value = 0)
 {
   
@@ -113,22 +113,13 @@ categorize <- function(data, categories, skew_value = 0)
     format = "f", flag = "0"
   )]
   
-  # Loop through skew values
-  for(i in (length(skew_values) + 1):1){
-    
-    # First category
-    if(i == 1){
-      data[data < skew_values[i]] <- i
-    }else if(i == length(skew_values) + 1){ # Last category
-      data[data >= skew_values[i-1]] <- i
-    }else{ # Middle category
-      data[data >= skew_values[i-1] & data < skew_values[i]] <- i
-    }
-    
-  }
+  # Add skew to data (see `utils-latentFactoR` for function)
+  skewed_data <- skew_single_variable(
+    data = data, skew_values = skew_values
+  )
   
   # Return categorized data
-  return(data)
+  return(skewed_data)
   
 }  
   

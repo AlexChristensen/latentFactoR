@@ -1096,6 +1096,305 @@ correlate_residuals <- function(
   
 }
 
+#%%%%%%%%%%%%%%%%
+# categorize ----
+#%%%%%%%%%%%%%%%%
+
+#' @noRd
+# Adds skew to a single variable based on threshold (skew) values
+# Updated 30.11.2022
+skew_single_variable <- function(data, skew_values){
+  
+  # Categorize biased data with updated thresholds
+  for(i in (length(skew_values) + 1):1){
+    
+    # First category
+    if(i == 1){
+      data[data < skew_values[i]] <- i
+    }else if(i == length(skew_values) + 1){ # Last category
+      data[data >= skew_values[i-1]] <- i
+    }else{ # Middle category
+      data[data >= skew_values[i-1] & data < skew_values[i]] <- i
+    }
+    
+  }
+  
+  # Return skewed data
+  return(data)
+  
+}
+
+# Based on 
+# Garrido, L. E., Abad, F. J., & Ponsoda, V. (2011).
+# Performance of Velicer’s minimum average partial factor retention
+# method with categorical variables.
+# Educational and Psychological Measurement, 71(3), 551-570.
+# https://doi.org/10.1177/0013164410389489
+#
+#' @noRd
+# Generates skewed data for continuous data
+# Updated 22.11.2022
+skew_continuous <- function(
+    skewness,
+    data = NULL,
+    sample_size = 1000000,
+    tolerance = 0.00001
+)
+{
+  
+  # Check for zero skew (skip adding skew)
+  if(skewness == 0){
+    return(data)
+  }
+  
+  # Obtain absolute skewness
+  if(sign(skewness) == -1){
+    skewness <- abs(skewness)
+    flip <- TRUE
+  }else{
+    flip <- FALSE
+  }
+  
+  # Generate data
+  if(is.null(data)){
+    data <- rnorm(sample_size)
+  }
+  
+  # Kurtosis
+  kurtosis <- 1
+  
+  # Initialize increments
+  increments <- 0.01
+  
+  # Seek along a range of skews
+  skew_values <- seq(
+    -2, 2, increments
+  )
+  
+  # Compute skews
+  skews <- unlist(lapply(skew_values, function(x){
+    # Skew data
+    skew_data <- sinh(
+      kurtosis * (asinh(data) + x) 
+    )
+    
+    # Observed skew in data
+    psych::skew(skew_data)
+  }))
+  
+  # Compute minimum index
+  minimum <- which.min(abs(skewness - skews))
+  
+  # Check for whether skewness is found
+  while(abs(skewness - skews[minimum]) > tolerance){
+    
+    # Check for minimum value
+    if(minimum == 1){
+      kurtosis <- kurtosis - 0.1
+    }else if(minimum == length(skews)){
+      kurtosis <- kurtosis + 0.1
+    }else{
+      
+      # Decrease increments
+      increments <- 0.01 * 0.1
+      
+      # Seek along a range of skews
+      skew_values <- seq(
+        skew_values[minimum - 1],
+        skew_values[minimum + 1],
+        length.out = 100
+      )
+      
+    }
+    
+    # Compute skews
+    skews <- unlist(lapply(skew_values, function(x){
+      # Skew data
+      skew_data <- sinh(
+        kurtosis * (asinh(data) + x) 
+      )
+      
+      # Observed skew in data
+      psych::skew(skew_data)
+    }))
+    
+    # Compute minimum index
+    minimum <- which.min(abs(skewness - skews))
+    
+  }
+  
+  # Compute final skew data
+  skew_data <- sinh(
+    kurtosis * (asinh(data) + skew_values[minimum]) 
+  )
+  
+  # Re-scale
+  skew_data <- scale(skew_data)
+  
+  # Flip skew?
+  if(isTRUE(flip)){
+    skew_data <- -skew_data
+  }
+  
+  # Return skewed data
+  return(skew_data)
+  
+}
+
+# Based on 
+# Garrido, L. E., Abad, F. J., & Ponsoda, V. (2011).
+# Performance of Velicer’s minimum average partial factor retention
+# method with categorical variables.
+# Educational and Psychological Measurement, 71(3), 551-570.
+# https://doi.org/10.1177/0013164410389489
+#
+#' @noRd
+# Generates skew
+# Updated 09.08.2022
+skew_generator <- function(
+    skewness, categories,
+    reduction_factor = 0.75,
+    sample_size = 1000000,
+    initial_proportion = 0.50,
+    tolerance = 0.00001
+)
+{
+  
+  # Initialize skew matrix
+  skew_matrix <- matrix(
+    0, nrow = categories, ncol = categories
+  )
+  
+  # Initialize cases
+  cases <- numeric(sample_size)
+  
+  # Loop through categories
+  for(i in 2:categories){
+    
+    # Initialize (largest category) proportion
+    proportion <- initial_proportion
+    
+    # Current proportion for rest of categories
+    remaining_proportion <- 1 - proportion
+    
+    # Initialize categories allocations
+    allocation <- 1
+    allocation_1 <- 1
+    
+    # Loop through with reduction factor
+    if(i > 2){
+      for(j in 1:(i-2)){
+        allocation_1 <- allocation_1 * reduction_factor
+        allocation <- allocation + allocation_1
+      }
+    }
+    
+    # Divide remaining proportion by allocations
+    divided_proportion <- remaining_proportion / allocation
+    
+    # Undefined objects
+    propinf <- 1 / sample_size
+    propsup <- initial_proportion
+    E <- divided_proportion / reduction_factor
+    
+    # Loop through
+    for(j in 1:i){
+      cases[round(sample_size * propinf):round(sample_size * propsup)] <- j
+      E <- E * reduction_factor
+      propinf <- propsup
+      propsup <- propinf + E
+    }
+    
+    # Compute skewness
+    skew_actual <- psych::skew(cases)
+    
+    # Limits
+    limitsup <- 1
+    limitsinf <- 0
+    
+    # Ensure skew within tolerance
+    while(abs(skew_actual - skewness) > tolerance){
+      
+      # Skew greater than
+      if(skew_actual < skewness){
+        limitinf <- proportion
+        proportion <- (proportion + limitsup) / 2
+      }else{
+        limitsup <- proportion
+        proportion <- (proportion + limitsinf) / 2
+      }
+      
+      # Update
+      # Current proportion for rest of categories
+      remaining_proportion <- 1 - proportion
+      
+      # Divide remaining proportion by allocations
+      divided_proportion <- remaining_proportion / allocation
+      
+      # Undefined objects
+      propinf <- 1 / sample_size
+      propsup <- proportion
+      E <- divided_proportion / reduction_factor
+      
+      # Loop through
+      for(j in 1:i){
+        cases[round(sample_size * propinf):round(sample_size * propsup)] <- j
+        E <- E * reduction_factor
+        propinf <- propsup
+        propsup <- propinf + E
+      }
+      
+      # Compute skewness
+      skew_actual <- psych::skew(cases)
+      
+    }
+    
+    # Set E
+    E <- divided_proportion / reduction_factor
+    cumulative_probability <- proportion
+    
+    # Update matrix
+    for(j in 1:i){
+      
+      skew_matrix[i,j] <- cumulative_probability
+      E <- E * reduction_factor
+      cumulative_probability <- cumulative_probability + E
+      
+    }
+    
+  }
+  
+  # Normal inverse
+  norm_inv_matrix <- qnorm(skew_matrix)
+  
+  # Set infinite values to zero
+  norm_inv_matrix[is.infinite(norm_inv_matrix)] <- 0
+  
+  # Category probability
+  category_probability <- matrix(
+    0, nrow = categories, ncol = categories
+  )
+  
+  # Fill first column
+  category_probability[,1] <- skew_matrix[,1]
+  
+  # Loop through
+  for(i in 2:categories){
+    category_probability[,i] <- skew_matrix[,i] - skew_matrix[,i-1]
+  }
+  
+  # Make -1 = 0
+  category_probability[category_probability == -1] <- 0
+  
+  # Return skew
+  result <- list(
+    skew_matrix = norm_inv_matrix,
+    probability = category_probability
+  )
+  return(result)
+  
+}
+
 #%%%%%%%%%%%%%%%%%%%
 # data_to_zipfs ----
 #%%%%%%%%%%%%%%%%%%%
@@ -1553,281 +1852,6 @@ range_error <- function(input, expected_ranges){
     )
   }
 
-}
-
-#%%%%%%%%%%%%%%%%%%%%%%%%%%
-# GENERATION FUNCTIONS ----
-#%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-# Based on 
-# Garrido, L. E., Abad, F. J., & Ponsoda, V. (2011).
-# Performance of Velicer’s minimum average partial factor retention
-# method with categorical variables.
-# Educational and Psychological Measurement, 71(3), 551-570.
-# https://doi.org/10.1177/0013164410389489
-#
-#' @noRd
-# Generates skewed data for continuous data
-# Updated 22.11.2022
-skew_continuous <- function(
-    skewness,
-    data = NULL,
-    sample_size = 1000000,
-    tolerance = 0.00001
-)
-{
-  
-  # Check for zero skew (skip adding skew)
-  if(skewness == 0){
-    return(data)
-  }
-  
-  # Obtain absolute skewness
-  if(sign(skewness) == -1){
-    skewness <- abs(skewness)
-    flip <- TRUE
-  }else{
-    flip <- FALSE
-  }
-  
-  # Generate data
-  if(is.null(data)){
-    data <- rnorm(sample_size)
-  }
-  
-  # Kurtosis
-  kurtosis <- 1
-  
-  # Initialize increments
-  increments <- 0.01
-  
-  # Seek along a range of skews
-  skew_values <- seq(
-    -2, 2, increments
-  )
-  
-  # Compute skews
-  skews <- unlist(lapply(skew_values, function(x){
-    # Skew data
-    skew_data <- sinh(
-      kurtosis * (asinh(data) + x) 
-    )
-    
-    # Observed skew in data
-    psych::skew(skew_data)
-  }))
-  
-  # Compute minimum index
-  minimum <- which.min(abs(skewness - skews))
-  
-  # Check for whether skewness is found
-  while(abs(skewness - skews[minimum]) > tolerance){
-    
-    # Check for minimum value
-    if(minimum == 1){
-      kurtosis <- kurtosis - 0.1
-    }else if(minimum == length(skews)){
-      kurtosis <- kurtosis + 0.1
-    }else{
-      
-      # Decrease increments
-      increments <- 0.01 * 0.1
-      
-      # Seek along a range of skews
-      skew_values <- seq(
-        skew_values[minimum - 1],
-        skew_values[minimum + 1],
-        length.out = 100
-      )
-
-    }
-    
-    # Compute skews
-    skews <- unlist(lapply(skew_values, function(x){
-      # Skew data
-      skew_data <- sinh(
-        kurtosis * (asinh(data) + x) 
-      )
-      
-      # Observed skew in data
-      psych::skew(skew_data)
-    }))
-    
-    # Compute minimum index
-    minimum <- which.min(abs(skewness - skews))
-    
-  }
-  
-  # Compute final skew data
-  skew_data <- sinh(
-    kurtosis * (asinh(data) + skew_values[minimum]) 
-  )
-  
-  # Re-scale
-  skew_data <- scale(skew_data)
-  
-  # Flip skew?
-  if(isTRUE(flip)){
-    skew_data <- -skew_data
-  }
-  
-  # Return skewed data
-  return(skew_data)
-  
-}
-
-# Based on 
-# Garrido, L. E., Abad, F. J., & Ponsoda, V. (2011).
-# Performance of Velicer’s minimum average partial factor retention
-# method with categorical variables.
-# Educational and Psychological Measurement, 71(3), 551-570.
-# https://doi.org/10.1177/0013164410389489
-#
-#' @noRd
-# Generates skew
-# Updated 09.08.2022
-skew_generator <- function(
-    skewness, categories,
-    reduction_factor = 0.75,
-    sample_size = 1000000,
-    initial_proportion = 0.50,
-    tolerance = 0.00001
-)
-{
-  
-  # Initialize skew matrix
-  skew_matrix <- matrix(
-    0, nrow = categories, ncol = categories
-  )
-  
-  # Initialize cases
-  cases <- numeric(sample_size)
-  
-  # Loop through categories
-  for(i in 2:categories){
-    
-    # Initialize (largest category) proportion
-    proportion <- initial_proportion
-    
-    # Current proportion for rest of categories
-    remaining_proportion <- 1 - proportion
-    
-    # Initialize categories allocations
-    allocation <- 1
-    allocation_1 <- 1
-    
-    # Loop through with reduction factor
-    if(i > 2){
-      for(j in 1:(i-2)){
-        allocation_1 <- allocation_1 * reduction_factor
-        allocation <- allocation + allocation_1
-      }
-    }
-    
-    # Divide remaining proportion by allocations
-    divided_proportion <- remaining_proportion / allocation
-    
-    # Undefined objects
-    propinf <- 1 / sample_size
-    propsup <- initial_proportion
-    E <- divided_proportion / reduction_factor
-    
-    # Loop through
-    for(j in 1:i){
-      cases[round(sample_size * propinf):round(sample_size * propsup)] <- j
-      E <- E * reduction_factor
-      propinf <- propsup
-      propsup <- propinf + E
-    }
-    
-    # Compute skewness
-    skew_actual <- psych::skew(cases)
-    
-    # Limits
-    limitsup <- 1
-    limitsinf <- 0
-    
-    # Ensure skew within tolerance
-    while(abs(skew_actual - skewness) > tolerance){
-      
-      # Skew greater than
-      if(skew_actual < skewness){
-        limitinf <- proportion
-        proportion <- (proportion + limitsup) / 2
-      }else{
-        limitsup <- proportion
-        proportion <- (proportion + limitsinf) / 2
-      }
-      
-      # Update
-      # Current proportion for rest of categories
-      remaining_proportion <- 1 - proportion
-      
-      # Divide remaining proportion by allocations
-      divided_proportion <- remaining_proportion / allocation
-      
-      # Undefined objects
-      propinf <- 1 / sample_size
-      propsup <- proportion
-      E <- divided_proportion / reduction_factor
-      
-      # Loop through
-      for(j in 1:i){
-        cases[round(sample_size * propinf):round(sample_size * propsup)] <- j
-        E <- E * reduction_factor
-        propinf <- propsup
-        propsup <- propinf + E
-      }
-      
-      # Compute skewness
-      skew_actual <- psych::skew(cases)
-      
-    }
-    
-    # Set E
-    E <- divided_proportion / reduction_factor
-    cumulative_probability <- proportion
-    
-    # Update matrix
-    for(j in 1:i){
-      
-      skew_matrix[i,j] <- cumulative_probability
-      E <- E * reduction_factor
-      cumulative_probability <- cumulative_probability + E
-      
-    }
-    
-  }
-  
-  # Normal inverse
-  norm_inv_matrix <- qnorm(skew_matrix)
-  
-  # Set infinite values to zero
-  norm_inv_matrix[is.infinite(norm_inv_matrix)] <- 0
-  
-  # Category probability
-  category_probability <- matrix(
-    0, nrow = categories, ncol = categories
-  )
-  
-  # Fill first column
-  category_probability[,1] <- skew_matrix[,1]
-  
-  # Loop through
-  for(i in 2:categories){
-    category_probability[,i] <- skew_matrix[,i] - skew_matrix[,i-1]
-  }
-  
-  # Make -1 = 0
-  category_probability[category_probability == -1] <- 0
-  
-  # Return skew
-  result <- list(
-    skew_matrix = norm_inv_matrix,
-    probability = category_probability
-  )
-  return(result)
-  
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%
