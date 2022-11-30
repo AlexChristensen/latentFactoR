@@ -1,11 +1,137 @@
-
-# Add wording effect
+#' Adds Wording Effects to \code{\link[latentFactoR]{simulate_factors}} Data
+#'
+#' Adds wording effects to simulated data from \code{\link[latentFactoR]{simulate_factors}}. 
+#' See examples to get started
+#' 
+#' @param lf_object Data object from \code{\link[latentFactoR]{simulate_factors}}.
+#' Data \strong{must} be categorical. If data are not categorical, then
+#' there function with throw an error
+#' 
+#' @param proportion_negative Numeric (length = 1 or \code{factors}).
+#' Proportion of variables that should have negative (or flipped) loadings across all
+#' or each factor. Accepts number of variables as well.
+#' The first variables on each factor, up to the corresponding proportion, will be
+#' flipped. Set to \code{0} to not have any loadings flipped.
+#' Defaults to \code{0.00}
+#' 
+#' @param proportion_negative_range Numeric (length = 2).
+#' Range of proportion of variables that are randomly selected from
+#' a random uniform distribution. Accepts number of number of variables as well.
+#' Defaults to \code{NULL}
+#' 
+#' @param proportion_biased_cases Numeric (length = 1).
+#' Proportion of cases that should be biased with wording effects.
+#' Also accepts number of cases to be biased. The first \emph{n} number of cases,
+#' up to the corresponding proportion, will be biased.
+#' Defaults to \code{0.10} or 10 percent of cases.
+#' 
+#' @param method Character (length = 1).
+#' Method to generate wording effect to add to the data.
+#' Description of methods:
+#' 
+#' \itemize{
+#' 
+#' \item{\code{"acquiescence"}}
+#' {Generates new data with flipped dominant loadings 
+#' (based on \code{proportion_negative}) and sets
+#' thresholds below the mid-point to \code{-Inf} for
+#' all variables creating a restricted range of responding
+#' (e.g., only 3s, 4s, and 5s on a 5-point Likert scale)}
+#' 
+#' \item{\code{"difficulty"}}
+#' {Generates new data with flipped dominant loadings 
+#' (based on \code{proportion_negative}) and uses this data
+#' as the data without wording effects. Then, the signs of the
+#' dominant loadings are obtained and the dominant loadings are 
+#' made to be absolute. Finally, the skews are multiplied by
+#' the signs of the original dominant loadings when generating
+#' the data with the wording effects}
+#' 
+#' \item{\code{"random_careless"}}
+#' {Number of cases up to \code{proportion_biased_cases} are sampled
+#' and replaced by values from a random uniform distribution ranging
+#' between the lowest and highest response category for each variable.
+#' These values then replace the values in the original data} 
+#' 
+#' \item{\code{"straight_line"}}
+#' {Coming soon...} 
+#' 
+#' }
+#' 
+#' @return Returns a list containing:
+#' 
+#' \item{data}{Biased data simulated data from the specified factor model}
+#' 
+#' \item{unbiased_data}{The corresponding unbiased data prior to replacing values
+#' to generate the (biased) \code{data}}
+#' 
+#' \item{biased_sample_size}{The number of cases that have biased data}
+#' 
+#' \item{adjusted_results}{Bias-adjusted \code{lf_object} input into function} 
+#' 
+#' \item{original_results}{Original \code{lf_object} input into function} 
+#'
+#' @examples
+#' # Generate factor data
+#' two_factor <- simulate_factors(
+#'   factors = 2, # factors = 2
+#'   variables = 6, # variables per factor = 6
+#'   loadings = 0.55, # loadings between = 0.45 to 0.65
+#'   cross_loadings = 0.05, # cross-loadings N(0, 0.05)
+#'   correlations = 0.30, # correlation between factors = 0.30
+#'   sample_size = 1000, # number of cases = 1000
+#'   variable_categories = 5 # 5-point Likert scale
+#' )
+#' 
+#' # Add wording effects using acquiescence method
+#' two_factor_acquiescence <- add_wording_effects(
+#'   lf_object = two_factor,
+#'   proportion_negative = 0.50,
+#'   proportion_biased_cases = 0.10,
+#'   method = "acquiescence"
+#' )
+#' 
+#' # Add wording effects using difficulty method
+#' two_factor_difficulty <- add_wording_effects(
+#'   lf_object = two_factor,
+#'   proportion_negative = 0.50,
+#'   proportion_biased_cases = 0.10,
+#'   method = "difficulty"
+#' )
+#' 
+#' # Add wording effects using random careless method
+#' two_factor_random_careless <- add_wording_effects(
+#'   lf_object = two_factor,
+#'   proportion_negative = 0.50,
+#'   proportion_biased_cases = 0.10,
+#'   method = "random_careless"
+#' )
+#' 
+#' @author
+#' Alexander P. Christensen <alexpaulchristensen@gmail.com>,
+#' Luis Eduardo Garrido <luisgarrido@pucmm.edu>
+#' 
+#' @references
+#' Garcia-Pardina, A., Abad, F. J., Christensen, A. P., Golino, H., & Garrido, L. E. (2022).
+#' Dimensionality assessment in the presence of wording effects: A network psychometric and factorial approach.
+#' \emph{PsyArXiv}.
+#' 
+#' Garrido, L. E., Golino, H., Christensen, A. P., Martinez-Molina, A., Arias, V. B., Guerra-Pena, K., ... & Abad, F. J. (2022).
+#' A systematic evaluation of wording effects modeling under the exploratory structural equation modeling framework.
+#' \emph{PsyArXiv}.
+#' 
+#' @importFrom utils data
+#'
+#' @export
+#'
+# Add wording effects to simulated data
+# Updated 30.11.2022
 add_wording_effects <- function(
     lf_object,
     proportion_negative = 0.00,
     proportion_negative_range = NULL,
-    proportion_biased_cases = 0.20,
-    type = c(
+    proportion_biased_cases = 0.10,
+    method = c(
       "acquiescence", "difficulty",
       "random_careless", "straight_line"
     )
@@ -13,22 +139,22 @@ add_wording_effects <- function(
 {
   
   # Not yet implemented
-  if(type == "straight_line"){
+  if(method == "straight_line"){
     
     # Produce error
     stop(
-      "The \"straight_line\" argument for `type` is not yet implemented."
+      "The \"straight_line\" argument for `method` is not yet implemented."
     )
     
   }
   
-  # Match `type` argument (no default)
-  if(missing(type)){
-    stop("The `type` argument must be set.")
-  }else{type <- match.arg(type)}
+  # Match `method` argument (no default)
+  if(missing(method)){
+    stop("The `method` argument must be set.")
+  }else{method <- match.arg(method)}
   
-  # Ensure `type` is lowercase
-  type <- tolower(type)
+  # Ensure `method` is lowercase
+  method <- tolower(method)
   
   # Check for appropriate class
   if(!is(lf_object, "lf_simulate")){
@@ -62,7 +188,7 @@ add_wording_effects <- function(
   # Obtain number of cases
   sample_size <- nrow(lf_object$data)
   
-  # Ensure appropriate types
+  # Ensure appropriate methods
   type_error(proportion_biased_cases, "numeric");
   
   # Ensure appropriate lengths
@@ -85,7 +211,7 @@ add_wording_effects <- function(
   parameters <- lf_object$parameters
   
   # Random careless responding
-  if(type == "random_careless"){
+  if(method == "random_careless"){
     
     # Initialize biased data
     biased_data <- lf_object$data
@@ -97,7 +223,7 @@ add_wording_effects <- function(
       biased_data[1:biased_sample_size,i] <- as.numeric(
         cut( # cuts evenly distributed categories
           runif(biased_sample_size), # generates random numbers
-          breaks = parameters$categories[i]
+          breaks = parameters$categories[i] # number of categories may change by variable
         )
       )
 
@@ -105,9 +231,10 @@ add_wording_effects <- function(
     
     # Populate results
     results <- list(
-      biased_data = new_data,
+      data = biased_data,
       unbiased_data = lf_object$data,
       biased_sample_size = biased_sample_size,
+      adjusted_results = NULL,
       original_results = lf_object
     )
     
@@ -224,7 +351,7 @@ add_wording_effects <- function(
   )
   
   # Check for difficulty
-  if(type == "difficulty"){
+  if(method == "difficulty"){
     
     # Update parameters
     parameters <- wording_data$parameters
@@ -326,7 +453,7 @@ add_wording_effects <- function(
   }
   
   # Acquiescence
-  if(type == "acquiescence"){
+  if(method == "acquiescence"){
     
     # Loop through threshold list
     update_thresholds <- lapply(threshold_list, function(x){
@@ -374,7 +501,7 @@ add_wording_effects <- function(
       unname(do.call(rbind.data.frame, skew_biased_data))
     ))
     
-  }else if(type == "difficulty"){
+  }else if(method == "difficulty"){
     
     # Obtain replacement data
     replacement_data <- difficulty_data$data[1:biased_sample_size,]
@@ -388,7 +515,7 @@ add_wording_effects <- function(
   
   # Populate results
   results <- list(
-    biased_data = new_data,
+    data = new_data,
     unbiased_data = wording_data$data,
     biased_sample_size = biased_sample_size,
     adjusted_results = wording_data,
