@@ -398,12 +398,15 @@ add_population_error <- function(
       # Using Cudeck method
       # From {bifactor} version 0.1.0
       # See `utils-latentFactoR`
-      population_error <- cudeck(
-        R = lf_object$population_correlation,
-        lambda = loadings,
-        Phi = parameters$factor_correlations,
-        Psi = errors, fit = fit,
-        misfit = misfit, method = cfa_method
+      population_error <- try(
+        cudeck(
+          R = lf_object$population_correlation,
+          lambda = loadings,
+          Phi = parameters$factor_correlations,
+          Psi = errors, fit = fit,
+          misfit = misfit, method = cfa_method
+        ),
+        silent = TRUE
       )
       
     }else if(error_method == "yuan"){
@@ -411,12 +414,15 @@ add_population_error <- function(
       # Using Yuan method
       # From {bifactor} version 0.1.0
       # See `utils-latentFactoR`
-      population_error <- yuan(
-        R = lf_object$population_correlation,
-        lambda = loadings,
-        Phi = parameters$factor_correlations,
-        Psi = errors, fit = fit,
-        misfit = misfit, method = cfa_method
+      population_error <- try(
+        yuan(
+          R = lf_object$population_correlation,
+          lambda = loadings,
+          Phi = parameters$factor_correlations,
+          Psi = errors, fit = fit,
+          misfit = misfit, method = cfa_method
+        ),
+        silent = TRUE
       )
       
     }

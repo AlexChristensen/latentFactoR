@@ -6,34 +6,20 @@
 \usage{
 add_wording_effects(
   lf_object,
-  proportion_negative = 0,
+  method = c("acquiescence", "difficulty", "random_careless", "straight_line"),
+  proportion_negative = 0.5,
   proportion_negative_range = NULL,
   proportion_biased_cases = 0.1,
-  method = c("acquiescence", "difficulty", "random_careless", "straight_line")
+  proportion_biased_variables = 1,
+  proportion_biased_variables_range = NULL,
+  proportion_biased_person = 1,
+  proportion_biased_person_range = NULL
 )
 }
 \arguments{
 \item{lf_object}{Data object from \code{\link[latentFactoR]{simulate_factors}}.
 Data \strong{must} be categorical. If data are not categorical, then
 there function with throw an error}
-
-\item{proportion_negative}{Numeric (length = 1 or \code{factors}).
-Proportion of variables that should have negative (or flipped) loadings across all
-or each factor. Accepts number of variables as well.
-The first variables on each factor, up to the corresponding proportion, will be
-flipped. Set to \code{0} to not have any loadings flipped.
-Defaults to \code{0.00}}
-
-\item{proportion_negative_range}{Numeric (length = 2).
-Range of proportion of variables that are randomly selected from
-a random uniform distribution. Accepts number of number of variables as well.
-Defaults to \code{NULL}}
-
-\item{proportion_biased_cases}{Numeric (length = 1).
-Proportion of cases that should be biased with wording effects.
-Also accepts number of cases to be biased. The first \emph{n} number of cases,
-up to the corresponding proportion, will be biased.
-Defaults to \code{0.10} or 10 percent of cases.}
 
 \item{method}{Character (length = 1).
 Method to generate wording effect to add to the data.
@@ -67,6 +53,54 @@ These values then replace the values in the original data}
 {Coming soon...} 
 
 }}
+
+\item{proportion_negative}{Numeric (length = 1 or \code{factors}).
+Proportion of variables that should have negative (or flipped) dominant loadings across all
+or each factor. Accepts number of variables as well.
+The first variables on each factor, up to the corresponding proportion, will be
+flipped. Set to \code{0} to not have any loadings flipped.
+Defaults to \code{0.50}}
+
+\item{proportion_negative_range}{Numeric (length = 2).
+Range of proportion of variables that are randomly selected from
+a uniform distribution. Accepts number of number of variables as well.
+Defaults to \code{NULL}}
+
+\item{proportion_biased_cases}{Numeric (length = 1).
+Proportion of cases that should be biased with wording effects.
+Also accepts number of cases to be biased. The first \emph{n} number of cases,
+up to the corresponding proportion, will be biased.
+Defaults to \code{0.10} or 10 percent of cases.}
+
+\item{proportion_biased_variables}{Numeric (length = 1 or \code{factors}).
+Proportion of variables that should be biased with wording effects.
+For \code{method = "difficulty"}, proportion of biased variables will only
+count for the negative variables.
+For \code{method = "acquiescence"}, proportion of biased variables will only
+count for variables below the mid-point of the \code{variable_categories}.
+Defaults to \code{1} or all possible variables}
+
+\item{proportion_biased_variables_range}{Numeric (length = 2).
+Range of proportion of variables that should be biased with wording effects.
+Values are drawn randomly from a uniform distribution.
+Defaults to \code{NULL}}
+
+\item{proportion_biased_person}{Numeric (length = 1 or \code{proportion_biased_cases} x \code{sample_size}).
+Person-specific parameter of how many much bias the \code{proportion_biased_cases} will
+have over the possible biased variables. This parameter interacts with
+\code{proportion_biased_variables}. Parameter specifies the proportion of variables 
+that should have bias per person.
+If one value is provided, then all biased cases will have the same proportion of variables biased.
+Individual values are possible by providing values for each biased case
+(\code{round(nrow(lf_object$data) * proportion_biased_cases)}). Setting individual
+values for each biased case is not recommended
+(use \code{proportion_biased_person_range} instead).
+Defaults to \code{1} or all possible biased variables for all biased cases}
+
+\item{proportion_biased_person_range}{Numeric (length = 2).
+Range to randomly draw bias from a uniform distribution. Allows for random
+person-specific bias to be obtained.
+Defaults to \code{NULL}}
 }
 \value{
 Returns a list containing:
