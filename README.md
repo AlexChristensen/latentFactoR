@@ -32,7 +32,45 @@ In addition to full specification of parameters, there are arguments for most pa
 
 There are several conditions that can be added on top of the latent factor data generated from `simulate_factors`. Conditions currently available in the package in include adding local dependence (`add_local_dependence`), population error (`add_population_error`), and wording effects (`add_wording_effects`).
 
-EXAMPLES COMING SOON... (see documentation for the respective functions for now)
+### Local Dependence
 
+Local dependence is the extent to which variables are correlated after accounting for latent variables in a model. Adding local dependence to simualted data can be achieved using the following code:
 
+```
+# Add local dependence
+two_factor_LD <- add_local_dependence(
+  lf_object = two_factor, # object from `simulate_factors`
+  proportion_LD = 0.25, # proportion of variables to be locally dependent on *each* factor
+  add_residuals = 0.20, # magnitude of the residuals to add between locally dependent variables
+  allow_multiple = FALSE # whether a variable can be locally dependent with more than one other variable
+)
+```
 
+### Population Error
+Population error is when there is misfit between the population and sample model. This misfit is often characterized by small local dependencies between variables that are not enough to change the factor loadings but result in model misspecification (e.g., over- or underfactoring). Adding population error to simulated data can be achieved using the following code:
+
+```
+# Add small population error using Cudeck method
+two_factor_Cudeck <- add_population_error(
+  lf_object = two_factor, # object from `simulate_factors`
+  cfa_method = "minres", # minimum residual method for determining model fit
+  fit = "rmsr", # measure used to determine misfit
+  misfit = "close", # amount of misfit (can be "close", "acceptable", or a numeric value between 0 and 1)
+  error_method = "cudeck" # method to add misfit ("cudeck" and "yuan" are available; "cudeck" is recommend)
+)
+```
+
+### Wording Effects
+Wording effects occur for a number of reasons: participants generally agree with statements (`"acquiescence"`), have difficulty discerning level due to negating words (`"difficulty"`), don't care and respond randomly (`"random_careless"`), or select the same response for everything (`"straight_line"`). These different wording effects can wreak havoc on the accurate detection of dimensions, precision of parameter estimates, and (mis)specification of models. Adding wording effects to simulated data can be achieved using the following code:
+
+```
+# Add wording effects using acquiescence method
+two_factor_acquiescence <- add_wording_effects(
+  lf_object = two_factor, # object from `simulate_factors`
+  proportion_negative = 0.50, # proportion of negatively worded variables on each factor
+  proportion_biased_cases = 0.10, # proportion of total cases that are biased
+  proportion_biased_variables = 1, # proportion of variables that show bias (out of possible variables to have bias)
+  proportion_viased_person = 1, # person-specific parameter of how much bias they show (proportion of variables to show bias)
+  method = "acquiescence" # method to introduce bias
+)
+```
