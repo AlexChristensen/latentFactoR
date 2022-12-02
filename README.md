@@ -39,7 +39,7 @@ Local dependence is the extent to which variables are correlated after accountin
 ```
 # Add local dependence
 two_factor_LD <- add_local_dependence(
-  lf_object = two_factor, # object from `simulate_factors`
+  lf_object = simulated, # object from `simulate_factors`
   proportion_LD = 0.25, # proportion of variables to be locally dependent on *each* factor
   add_residuals = 0.20, # magnitude of the residuals to add between locally dependent variables
   allow_multiple = FALSE # whether a variable can be locally dependent with more than one other variable
@@ -52,7 +52,7 @@ Population error is when there is misfit between the population and sample model
 ```
 # Add small population error using Cudeck method
 two_factor_Cudeck <- add_population_error(
-  lf_object = two_factor, # object from `simulate_factors`
+  lf_object = simulated, # object from `simulate_factors`
   cfa_method = "minres", # minimum residual method for determining model fit
   fit = "rmsr", # measure used to determine misfit
   misfit = "close", # amount of misfit (can be "close", "acceptable", or a numeric value between 0 and 1)
@@ -66,7 +66,7 @@ Wording effects occur for a number of reasons: participants generally agree with
 ```
 # Add wording effects using acquiescence method
 two_factor_acquiescence <- add_wording_effects(
-  lf_object = two_factor, # object from `simulate_factors`
+  lf_object = simulated, # object from `simulate_factors`
   proportion_negative = 0.50, # proportion of negatively worded variables on each factor
   proportion_biased_cases = 0.10, # proportion of total cases that are biased
   proportion_biased_variables = 1, # proportion of variables that show bias (out of possible variables to have bias)
