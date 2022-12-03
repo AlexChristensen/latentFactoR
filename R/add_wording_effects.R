@@ -795,23 +795,3 @@ add_wording_effects <- function(
   return(results)
   
 }
-
-# NOTES FOR FUTURE IMPLEMENTATION
-
-# Person parameter
-# different proportion for bias
-# 100% = all replacement
-# 50% = 50% of the items
-
-# Item parameter
-# different proportion for bias
-# all equal = then all the same for person
-# not all the same: sampling weight
-
-# sample(
-#   1:ncol(original_data), # items
-#   ncol(original_data) * 0.50, # person parameter
-#   prob = c(  # item parameter
-#     rep(0, 3), rep(0.30, 3), rep(0.70, 3)
-#   )
-# )

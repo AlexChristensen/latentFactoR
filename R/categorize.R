@@ -66,7 +66,7 @@
 #' @export
 #'
 # Categorization function
-# Updated 30.11.2022
+# Updated 03.12.2022
 categorize <- function(data, categories, skew_value = 0)
 {
   
@@ -106,6 +106,14 @@ categorize <- function(data, categories, skew_value = 0)
   
   # Obtain skew table
   skew_table <- skew_tables[[categories]]
+  
+  # Sometimes R will treat numeric zeros
+  # as having negatives (seriously, why?)
+  # This fix prevents R from making
+  # 0 = "-0.00" and ensures 0 = "0.00"
+  if(skew_value == 0){
+    skew_value <- abs(skew_value)
+  }
   
   # Obtain skew values
   skew_values <- skew_table[,formatC(
