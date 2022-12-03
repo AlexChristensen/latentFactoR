@@ -70,7 +70,7 @@ two_factor_acquiescence <- add_wording_effects(
   proportion_negative = 0.50, # proportion of negatively worded variables on each factor
   proportion_biased_cases = 0.10, # proportion of total cases that are biased
   proportion_biased_variables = 1, # proportion of variables that show bias (out of possible variables to have bias)
-  proportion_viased_person = 1, # person-specific parameter of how much bias they show (proportion of variables to show bias)
+  proportion_biased_person = 1, # person-specific parameter of how much bias they show (proportion of variables to show bias)
   method = "acquiescence" # method to introduce bias
 )
 ```
