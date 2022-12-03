@@ -179,7 +179,7 @@
 #' @export
 #'
 # Main factor simulation function
-# Updated 29.11.2022
+# Updated 03.12.2022
 simulate_factors <- function(
     factors,
     variables, variables_range = NULL,
@@ -408,6 +408,9 @@ simulate_factors <- function(
     
     # Ensure diagonal of correlation matrix is 1
     diag(correlation_matrix) <- 1
+    
+    # Assume always positive correlations (for now)
+    correlation_matrix <- abs(correlation_matrix)
     
     # Create population correlation matrix
     population_correlation <- loading_matrix %*%
