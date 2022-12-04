@@ -524,7 +524,7 @@ add_population_error <- function(
     convergence_stuck_count <- convergence_stuck_count + 1
     
     # Add residual
-    residual[stuck_count] <- max_abs_res
+    residual[convergence_stuck_count] <- max_abs_res
     
     # Check for minimum
     if(min(residual, na.rm = TRUE) < previous_minimum){
