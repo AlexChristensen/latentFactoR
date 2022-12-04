@@ -191,7 +191,7 @@
 #' @export
 #'
 # Add population error to simulated data
-# Updated 28.11.2022
+# Updated 04.12.2022
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
@@ -377,11 +377,13 @@ add_population_error <- function(
   # Reset diagonal of population correlation matrix
   diag(lf_object$population_correlation) <- 1
   
-  # Initialize convergence
+  # Initialize positive definite and convergence
+  positive_definite <- FALSE
   convergence <- FALSE
   
-  # Initialize count so it doesn't get stuck
-  stuck_count <- 0
+  # Initialize counts so it doesn't get stuck
+  pd_stuck_count <- 0
+  convergence_stuck_count <- 0
   
   # Initialize maximum absolute residual vector 
   residual <- rep(NA, length = convergence_iterations)
@@ -392,38 +394,74 @@ add_population_error <- function(
   # Ensure proper convergence
   while(!convergence){
     
-    # Obtain population error
-    if(error_method == "cudeck"){
+    # Try to get positive definite matrix
+    while(!positive_definite){
       
-      # Using Cudeck method
-      # From {bifactor} version 0.1.0
-      # See `utils-latentFactoR`
-      population_error <- try(
-        cudeck(
-          R = lf_object$population_correlation,
-          lambda = loadings,
-          Phi = parameters$factor_correlations,
-          Psi = errors, fit = fit,
-          misfit = misfit, method = cfa_method
-        ),
-        silent = TRUE
-      )
+      # Obtain population error
+      if(error_method == "cudeck"){
+        
+        # Using Cudeck method
+        # From {bifactor} version 0.1.0
+        # See `utils-latentFactoR`
+        population_error <- try(
+          cudeck(
+            R = lf_object$population_correlation,
+            lambda = loadings,
+            Phi = parameters$factor_correlations,
+            Psi = errors, fit = fit,
+            misfit = misfit, method = cfa_method
+          ),
+          silent = TRUE
+        )
+        
+      }else if(error_method == "yuan"){
+        
+        # Using Yuan method
+        # From {bifactor} version 0.1.0
+        # See `utils-latentFactoR`
+        population_error <- try(
+          yuan(
+            R = lf_object$population_correlation,
+            lambda = loadings,
+            Phi = parameters$factor_correlations,
+            Psi = errors, fit = fit,
+            misfit = misfit, method = cfa_method
+          ),
+          silent = TRUE
+        )
+        
+      }
       
-    }else if(error_method == "yuan"){
-      
-      # Using Yuan method
-      # From {bifactor} version 0.1.0
-      # See `utils-latentFactoR`
-      population_error <- try(
-        yuan(
-          R = lf_object$population_correlation,
-          lambda = loadings,
-          Phi = parameters$factor_correlations,
-          Psi = errors, fit = fit,
-          misfit = misfit, method = cfa_method
-        ),
-        silent = TRUE
-      )
+      # Check for error
+      if(is(population_error, "try-error")){
+        
+        # Increase positive definite stuck count
+        pd_stuck_count <- pd_stuck_count + 1
+        
+        # Check if a break is necessary
+        if(pd_stuck_count >= convergence_iterations){
+          
+          # Stop and tell user to increase convergence iterations
+          stop(
+            paste(
+              "Convergence counter has exceeded its limit.",
+              "There were issues converging the model with proper",
+              "population error. \n\n",
+              "Population error could not converge with a positive",
+              "definite matrix. \n\n",
+              "Try increasing the number of iterations for convergence",
+              "using the `convergence_iterations` argument."
+            )
+          )
+          
+        }
+        
+      }else{
+        
+        # Set positive definite to be TRUE
+        positive_definite <- TRUE
+        
+      }
       
     }
     
@@ -482,8 +520,8 @@ add_population_error <- function(
       max_abs_res < max_res
     ){convergence <- TRUE}
     
-    # Increase stuck count
-    stuck_count <- stuck_count + 1
+    # Increase convergence stuck count
+    convergence_stuck_count <- convergence_stuck_count + 1
     
     # Add residual
     residual[stuck_count] <- max_abs_res
@@ -503,7 +541,7 @@ add_population_error <- function(
     }
     
     # Check if a break is necessary
-    if(stuck_count >= convergence_iterations){
+    if(convergence_stuck_count >= convergence_iterations){
       
       warning(
         paste(
