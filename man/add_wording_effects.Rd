@@ -6,7 +6,7 @@
 \usage{
 add_wording_effects(
   lf_object,
-  method = c("acquiescence", "difficulty", "random_careless", "straight_line"),
+  method = c("acquiescence", "difficulty", "random_careless", "straight_line", "mixed"),
   proportion_negative = 0.5,
   proportion_negative_range = NULL,
   proportion_biased_cases = 0.1,
@@ -29,10 +29,9 @@ Description of methods:
 
 \item{\code{"acquiescence"}}
 {Generates new data with flipped dominant loadings 
-(based on \code{proportion_negative}) and sets
-thresholds below the mid-point to \code{-Inf} for
-all variables creating a restricted range of responding
-(e.g., only 3s, 4s, and 5s on a 5-point Likert scale)}
+(based on \code{proportion_negative}) and ensures a bias
+such that variables have a restricted range of responding
+(e.g., only 4s and 5s on a 5-point Likert scale)}
 
 \item{\code{"difficulty"}}
 {Generates new data with flipped dominant loadings 
@@ -154,6 +153,30 @@ two_factor_random_careless <- add_wording_effects(
   proportion_negative = 0.50,
   proportion_biased_cases = 0.10,
   method = "random_careless"
+)
+
+# Add wording effects using straight line method
+two_factor_random_careless <- add_wording_effects(
+  lf_object = two_factor,
+  proportion_negative = 0.50,
+  proportion_biased_cases = 0.10,
+  method = "straight_line"
+)
+
+# Add wording effects using mixed method
+two_factor_random_careless <- add_wording_effects(
+  lf_object = two_factor,
+  proportion_negative = 0.50,
+  proportion_biased_cases = 0.10,
+  method = "mixed"
+)
+
+# Add wording effects using acquiescence and straight line method
+two_factor_random_careless <- add_wording_effects(
+  lf_object = two_factor,
+  proportion_negative = 0.50,
+  proportion_biased_cases = 0.10,
+  method = c("acquiescence", "straight_line")
 )
 
 }

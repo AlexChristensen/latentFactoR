@@ -15,10 +15,9 @@
 #' 
 #' \item{\code{"acquiescence"}}
 #' {Generates new data with flipped dominant loadings 
-#' (based on \code{proportion_negative}) and sets
-#' thresholds below the mid-point to \code{-Inf} for
-#' all variables creating a restricted range of responding
-#' (e.g., only 3s, 4s, and 5s on a 5-point Likert scale)}
+#' (based on \code{proportion_negative}) and ensures a bias
+#' such that variables have a restricted range of responding
+#' (e.g., only 4s and 5s on a 5-point Likert scale)}
 #' 
 #' \item{\code{"difficulty"}}
 #' {Generates new data with flipped dominant loadings 
@@ -137,6 +136,30 @@
 #'   method = "random_careless"
 #' )
 #' 
+#' # Add wording effects using straight line method
+#' two_factor_random_careless <- add_wording_effects(
+#'   lf_object = two_factor,
+#'   proportion_negative = 0.50,
+#'   proportion_biased_cases = 0.10,
+#'   method = "straight_line"
+#' )
+#' 
+#' # Add wording effects using mixed method
+#' two_factor_random_careless <- add_wording_effects(
+#'   lf_object = two_factor,
+#'   proportion_negative = 0.50,
+#'   proportion_biased_cases = 0.10,
+#'   method = "mixed"
+#' )
+#' 
+#' # Add wording effects using acquiescence and straight line method
+#' two_factor_random_careless <- add_wording_effects(
+#'   lf_object = two_factor,
+#'   proportion_negative = 0.50,
+#'   proportion_biased_cases = 0.10,
+#'   method = c("acquiescence", "straight_line")
+#' )
+#' 
 #' @author
 #' Alexander P. Christensen <alexpaulchristensen@gmail.com>,
 #' Luis Eduardo Garrido <luisgarrido@pucmm.edu>
@@ -155,12 +178,13 @@
 #' @export
 #'
 # Add wording effects to simulated data
-# Updated 03.12.2022
+# Updated 05.12.2022
 add_wording_effects <- function(
     lf_object,
     method = c(
       "acquiescence", "difficulty",
-      "random_careless", "straight_line"
+      "random_careless", "straight_line",
+      "mixed"
     ),
     proportion_negative = 0.50,
     proportion_negative_range = NULL,
@@ -175,10 +199,18 @@ add_wording_effects <- function(
   # Match `method` argument (no default)
   if(missing(method)){
     stop("The `method` argument must be set.")
-  }else{method <- match.arg(method)}
+  }else{method <- match.arg(method, several.ok = TRUE)}
   
   # Ensure `method` is lowercase
   method <- tolower(method)
+  
+  # Check for mixed methods
+  if("mixed" %in% method){
+    method <- c(
+      "acquiescence", "difficulty",
+      "random_careless", "straight_line"
+    )
+  }
   
   # Check for appropriate class
   if(!is(lf_object, "lf_simulate")){
@@ -488,304 +520,113 @@ add_wording_effects <- function(
   # Obtain variables
   variables <- parameters$variables
   
-  # Set sequence of variables for each factor
-  end_variables <- cumsum(parameters$variables)
-  start_variables <- (end_variables + 1) - parameters$variables
+  # Obtain categories
+  categories <- parameters$categories
   
-  # Check for difficulty
-  if(method == "difficulty"){
+  # Set up biased sample size
+  if(length(method) > 1){
     
-    # Initialize signs
-    signs <- numeric(nrow(loadings))
+    # Split by method (ensures proper number of total biased sample)
+    replacement_sample <- method[
+      as.numeric(cut(1:biased_sample_size, length(method)))
+    ]
     
-    # Make all dominant loadings positive
-    for(i in 1:ncol(loadings)){
-      
-      # Target dominant loadings
-      target_loadings <- start_variables[i]:end_variables[i]
-      
-      # Determine sign
-      signs[target_loadings] <- sign(loadings[target_loadings, i])
-      
-      # Check for proportion of biased variables
-      if(proportion_biased_variables[i] != 1){
-        
-        # Set signed loadings
-        signed_loadings <- signs[target_loadings]
-        
-        # Modify the signs (candidate variables)
-        modify_signs <- round(sum(signed_loadings == -1) * proportion_biased_variables[i])
-        
-        # Replace some negatives with 1s
-        signed_loadings[
-          (modify_signs + 1):length(signed_loadings)
-        ] <- 1
-        
-        # Return to signs vector
-        signs[target_loadings] <- signed_loadings
-        
-      }
-      
-    }
+  }else{
     
-    # Candidate variables for re-coding
-    candidate_variables <- as.logical(ifelse(signs == -1, 1, 0))
-    
-    # Obtain replacement data
-    replacement_data <- wording_data$data[1:biased_sample_size,]
-    
-    # Obtain person bias on candidate variables
-    person_bias <- round(
-      proportion_biased_person * sum(candidate_variables)
+    # Set all replacement sample to one method
+    replacement_sample <- rep(
+      method, biased_sample_size
     )
     
-    # Loop through biased participants
-    for(i in 1:nrow(replacement_data)){
-      
-      # Skip if bias is zero
-      if(person_bias[i] != 0){
-        
-        # Target participant
-        participant <- replacement_data[i,]
-        
-        # Sample candidate variables
-        target_variables <- sample(
-          which(candidate_variables),
-          person_bias[i],
-          replace = FALSE
-        )
-        
-        # Target variable categories
-        target_categories <- parameters$categories[target_variables]
-        
-        # Target participant's variables
-        replacement_data[i, target_variables] <- (target_categories + 1) -
-          participant[target_variables]
-        
-      }
-      
-    }
+  }
+  
+  # Initialize replacement data
+  replacement_data <- wording_data$data
+  
+  # Check whether to add acquiescence
+  if("acquiescence" %in% method){
     
-  }else if(method == "acquiescence"){
+    # Add acquiescence to data
+    replacement_data[
+      which(replacement_sample == "acquiescence"),
+    ] <- add_wording_acquiescence(
+      wording_data = wording_data,
+      loadings = loadings,
+      categories = categories,
+      proportion_biased_variables = proportion_biased_variables,
+      proportion_biased_person = proportion_biased_person,
+      replacement_index = which(
+        replacement_sample == "acquiescence"
+      )
+    )
     
-    # Initialize signs
-    candidate_variables <- rep(FALSE, nrow(loadings))
+  }
+  
+  # Check whether to add difficulty
+  if("difficulty" %in% method){
     
-    # Loop through each factor
-    for(i in 1:ncol(loadings)){
-      
-      # Target variables
-      target_variables <- start_variables[i]:end_variables[i]
-      
-      # Number of variables for re-coding
-      number_recode <- round(proportion_biased_variables[i] * variables[i])
-      
-      # Check for whether recoding is necessary
-      if(number_recode != 0){
-        
-        # Determine variables for re-coding
-        recode_variables <- sample(
-          target_variables,
-          number_recode
-        )
-        
-        # Set candidate variables for re-coding
-        candidate_variables[recode_variables] <- TRUE
-        
-      }
-      
-    }
+    # Add difficulty to data
+    replacement_data[
+      which(replacement_sample == "difficulty"),
+    ] <- add_wording_difficulty(
+      wording_data = wording_data,
+      loadings = loadings,
+      categories = categories,
+      proportion_biased_variables = proportion_biased_variables,
+      proportion_biased_person = proportion_biased_person,
+      replacement_index = which(
+        replacement_sample == "difficulty"
+      )
+    )
     
-    # Obtain replacement data
-    replacement_data <- wording_data$data[1:biased_sample_size,]
+  }
+  
+  # Check whether to add random careless
+  if("random_careless" %in% method){
     
-    # Loop through biased participants
-    for(i in 1:nrow(replacement_data)){
-      
-      # Skip if bias is zero
-      if(proportion_biased_person[i] != 0){
-        
-        # Target participant
-        participant <- replacement_data[i,]
-        
-        # Participant candidate variables
-        participant_candidate_variables <- candidate_variables &
-          participant <= (parameters$categories / 2)
-        
-        # Determine person bias
-        person_bias <- round(sum(participant_candidate_variables) * proportion_biased_person[i])
-        
-        # Sample candidate variables
-        target_variables <- sample(
-          which(participant_candidate_variables),
-          person_bias,
-          replace = FALSE
-        )
-        
-        # Target variable categories
-        target_categories <- parameters$categories[target_variables]
-        
-        # Target participant's variables (to mid-point or nearest agreement point)
-        replacement_data[i, target_variables] <- round((target_categories + 1) / 2)
-
-      }
-      
-    }
+    # Add random careless to data
+    replacement_data[
+      which(replacement_sample == "random_careless"),
+    ] <- add_wording_random_careless(
+      wording_data = wording_data,
+      loadings = loadings,
+      categories = categories,
+      proportion_biased_variables = proportion_biased_variables,
+      proportion_biased_person = proportion_biased_person,
+      replacement_index = which(
+        replacement_sample == "random_careless"
+      )
+    )
     
-  }else if(method == "random_careless"){
+  }
+  
+  # Check whether to add straight line
+  if("straight_line" %in% method){
     
-    # Initialize signs
-    candidate_variables <- rep(FALSE, nrow(loadings))
-    
-    # Loop through each factor
-    for(i in 1:ncol(loadings)){
-      
-      # Target variables
-      target_variables <- start_variables[i]:end_variables[i]
-      
-      # Number of variables for re-coding
-      number_recode <- round(proportion_biased_variables[i] * variables[i])
-      
-      # Check for whether recoding is necessary
-      if(number_recode != 0){
-        
-        # Determine variables for re-coding
-        recode_variables <- sample(
-          target_variables,
-          number_recode
-        )
-        
-        # Set candidate variables for re-coding
-        candidate_variables[recode_variables] <- TRUE
-        
-      }
-      
-    }
-    
-    # Obtain replacement data
-    replacement_data <- wording_data$data[1:biased_sample_size,]
-    
-    # Loop through biased participants
-    for(i in 1:nrow(replacement_data)){
-      
-      # Skip if bias is zero
-      if(proportion_biased_person[i] != 0){
-        
-        # Target participant
-        participant <- replacement_data[i,]
-        
-        # Determine person bias
-        person_bias <- round(sum(candidate_variables) * proportion_biased_person[i])
-        
-        # Sample candidate variables
-        target_variables <- sample(
-          which(candidate_variables),
-          person_bias,
-          replace = FALSE
-        )
-        
-        # Loop through variables
-        for(recode in target_variables){
-          
-          # Insert random values
-          replacement_data[i, recode] <- sample(
-            1:parameters$categories[recode], 1
-          )
-          
-        }
-        
-      }
-      
-    }
-    
-  }else if(method == "straight_line"){
-    
-    # Initialize signs
-    candidate_variables <- rep(FALSE, nrow(loadings))
-    
-    # Loop through each factor
-    for(i in 1:ncol(loadings)){
-      
-      # Target variables
-      target_variables <- start_variables[i]:end_variables[i]
-      
-      # Number of variables for re-coding
-      number_recode <- round(proportion_biased_variables[i] * variables[i])
-      
-      # Check for whether recoding is necessary
-      if(number_recode != 0){
-        
-        # Determine variables for re-coding
-        recode_variables <- sample(
-          target_variables,
-          number_recode
-        )
-        
-        # Set candidate variables for re-coding
-        candidate_variables[recode_variables] <- TRUE
-        
-      }
-      
-    }
-    
-    # Obtain replacement data
-    replacement_data <- wording_data$data[1:biased_sample_size,]
-    
-    # Loop through biased participants
-    for(i in 1:nrow(replacement_data)){
-      
-      # Skip if bias is zero
-      if(proportion_biased_person[i] != 0){
-        
-        # Target participant
-        participant <- replacement_data[i,]
-        
-        # Determine person bias
-        person_bias <- round(sum(candidate_variables) * proportion_biased_person[i])
-        
-        # Sample candidate variables
-        target_variables <- sample(
-          which(candidate_variables),
-          person_bias,
-          replace = FALSE
-        )
-        
-        # Obtain max category
-        maximum_category <- max(parameters$categories)
-        
-        # Draw random number from maximum category
-        random_category <- sample(
-          1:maximum_category, 1
-        )
-        
-        # Proportion of category
-        proportion_category <- random_category / maximum_category
-        
-        # Determine replacement category value
-        replacement_category <- round(parameters$categories * proportion_category)
-        
-        # Can't have zeros
-        replacement_category <- ifelse(
-          replacement_category == 0, 1, replacement_category
-        )
-        
-        # Replace target variables
-        replacement_data[i, target_variables] <- replacement_category[target_variables]
-        
-      }
-      
-    }
+    # Add straight line to data
+    replacement_data[
+      which(replacement_sample == "straight_line"),
+    ] <- add_wording_straight_line(
+      wording_data = wording_data,
+      loadings = loadings,
+      categories = categories,
+      proportion_biased_variables = proportion_biased_variables,
+      proportion_biased_person = proportion_biased_person,
+      replacement_index = which(
+        replacement_sample == "straight_line"
+      )
+    )
     
   }
   
   # Replace original data with replacement data
-  new_data <- wording_data$data
-  new_data[1:biased_sample_size,] <- replacement_data
+  new_data <- replacement_data
   
   # Populate results
   results <- list(
     data = new_data,
     unbiased_data = wording_data$data,
+    replaced_sample_effects = replacement_sample,
     biased_sample_size = biased_sample_size,
     adjusted_results = wording_data,
     original_results = lf_object
