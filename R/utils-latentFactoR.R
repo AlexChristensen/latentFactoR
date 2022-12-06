@@ -1157,7 +1157,7 @@ add_wording_acquiescence <- function(
       
       # Participant candidate variables
       participant_candidate_variables <- candidate_variables &
-        participant <= (categories / 2)
+        participant <= ceiling(categories / 2)
       
       # Determine person bias
       person_bias <- round(sum(participant_candidate_variables) * proportion_biased_person[i])
@@ -1173,7 +1173,7 @@ add_wording_acquiescence <- function(
       target_categories <- categories[target_variables]
       
       # Target participant's variables (to nearest agreement point)
-      replacement_data[i, target_variables] <- round((target_categories / 2) + 1)
+      replacement_data[i, target_variables] <- ceiling((target_categories / 2) + 1)
       
     }
     
