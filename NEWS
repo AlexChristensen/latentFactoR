@@ -4,6 +4,10 @@ o FIX: bug in skew when only providing 1 value
 
 o FIX: further correction to `EKC` (uses `cumsum(eigenvalues)` rather than `sum(eigenvalues)`)
 
+o ADD: `add_wording_effects` will add wording effects such as acquiescence, difficulty, random careless, straight line, or some combination of the four to a simulated factor model
+
+o ADD: `ESEM` to perform Exploratory Structural Equation Modeling using {lavaan} (allows wording effects to be estimated)
+
 
 Changes in version 0.0.4
 
@@ -16,7 +20,7 @@ o ADD: `skew` argument for continuous data
 
 Changes in version 0.0.3
 
-o ADD: `add_population_error` will add population error, using {bifactor}, from a simulated factor model
+o ADD: `add_population_error` will add population error, using {bifactor}, to a simulated factor model
 
 o ADD: `data_to_zipfs` to transform data to Zipf's distribution from `simulate_factors`
 
