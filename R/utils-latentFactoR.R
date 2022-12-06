@@ -2104,6 +2104,30 @@ textsymbol <- function(symbol = c("alpha", "beta", "chi", "delta",
 #%%%%%%%%%%%%%%%%%%%%%%%
 
 #' @noRd
+# Ensures column names to data
+# Updated 02.12.2022
+ensure_column_names <- function(data)
+{
+  
+  # Check for whether column names exist
+  if(is.null(colnames(data))){
+    
+    # Add column names
+    colnames(data) <- paste0(
+      "V", formatC(
+        1:ncol(data), digits = floor(log10(ncol(data))),
+        format = "d", flag = "0"
+      )
+    )
+    
+  }
+  
+  # Return data
+  return(data)
+
+}
+
+#' @noRd
 # Checks for duplicated rows
 # Updated 05.09.2022
 match_row <- function(data)
