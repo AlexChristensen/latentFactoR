@@ -164,7 +164,7 @@ two_factor_random_careless <- add_wording_effects(
 )
 
 # Add wording effects using mixed method
-two_factor_random_careless <- add_wording_effects(
+two_factor_mixed <- add_wording_effects(
   lf_object = two_factor,
   proportion_negative = 0.50,
   proportion_biased_cases = 0.10,
@@ -172,7 +172,7 @@ two_factor_random_careless <- add_wording_effects(
 )
 
 # Add wording effects using acquiescence and straight line method
-two_factor_random_careless <- add_wording_effects(
+two_factor_multiple <- add_wording_effects(
   lf_object = two_factor,
   proportion_negative = 0.50,
   proportion_biased_cases = 0.10,

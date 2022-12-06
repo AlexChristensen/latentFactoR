@@ -145,7 +145,7 @@
 #' )
 #' 
 #' # Add wording effects using mixed method
-#' two_factor_random_careless <- add_wording_effects(
+#' two_factor_mixed <- add_wording_effects(
 #'   lf_object = two_factor,
 #'   proportion_negative = 0.50,
 #'   proportion_biased_cases = 0.10,
@@ -153,7 +153,7 @@
 #' )
 #' 
 #' # Add wording effects using acquiescence and straight line method
-#' two_factor_random_careless <- add_wording_effects(
+#' two_factor_multiple <- add_wording_effects(
 #'   lf_object = two_factor,
 #'   proportion_negative = 0.50,
 #'   proportion_biased_cases = 0.10,
@@ -551,6 +551,7 @@ add_wording_effects <- function(
       which(replacement_sample == "acquiescence"),
     ] <- add_wording_acquiescence(
       wording_data = wording_data,
+      variables = variables,
       loadings = loadings,
       categories = categories,
       proportion_biased_variables = proportion_biased_variables,
@@ -570,6 +571,7 @@ add_wording_effects <- function(
       which(replacement_sample == "difficulty"),
     ] <- add_wording_difficulty(
       wording_data = wording_data,
+      variables = variables,
       loadings = loadings,
       categories = categories,
       proportion_biased_variables = proportion_biased_variables,
@@ -589,6 +591,7 @@ add_wording_effects <- function(
       which(replacement_sample == "random_careless"),
     ] <- add_wording_random_careless(
       wording_data = wording_data,
+      variables = variables,
       loadings = loadings,
       categories = categories,
       proportion_biased_variables = proportion_biased_variables,
@@ -608,6 +611,7 @@ add_wording_effects <- function(
       which(replacement_sample == "straight_line"),
     ] <- add_wording_straight_line(
       wording_data = wording_data,
+      variables = variables,
       loadings = loadings,
       categories = categories,
       proportion_biased_variables = proportion_biased_variables,

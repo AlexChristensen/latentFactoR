@@ -1104,7 +1104,7 @@ correlate_residuals <- function(
 # Applies acquiescence wording effects
 # Updated 05.12.2022
 add_wording_acquiescence <- function(
-    wording_data, loadings, categories,
+    wording_data, variables, loadings, categories,
     proportion_biased_variables,
     proportion_biased_person,
     replacement_index
@@ -1188,7 +1188,7 @@ add_wording_acquiescence <- function(
 # Applies difficulty wording effects
 # Updated 05.12.2022
 add_wording_difficulty <- function(
-    wording_data, loadings, categories,
+    wording_data, variables, loadings, categories,
     proportion_biased_variables,
     proportion_biased_person,
     replacement_index
@@ -1279,7 +1279,7 @@ add_wording_difficulty <- function(
 # Applies random careless wording effects
 # Updated 05.12.2022
 add_wording_random_careless <- function(
-    wording_data, loadings, categories,
+    wording_data, variables, loadings, categories,
     proportion_biased_variables,
     proportion_biased_person,
     replacement_index
@@ -1363,7 +1363,7 @@ add_wording_random_careless <- function(
 # Applies straight line wording effects
 # Updated 05.12.2022
 add_wording_straight_line <- function(
-    wording_data, loadings, categories,
+    wording_data, variables, loadings, categories,
     proportion_biased_variables,
     proportion_biased_person,
     replacement_index
