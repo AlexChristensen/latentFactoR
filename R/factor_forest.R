@@ -17,6 +17,9 @@
 #' Maximum number of factors to search over.
 #' Defaults to \code{8}
 #' 
+#' @param PAcorrelation Character (length = 1).
+#' Type of correlation to use in \code{\link[psych]{fa.parallel}}
+#' 
 #' @return Returns a list containing:
 #' 
 #' \item{dimensions}{Number of dimensions identified}
@@ -66,10 +69,11 @@
 #' @export
 #'
 # Factor Forest
-# Updated 17.11.2022
+# Updated 11.12.2022
 factor_forest <- function(
     data, sample_size,
-    maximum_factors = 8
+    maximum_factors = 8,
+    PAcorrelation = c("cor", "poly", "tet")
 )
 {
   
@@ -164,9 +168,10 @@ factor_forest <- function(
   
   sink <- capture.output(
     pa <- psych::fa.parallel(
-      x = correlation,
+      x = newdata,
       n.obs = sample_size,
-      fa = "fa", plot = FALSE
+      fa = "fa", cor = PAcorrelation,
+      plot = FALSE
     )
   )
   pa_solution <- pa$nfact
