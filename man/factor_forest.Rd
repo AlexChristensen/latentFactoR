@@ -31,13 +31,13 @@ Must be set:
 
 \itemize{
 
-\item{"cor"}
+\item{\code{"cor"}}
 {Pearson's correlation}
 
-\item{"poly"}
+\item{\code{"poly"}}
 {Polychoric correlation}
 
-\item{"tet"}
+\item{\code{"tet"}}
 {Tetrachoric correlation}
 
 }}
