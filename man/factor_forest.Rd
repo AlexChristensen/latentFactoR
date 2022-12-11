@@ -8,7 +8,7 @@ factor_forest(
   data,
   sample_size,
   maximum_factors = 8,
-  PAcorrelation = c("cor", "poly", "tet")
+  PA_correlation = c("cor", "poly", "tet")
 )
 }
 \arguments{
@@ -25,8 +25,22 @@ then specifying the sample size is required}
 Maximum number of factors to search over.
 Defaults to \code{8}}
 
-\item{PAcorrelation}{Character (length = 1).
-Type of correlation to use in \code{\link[psych]{fa.parallel}}}
+\item{PA_correlation}{Character (length = 1).
+Type of correlation used in \code{\link[psych]{fa.parallel}}.
+Must be set:
+
+\itemize{
+
+\item{"cor"}
+{Pearson's correlation}
+
+\item{"poly"}
+{Polychoric correlation}
+
+\item{"tet"}
+{Tetrachoric correlation}
+
+}}
 }
 \value{
 Returns a list containing:

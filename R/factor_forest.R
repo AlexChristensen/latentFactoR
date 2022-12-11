@@ -17,8 +17,22 @@
 #' Maximum number of factors to search over.
 #' Defaults to \code{8}
 #' 
-#' @param PAcorrelation Character (length = 1).
-#' Type of correlation to use in \code{\link[psych]{fa.parallel}}
+#' @param PA_correlation Character (length = 1).
+#' Type of correlation used in \code{\link[psych]{fa.parallel}}.
+#' Must be set:
+#' 
+#' \itemize{
+#' 
+#' \item{"cor"}
+#' {Pearson's correlation}
+#' 
+#' \item{"poly"}
+#' {Polychoric correlation}
+#' 
+#' \item{"tet"}
+#' {Tetrachoric correlation}
+#' 
+#' }
 #' 
 #' @return Returns a list containing:
 #' 
@@ -73,7 +87,7 @@
 factor_forest <- function(
     data, sample_size,
     maximum_factors = 8,
-    PAcorrelation = c("cor", "poly", "tet")
+    PA_correlation = c("cor", "poly", "tet")
 )
 {
   
