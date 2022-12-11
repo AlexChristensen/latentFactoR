@@ -8,6 +8,8 @@ o ADD: `add_wording_effects` will add wording effects such as acquiescence, diff
 
 o ADD: `ESEM` to perform Exploratory Structural Equation Modeling using {lavaan} (allows wording effects to be estimated)
 
+o FIX: `factor_forest` uses raw data in `psych::fa.parallel` rather than correlation matrix
+
 
 Changes in version 0.0.4
 

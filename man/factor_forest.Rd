@@ -4,7 +4,12 @@
 \alias{factor_forest}
 \title{Estimate Number of Dimensions using Factor Forest}
 \usage{
-factor_forest(data, sample_size, maximum_factors = 8)
+factor_forest(
+  data,
+  sample_size,
+  maximum_factors = 8,
+  PAcorrelation = c("cor", "poly", "tet")
+)
 }
 \arguments{
 \item{data}{Matrix or data frame.
@@ -19,6 +24,9 @@ then specifying the sample size is required}
 \item{maximum_factors}{Numeric (length = 1).
 Maximum number of factors to search over.
 Defaults to \code{8}}
+
+\item{PAcorrelation}{Character (length = 1).
+Type of correlation to use in \code{\link[psych]{fa.parallel}}}
 }
 \value{
 Returns a list containing:
