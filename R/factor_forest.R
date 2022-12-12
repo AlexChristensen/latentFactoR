@@ -184,7 +184,7 @@ factor_forest <- function(
     pa <- psych::fa.parallel(
       x = newdata,
       n.obs = sample_size,
-      fa = "fa", cor = PAcorrelation,
+      fa = "fa", cor = PA_correlation,
       plot = FALSE
     )
   )

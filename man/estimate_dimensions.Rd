@@ -9,7 +9,7 @@ estimate_dimensions(
   sample_size,
   EGA_args = list(corr = "cor_auto", uni.method = "louvain", model = "glasso",
     consensus.method = "most_common", plot.EGA = FALSE),
-  FF_args = list(maximum_factors = 8),
+  FF_args = list(maximum_factors = 8, PA_correlation = "cor"),
   FSPE_args = list(maxK = 8, rep = 1, method = "PE", pbar = FALSE),
   NEST_args = list(iterations = 1000, maximum_iterations = 500, alpha = 0.05, convergence
     = 1e-05),

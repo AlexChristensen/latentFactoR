@@ -74,7 +74,7 @@
 #' @export
 #'
 # Estimate several different factor recovery methods
-# Updated 24.11.2022
+# Updated 12.12.2022
 estimate_dimensions <- function(
     data, sample_size,
     EGA_args = list(
@@ -83,7 +83,8 @@ estimate_dimensions <- function(
       plot.EGA = FALSE
     ),
     FF_args = list(
-      maximum_factors = 8
+      maximum_factors = 8,
+      PA_correlation = "cor"
     ),
     FSPE_args = list(
       maxK = 8, rep = 1, method = "PE", pbar = FALSE

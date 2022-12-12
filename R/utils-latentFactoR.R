@@ -794,8 +794,6 @@ correlate_residuals <- function(
 )
 {
   
-  lf_object <- two_factor
-  
   # Obtain parameters
   parameters <- lf_object$parameters
   
@@ -807,7 +805,7 @@ correlate_residuals <- function(
   sample_size <- nrow(lf_object$data)
   variable_categories <- parameters$categories
   categorical_limit <- parameters$categorical_limit
-  skews <- parameters$skew
+  skew <- parameters$skew
   original_correlation <- lf_object$population_correlation
   population_correlation <- original_correlation
   
@@ -1160,9 +1158,9 @@ correlate_residuals <- function(
     # Ensure skew in the same direction
     for(i in seq_along(residual_chain)){
       
-      # Handle skews
-      skews[residual_chain[[i]]] <- handle_skew_signs(
-        skews = skews[residual_chain[[i]]],
+      # Handle skew
+      skew[residual_chain[[i]]] <- handle_skew_signs(
+        skews = skew[residual_chain[[i]]],
         signs = signs[residual_chain[[i]]]
       )
       
@@ -1174,10 +1172,10 @@ correlate_residuals <- function(
   if(length(categorize_columns) != 0){
     
     # Set skew
-    if(length(skews) == 1){
-      skews <- rep(skews, length(categorize_columns))
+    if(length(skew) == 1){
+      skew <- rep(skew, length(categorize_columns))
     }else if(length(skew) != ncol(data)){
-      skews <- sample(skews, length(categorize_columns), replace = TRUE)
+      skew <- sample(skew, length(categorize_columns), replace = TRUE)
     }
     
     # Loop through columns
@@ -1186,7 +1184,7 @@ correlate_residuals <- function(
       data[,i] <- categorize(
         data = data[,i],
         categories = variable_categories[i],
-        skew_value = skews[i]
+        skew_value = skew[i]
       )
       
     }
@@ -1196,18 +1194,18 @@ correlate_residuals <- function(
   ## Check for continuous
   if(length(continuous_columns) != 0){
     
-    # Set skews
-    if(length(skews) == 1){
-      skews <- rep(skews, length(continuous_columns))
-    }else if(length(skews) != ncol(data)){
-      skews <- sample(skews, length(continuous_columns), replace = TRUE)
+    # Set skew
+    if(length(skew) == 1){
+      skew <- rep(skew, length(continuous_columns))
+    }else if(length(skew) != ncol(data)){
+      skew <- sample(skew, length(continuous_columns), replace = TRUE)
     }
     
     # Loop through columns
     for(i in continuous_columns){
       
       data[,i] <- skew_continuous( # function in `utils-latentFactoR`
-        skewness = skews[i],
+        skewness = skew[i],
         data = data[,i]
       )
       
@@ -1225,7 +1223,7 @@ correlate_residuals <- function(
   )
   
   # Update skews
-  parameters$skew <- skews
+  parameters$skew <- skew
   
   # Populate results
   results <- list(
@@ -2704,7 +2702,7 @@ match_row <- function(data)
 
 #' @noRd
 # Function update default arguments
-# Updated 24.11.2022
+# Updated 12.12.2022
 update_defaults <- function(FUN, FUN_args)
 {
   
@@ -2725,7 +2723,8 @@ update_defaults <- function(FUN, FUN_args)
     
     # Defaults
     defaults <- list(
-      maximum_factors = 8
+      maximum_factors = 8,
+      PA_correlation = "cor"
     )
     
   }
