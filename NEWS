@@ -10,6 +10,8 @@ o ADD: `ESEM` to perform Exploratory Structural Equation Modeling using {lavaan}
 
 o FIX: `factor_forest` uses raw data in `psych::fa.parallel` rather than correlation matrix
 
+o ADD: internal functions for computing effect sizes across conditions are included (see `simulation_helpers.R`)
+
 
 Changes in version 0.0.4
 
