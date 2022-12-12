@@ -7,7 +7,9 @@
 # simulations we run. They are not intended for users
 # although they may be useful to some.
 
-# Creates an effects table for all methods
+#' Creates an effects table for all methods
+#' @noRd
+# Updated 12.12.2022
 effect_table <- function(
     formula, data, method,
     minimum_effect = c("small", "moderate", "large"),
