@@ -1085,6 +1085,11 @@ correlate_residuals <- function(
       "item_rows", "item_columns"
     )]
     
+    # Ensure matrix
+    if(!is.matrix(residual_variables)){
+      residual_variables <- t(as.matrix(residual_variables))
+    }
+    
     # Initialize residual chain list
     residual_chain <- vector("list", nrow(residual_variables))
     
