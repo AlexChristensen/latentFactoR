@@ -973,12 +973,16 @@ correlate_residuals <- function(
         # Loop through correlated residuals
         for(i in 1:nrow(correlated_residuals)){
           
-          # Compute random residual
-          random_residual <- runif(
-            1,
-            min = add_residuals[i] - 0.05,
-            max = add_residuals[i] + 0.05
-          )
+          # Insert or compute random residual
+          if(!is.null(add_residuals_range)){
+            random_residual <- add_residuals[i]
+          }else{
+            random_residual <- runif(
+              1,
+              min = add_residuals[i] - 0.05,
+              max = add_residuals[i] + 0.05
+            )
+          }
           
           # Obtain sign
           original_sign <- sign(original_correlation[
