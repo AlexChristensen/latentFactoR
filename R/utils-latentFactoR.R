@@ -786,13 +786,15 @@ yuan <- function(R, lambda, Phi, Psi,
 
 #' @noRd
 # Adds correlated residuals to generated data
-# Updated 01.11.2022
+# Updated 12.12.2022
 correlate_residuals <- function(
     lf_object,
     proportion_LD, allow_multiple = FALSE,
     add_residuals, add_residuals_range
 )
 {
+  
+  lf_object <- two_factor
   
   # Obtain parameters
   parameters <- lf_object$parameters
@@ -805,7 +807,7 @@ correlate_residuals <- function(
   sample_size <- nrow(lf_object$data)
   variable_categories <- parameters$categories
   categorical_limit <- parameters$categorical_limit
-  skew <- parameters$skew
+  skews <- parameters$skew
   original_correlation <- lf_object$population_correlation
   population_correlation <- original_correlation
   
@@ -895,6 +897,30 @@ correlate_residuals <- function(
         cbind(item_rows, item_columns)
       )
       
+      # Obtain same variable rows
+      same_variable_rows <- which(
+        correlated_residuals[,"item_rows"] ==
+          correlated_residuals[,"item_columns"]
+      )
+      
+      # Replace until there are no duplicate rows
+      while(any(same_variable_rows)){
+        
+        # Replace second column with new variable
+        correlated_residuals[same_variable_rows, 2] <- sample(
+          remaining_variables,
+          length(same_variable_rows),
+          replace = allow_multiple
+        )
+        
+        # Re-check for duplicate rows
+        same_variable_rows <- which(
+          correlated_residuals[,"item_rows"] ==
+            correlated_residuals[,"item_columns"]
+        )
+        
+      }
+      
       # Obtain duplicate rows
       duplicate_rows <- match_row(correlated_residuals)
       
@@ -915,34 +941,16 @@ correlate_residuals <- function(
       
     }
     
-    # Obtain amount residual to add
-    if(length(add_residuals) == length(variables_LD)){
-      
-      # Loop through correlated_residuals
-      for(i in 1:nrow(correlated_residuals)){
-        
-        # Add residuals to correlation matrix
-        population_correlation[
-          correlated_residuals[i,1],
-          correlated_residuals[i,2]
-        ] <- original_correlation[
-          correlated_residuals[i,1],
-          correlated_residuals[i,2]
-        ] + add_residuals[i]
-        
-        # Ensure symmetric
-        population_correlation[
-          correlated_residuals[i,2],
-          correlated_residuals[i,1]
-        ] <- population_correlation[
-          correlated_residuals[i,1],
-          correlated_residuals[i,2]
-        ]
-        
-      }
-      
-      
-    }else{
+    # Add column for residual
+    correlated_residuals <- cbind(
+      correlated_residuals, rep(0, nrow(correlated_residuals))
+    )
+    
+    # Add column name for residual
+    colnames(correlated_residuals)[3] <- "residual_correlation"
+    
+    # Loop through correlated residuals
+    if(nrow(correlated_residuals) != 0){
       
       # Check if add residuals length equals 1 or number of factors
       if(length(add_residuals) != sum(variables_LD)){
@@ -998,6 +1006,10 @@ correlate_residuals <- function(
             correlated_residuals[i,2]
           ]
           
+          # Add random residual to output
+          correlated_residuals[i,"residual_correlation"] <-
+            random_residual * original_sign
+          
         }
         
       }
@@ -1042,24 +1054,161 @@ correlate_residuals <- function(
     
   }
   
-  # Find categories
-  if(any(variable_categories <= categorical_limit)){
+  # Set skew/categories
+  ## Target columns to categorize and/or add skew
+  categorize_columns <- which(variable_categories <= categorical_limit)
+  continuous_columns <- setdiff(1:ncol(data), categorize_columns)
+  
+  # Ensure skew is in the appropriate direction for correlated residuals
+  if(nrow(correlated_residuals) != 0){
     
-    # Target columns to categorize
-    columns <- which(variable_categories <= categorical_limit)
+    # 1. Obtain loading signs
+    signs <- numeric(nrow(loadings))
+    
+    # Ensure proper signs for skew
+    for(i in 1:ncol(loadings)){
+      
+      # Target dominant loadings
+      target_loadings <- start_variables[i]:end_variables[i]
+      
+      # Determine sign
+      signs[target_loadings] <- sign(loadings[target_loadings, i])
+      
+    }
+    
+    # 2. Obtain correlated residual chains
+    
+    # Obtain residual variables
+    residual_variables <- correlated_residuals[,c(
+      "item_rows", "item_columns"
+    )]
+    
+    # Initialize residual chain list
+    residual_chain <- vector("list", nrow(residual_variables))
+    
+    # Create residual chain
+    while(nrow(residual_variables) != 0){
+      
+      # Determine if either variable exists in residual chain
+      combine_residuals <- unlist(
+        lapply(residual_chain, function(x){
+          
+          if(any(residual_variables[1,] %in% x)){
+            return(TRUE)
+          }else{
+            return(FALSE)
+          }
+          
+        })
+      )
+      
+      # Check for whether to combine
+      if(!any(combine_residuals)){
+        
+        # Find NULL lists
+        null_list <- unlist(lapply(residual_chain, is.null))
+        
+        # First NULL list
+        residual_chain[[which(null_list)[1]]] <-
+          unique(as.vector(residual_variables[1,]))
+        
+      }else if(sum(combine_residuals) == 1){
+        
+        # Find residual chain to add to
+        add_to_chain <- which(combine_residuals)
+        
+        # Add variables to chain
+        residual_chain[[add_to_chain]] <- unique( # keep unique
+          c(
+            residual_chain[[add_to_chain]], # existing chain
+            as.vector(residual_variables[1,]) # new to add
+          )
+        )
+        
+      }else{
+        
+        # Find residual chains to merge
+        merge_chains <- which(combine_residuals)
+        
+        # Merge into first merge
+        residual_chain[[merge_chains[1]]] <- unique(unlist(residual_chain[merge_chains]))
+        
+        # Add to first merge chain
+        residual_chain[[merge_chains[1]]] <- unique( # keep unique
+          c(
+            residual_chain[[merge_chains[1]]], # existing chain
+            as.vector(residual_variables[1,]) # new to add
+          )
+        )
+        
+        # Set second merge chain to NULL
+        residual_chain[[merge_chains[2]]] <- NULL
+        
+      }
+      
+      # Remove residual variables from consideration
+      residual_variables <- matrix(residual_variables[-1,], ncol = 2)
+      
+    }
+    
+    # Find NULL lists
+    null_list <- unlist(lapply(residual_chain, is.null))
+    
+    # Keep non-NULL chains
+    residual_chain <- residual_chain[!null_list]
+    
+    # Ensure skew in the same direction
+    for(i in seq_along(residual_chain)){
+      
+      # Handle skews
+      skews[residual_chain[[i]]] <- handle_skew_signs(
+        skews = skews[residual_chain[[i]]],
+        signs = signs[residual_chain[[i]]]
+      )
+      
+    }
+    
+  }
+  
+  ## Check for categories
+  if(length(categorize_columns) != 0){
     
     # Set skew
-    if(length(skew) != length(columns)){
-      skew <- sample(skew, length(columns), replace = TRUE)
+    if(length(skews) == 1){
+      skews <- rep(skews, length(categorize_columns))
+    }else if(length(skew) != ncol(data)){
+      skews <- sample(skews, length(categorize_columns), replace = TRUE)
     }
     
     # Loop through columns
-    for(i in columns){
+    for(i in categorize_columns){
       
       data[,i] <- categorize(
         data = data[,i],
         categories = variable_categories[i],
-        skew_value = skew[i]
+        skew_value = skews[i]
+      )
+      
+    }
+    
+  }
+  
+  ## Check for continuous
+  if(length(continuous_columns) != 0){
+    
+    # Set skews
+    if(length(skews) == 1){
+      skews <- rep(skews, length(continuous_columns))
+    }else if(length(skews) != ncol(data)){
+      skews <- sample(skews, length(continuous_columns), replace = TRUE)
+    }
+    
+    # Loop through columns
+    for(i in continuous_columns){
+      
+      data[,i] <- skew_continuous( # function in `utils-latentFactoR`
+        skewness = skews[i],
+        data = data[,i]
       )
       
     }
@@ -1075,19 +1224,15 @@ correlate_residuals <- function(
     )
   )
   
-  # Update correlated residuals
-  correlated_residuals_df <- data.frame(
-    V1 = correlated_residuals[,1],
-    V2 = correlated_residuals[,2],
-    added_residual = add_residuals
-  )
+  # Update skews
+  parameters$skew <- skews
   
   # Populate results
   results <- list(
     data = data,
     population_correlation = population_correlation,
     parameters = parameters,
-    correlated_residuals = correlated_residuals_df,
+    correlated_residuals = as.data.frame(correlated_residuals),
     original_results = lf_object
   )
   
@@ -1458,6 +1603,59 @@ add_wording_straight_line <- function(
 #%%%%%%%%%%%%%%%%
 # categorize ----
 #%%%%%%%%%%%%%%%%
+
+#' @noRd
+# Ensures skew is in an appropriate direction based on loadings
+# Updated 12.12.2022
+handle_skew_signs <- function(skews, signs){
+  
+  # Check if all skew signs are in the same direction
+  if(all(sign(skews) == -1)){ # All in negative direction
+    
+    # Make all skew for negative variables positive
+    skews[signs == -1] <- abs(skews[signs == -1])
+    
+  }else if(all(sign(skews) == 1)){ # All in negative direction
+    
+    # Make all skew for positive variables negative
+    skews[signs == 1] <- -abs(skews[signs == 1])
+    
+  }else{ 
+    
+    # If mixed, base signs on mode of positive variables
+    # with preference for negative skew (i.e., ties go to negative skew)
+    
+    # Obtain skew signs for positive variables
+    positive_skew_signs <- sign(skews[signs == 1])
+    
+    # Determine whether mode with ties going to negative skew
+    if(
+      sum(positive_skew_signs == -1) >=
+      sum(positive_skew_signs == 1)
+    ){
+      
+      # Make all skew for positive variables negative
+      skews[signs == 1] <- -abs(skews[signs == 1])
+      
+      # Make all skew for negative variables positive
+      skews[signs == -1] <- abs(skews[signs == -1])
+      
+    }else{ # Do positive skew for positive variables
+      
+      # Make all skew for positive variables positive
+      skews[signs == 1] <- abs(skews[signs == 1])
+      
+      # Make all skew for negative variables negative
+      skews[signs == -1] <- -abs(skews[signs == -1])
+      
+    }
+    
+  }
+  
+  # Return skews
+  return(skews)
+  
+}
 
 #' @noRd
 # Adds skew to a single variable based on threshold (skew) values

@@ -179,7 +179,7 @@
 #' @export
 #'
 # Main factor simulation function
-# Updated 03.12.2022
+# Updated 12.12.2022
 simulate_factors <- function(
     factors,
     variables, variables_range = NULL,

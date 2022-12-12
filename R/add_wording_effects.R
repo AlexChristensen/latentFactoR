@@ -178,7 +178,7 @@
 #' @export
 #'
 # Add wording effects to simulated data
-# Updated 05.12.2022
+# Updated 12.12.2022
 add_wording_effects <- function(
     lf_object,
     method = c(
@@ -452,51 +452,10 @@ add_wording_effects <- function(
   # Obtain skews
   skews <- parameters$skew
   
-  # Check if all skew signs are in the same direction
-  if(all(sign(skews) == -1)){ # All in negative direction
-    
-    # Make all skew for negative variables positive
-    skews[signs == -1] <- abs(skews[signs == -1])
-    
-  }else if(all(sign(skews) == 1)){ # All in negative direction
-    
-    # Make all skew for positive variables negative
-    skews[signs == 1] <- -abs(skews[signs == 1])
-    
-  }else{ 
-    
-    # If mixed, base signs on mode of positive variables
-    # with preference for negative skew (i.e., ties go to negative skew)
-    
-    # Obtain skew signs for positive variables
-    positive_skew_signs <- sign(skews[signs == 1])
-    
-    # Determine whether mode with ties going to negative skew
-    if(
-      sum(positive_skew_signs == -1) >=
-      sum(positive_skew_signs == 1)
-    ){
-      
-      # Make all skew for positive variables negative
-      skews[signs == 1] <- -abs(skews[signs == 1])
-      
-      # Make all skew for negative variables positive
-      skews[signs == -1] <- abs(skews[signs == -1])
-      
-    }else{ # Do positive skew for positive variables
-      
-      # Make all skew for positive variables positive
-      skews[signs == 1] <- abs(skews[signs == 1])
-      
-      # Make all skew for negative variables negative
-      skews[signs == -1] <- -abs(skews[signs == -1])
-      
-    }
-    
-  }
-  
-  # Re-assign skew to variables
-  parameters$skew <- skews
+  # Handle skew signs and re-assign
+  parameters$skew <- handle_skew_signs(
+    skews = skews, signs = signs
+  )
   
   # Re-generate data
   wording_data <- simulate_factors(

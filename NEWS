@@ -12,6 +12,8 @@ o FIX: `factor_forest` uses raw data in `psych::fa.parallel` rather than correla
 
 o ADD: internal functions for computing effect sizes across conditions are included (see `simulation_helpers.R`)
 
+o ADD: skew in `add_local_dependence` is guaranteed to be same direction for locally dependent variables
+
 
 Changes in version 0.0.4
 
