@@ -209,7 +209,7 @@ obtain_effect_sizes <- function(
 
 #' Partial eta squared
 #' @noRd
-# Updated 12.12.2022
+# Updated 13.12.2022
 partial_eta <- function(aov_object)
 {
   
@@ -226,7 +226,7 @@ partial_eta <- function(aov_object)
   residuals <- sum_of_squares[length(sum_of_squares)]
   
   # Obtain partial eta squares
-  etas <- sum_of_squares / residuals
+  etas <- sum_of_squares / (sum_of_squares + residuals)
   
   # Add names
   names(etas) <- variable_names
