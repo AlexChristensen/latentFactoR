@@ -2,10 +2,116 @@
 #### Simulation Helpers ####
 #%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
+# Testing code
+#
+# # NEO Openness to Experience (n = 800)
+# neo <- NetworkToolbox::neoOpen[1:800,]
+# 
+# # Create groups
+# neo <- cbind(
+#   rep(1:4, 200),
+#   neo
+# )
+# 
+# # Change column name
+# colnames(neo)[1] <- "group"
+# 
+# # Obtain effects
+# effect_table_object <- effect_table(
+#   formula = Val8 ~ Val7 * Act4 * group,
+#   data = neo, method = "group"
+# )
+# 
+# # Plot effects
+# effect_plot(effect_table_object)
+#
+
 # These functions are used internally to facilitate
 # the use of functions that are often used in 
 # simulations we run. They are not intended for users
 # although they may be useful to some.
+
+#' Creates a plot of the effects table
+#' @noRd
+# Updated 13.12.2022
+effect_plot <- function(
+    effect_table_object,
+    fill_color = "#598381",
+    produce = TRUE
+)
+{
+  
+  # Create long format data frame
+  long_df <- data.frame(
+    Method = rep(
+      colnames(effect_table_object), # Methods
+      each = nrow(effect_table_object) # Effects
+    ),
+    Term = rep(
+      row.names(effect_table_object), # Effects
+      times = ncol(effect_table_object) # Methods
+    ),
+    Eta = as.vector(
+      effect_table_object # Values
+    )
+  )
+  
+  # Set modes
+  long_df$Method <- as.factor(long_df$Method)
+  long_df$Term <- as.factor(long_df$Term)
+  long_df$Eta <- as.numeric(
+    as.character(long_df$Eta)
+  )
+  
+  # Plot
+  plot_to_return <- ggplot2::ggplot(
+    data = long_df,
+    ggplot2::aes(
+      x = Method, y = Term,
+      fill = Eta, label = Eta
+    )
+  ) +
+    ggplot2::geom_tile(color = "white") +
+    ggplot2::scale_fill_gradient2(
+      low = "white", high = fill_color,
+      limits = c(0, 1), 
+      name = expression(
+        "\u03B7"[p]^2
+      )
+    ) +
+    ggplot2::scale_x_discrete(
+      position = "top", expand = c(0,0)
+    ) +
+    ggplot2::scale_y_discrete(expand = c(0,0)) + 
+    ggplot2::geom_text(size = 6) +
+    ggplot2::theme(
+      panel.background = ggplot2::element_blank(),
+      axis.title = ggplot2::element_text(size = 16),
+      axis.text = ggplot2::element_text(size = 14),
+      axis.ticks = ggplot2::element_blank(),
+      legend.title = ggplot2::element_text(size = 14, hjust = 0.5),
+      legend.text = ggplot2::element_text(size = 12),
+      legend.key.height = ggplot2::unit(1, "cm")
+    )
+  
+  # Check if plot should be produced
+  if(isTRUE(produce)){
+    plot(plot_to_return)
+  }
+  
+  # Message to user
+  message(
+    paste(
+      "Use standard {ggplot2} functionality to manipulate the plot\n\n",
+      "`aes()` settings:\n",
+      "x = Method\n", "y = Term\n", "fill = Eta\n", "label = Eta\n"
+    )
+  )
+  
+  # Return plot
+  return(plot_to_return)
+  
+}
 
 #' Creates an effects table for all methods
 #' @noRd
