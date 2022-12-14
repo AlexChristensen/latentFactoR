@@ -100,10 +100,10 @@ EKC <- function(
   eigenvalues <- eigen(correlation)$values
   
   # Set null model
-  l_up <- (1 + sqrt(variables / sample_size)^2)
+  l_up <- (1 + sqrt(variables / sample_size))^2
   
   # Set eigenvalue criterion
-  V <- c(0, eigenvalues[-variables])
+  V <- cumsum(c(0, eigenvalues[-variables]))
   
   # Set order of variables
   W <- variables:1
