@@ -119,6 +119,7 @@ effect_plot <- function(
 effect_table <- function(
     formula, data, method,
     minimum_effect = c("small", "moderate", "large"),
+    progress = TRUE,
     return_all = FALSE
 )
 {
@@ -137,6 +138,11 @@ effect_table <- function(
   unique_methods <- unique(
     data[,method]
   )
+  
+  # Determine character length (for progress)
+  if(isTRUE(progress)){
+    method_characters <- nchar(as.character(unique_methods))
+  }
   
   # Check for only one method
   if(length(unique_methods) == 1){
@@ -157,12 +163,36 @@ effect_table <- function(
   
   # Perform ANOVAs on separate data
   results <- lapply(
-    separate_data, function(x){
+    seq_along(separate_data), function(i){
+      
+      # Check for progress
+      if(isTRUE(progress)){
+        
+        # Progress message
+        cat(
+          
+          colortext(
+            paste0(
+              "\r Obtaining effects for '",
+              unique_methods[i], "' (",
+              i,
+              " of ", length(separate_data), ")...",
+              paste0(
+                rep(" ", abs(diff(range(method_characters)))),
+                collapse = ""
+              )
+            ),
+            defaults = "message"
+          )
+          
+        )
+        
+      }
       
       # Obtain effects
       obtain_effect_sizes(
         formula = formula,
-        data = x,
+        data = separate_data[[i]],
         minimum_effect = minimum_effect,
         return_all = TRUE
       )
