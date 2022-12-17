@@ -91,7 +91,7 @@ effect_plot <- function(
     ggplot2::geom_text(size = 6) +
     ggplot2::theme(
       plot.title = ggplot2::element_text(size = 18, hjust = 0.5),
-      plot.title = ggplot2::element_text(size = 16, hjust = 0.5),
+      plot.subtitle = ggplot2::element_text(size = 16, hjust = 0.5),
       panel.background = ggplot2::element_blank(),
       axis.title = ggplot2::element_text(size = 16),
       axis.text = ggplot2::element_text(size = 14),
