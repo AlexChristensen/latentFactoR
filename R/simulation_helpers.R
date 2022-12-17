@@ -33,10 +33,10 @@
 
 #' Creates a plot of the effects table
 #' @noRd
-# Updated 13.12.2022
+# Updated 17.12.2022
 effect_plot <- function(
-    effect_table_object,
-    fill_color = "#598381",
+    effect_table_object, title = "",
+    fill_color = "blue",
     produce = TRUE
 )
 {
@@ -79,12 +79,14 @@ effect_plot <- function(
         "\u03B7"[p]^2
       )
     ) +
+    ggplot2::ggtitle(title) +
     ggplot2::scale_x_discrete(
-      position = "top", expand = c(0,0)
+      position = "bottom", expand = c(0,0)
     ) +
     ggplot2::scale_y_discrete(expand = c(0,0)) + 
     ggplot2::geom_text(size = 6) +
     ggplot2::theme(
+      plot.title = ggplot2::element_text(size = 18, hjust = 0.5),
       panel.background = ggplot2::element_blank(),
       axis.title = ggplot2::element_text(size = 16),
       axis.text = ggplot2::element_text(size = 14),
@@ -115,7 +117,7 @@ effect_plot <- function(
 
 #' Creates an effects table for all methods
 #' @noRd
-# Updated 12.12.2022
+# Updated 17.12.2022
 effect_table <- function(
     formula, data, method,
     minimum_effect = c("small", "moderate", "large"),
