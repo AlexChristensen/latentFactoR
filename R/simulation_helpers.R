@@ -35,7 +35,8 @@
 #' @noRd
 # Updated 17.12.2022
 effect_plot <- function(
-    effect_table_object, title = "",
+    effect_table_object,
+    title = "", subtitle = "",
     fill_color = "blue",
     produce = TRUE
 )
@@ -79,7 +80,10 @@ effect_plot <- function(
         "\u03B7"[p]^2
       )
     ) +
-    ggplot2::ggtitle(title) +
+    ggplot2::labs(
+      title = title,
+      subtitle = subtitle
+    ) +
     ggplot2::scale_x_discrete(
       position = "bottom", expand = c(0,0)
     ) +
@@ -87,6 +91,7 @@ effect_plot <- function(
     ggplot2::geom_text(size = 6) +
     ggplot2::theme(
       plot.title = ggplot2::element_text(size = 18, hjust = 0.5),
+      plot.title = ggplot2::element_text(size = 16, hjust = 0.5),
       panel.background = ggplot2::element_blank(),
       axis.title = ggplot2::element_text(size = 16),
       axis.text = ggplot2::element_text(size = 14),
