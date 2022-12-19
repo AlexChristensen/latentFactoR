@@ -83,7 +83,7 @@
 #' @export
 #'
 # Factor Forest
-# Updated 11.12.2022
+# Updated 19.12.2022
 factor_forest <- function(
     data, sample_size,
     maximum_factors = 8,
@@ -183,7 +183,6 @@ factor_forest <- function(
   sink <- capture.output(
     pa <- psych::fa.parallel(
       x = newdata,
-      n.obs = sample_size,
       fa = "fa", cor = PA_correlation,
       plot = FALSE
     )
