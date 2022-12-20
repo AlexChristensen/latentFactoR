@@ -59,7 +59,10 @@ effect_plot <- function(
   
   # Set modes
   long_df$Method <- as.factor(long_df$Method)
-  long_df$Term <- as.factor(long_df$Term)
+  long_df$Term <- factor(
+    row.names(effect_table_object),
+    levels = rev(row.names(effect_table_object))
+  )
   long_df$Eta <- as.numeric(
     as.character(long_df$Eta)
   )
