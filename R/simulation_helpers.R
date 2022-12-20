@@ -123,10 +123,11 @@ effect_plot <- function(
 
 #' Creates an effects table for all methods
 #' @noRd
-# Updated 17.12.2022
+# Updated 20.12.2022
 effect_table <- function(
     formula, data, method,
     minimum_effect = c("small", "moderate", "large"),
+    interactions_limit = 3,
     progress = TRUE,
     return_all = FALSE
 )
@@ -265,6 +266,21 @@ effect_table <- function(
       return(NULL)
       
     }else{
+      
+      # Obtain terms
+      terms <- names(conditions_to_return[conditions_to_return])
+      
+      # Obtain length of terms
+      term_lengths <- unlist(
+        lapply(strsplit(terms, split = ":"), length)
+      )
+      
+      # Check for interaction limit
+      if(any(term_lengths > interactions_limit)){
+        conditions_to_return <- conditions_to_return[
+          conditions_to_return
+        ][term_lengths <= interactions_limit]
+      }
       
       # Return rounded larger etas
       return(t(stacked_results[,conditions_to_return]))
