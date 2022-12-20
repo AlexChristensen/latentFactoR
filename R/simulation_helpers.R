@@ -33,7 +33,7 @@
 
 #' Creates a plot of the effects table
 #' @noRd
-# Updated 17.12.2022
+# Updated 20.12.2022
 effect_plot <- function(
     effect_table_object,
     title = "", subtitle = "",
@@ -95,6 +95,7 @@ effect_plot <- function(
       panel.background = ggplot2::element_blank(),
       axis.title = ggplot2::element_text(size = 16),
       axis.text = ggplot2::element_text(size = 14),
+      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
       axis.ticks = ggplot2::element_blank(),
       legend.title = ggplot2::element_text(size = 14, hjust = 0.5),
       legend.text = ggplot2::element_text(size = 12),
