@@ -283,7 +283,7 @@ effect_table <- function(
       }
       
       # Return rounded larger etas
-      return(t(stacked_results[,conditions_to_return]))
+      return(t(stacked_results[,names(conditions_to_return)]))
       
     }
     
