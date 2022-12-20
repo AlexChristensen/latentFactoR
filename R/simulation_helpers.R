@@ -277,13 +277,15 @@ effect_table <- function(
       
       # Check for interaction limit
       if(any(term_lengths > interactions_limit)){
-        conditions_to_return <- conditions_to_return[
-          conditions_to_return
-        ][term_lengths <= interactions_limit]
+        conditions_to_return[
+          terms[
+            term_lengths > interactions_limit
+          ]
+        ] <- FALSE
       }
       
       # Return rounded larger etas
-      return(t(stacked_results[,names(conditions_to_return)]))
+      return(t(stacked_results[,conditions_to_return]))
       
     }
     
