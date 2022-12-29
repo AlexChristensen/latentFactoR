@@ -404,5 +404,29 @@ partial_eta <- function(aov_object)
   
 }
 
-
-
+#' Check levels available in a given dataset
+#' @noRd
+# Updated 29.12.2022
+check_levels <- function(data, limit = 10)
+{
+  
+  # Ensure data is a data frame
+  data <- as.data.frame(data)
+  
+  # Determine variables within a reasonable limit
+  variable_lengths <- apply(data, 2, function(x){
+    length(na.omit(unique(x)))
+  })
+  
+  # Check levels under or equal to limit
+  variable_levels <- apply(
+    data[,variable_lengths <= limit],
+    2, function(x){
+      unique(x)
+    }
+  )
+  
+  # Return levels
+  return(variable_levels)
+  
+}
