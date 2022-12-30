@@ -53,7 +53,7 @@ effect_plot <- function(
       times = ncol(effect_table_object) # Methods
     ),
     Eta = as.vector(
-      effect_table_object # Values
+      as.matrix(effect_table_object) # Values
     )
   )
   
