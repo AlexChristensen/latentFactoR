@@ -179,7 +179,7 @@
 #' @export
 #'
 # Main factor simulation function
-# Updated 12.12.2022
+# Updated 17.01.2022
 simulate_factors <- function(
     factors,
     variables, variables_range = NULL,
@@ -475,10 +475,10 @@ simulate_factors <- function(
     }
     
     # Loop through columns
-    for(i in categorize_columns){
+    for(i in seq_along(categorize_columns)){
       
-      data[,i] <- categorize(
-        data = data[,i],
+      data[,categorize_columns[i]] <- categorize(
+        data = data[,categorize_columns[i]],
         categories = variable_categories[i],
         skew_value = skew[i]
       )
@@ -498,11 +498,11 @@ simulate_factors <- function(
     }
     
     # Loop through columns
-    for(i in continuous_columns){
+    for(i in seq_along(continuous_columns)){
       
-      data[,i] <- skew_continuous( # function in `utils-latentFactoR`
+      data[,continuous_columns[i]] <- skew_continuous( # function in `utils-latentFactoR`
         skewness = skew[i],
-        data = data[,i]
+        data = data[,continuous_columns[i]]
       )
       
     }
