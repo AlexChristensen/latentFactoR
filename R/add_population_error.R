@@ -204,6 +204,17 @@ add_population_error <- function(
 )
 {
   
+  # For debugging
+  # two_factor <- simulate_factors(
+  #   factors = 2, variables = 6,
+  #   loadings = 0.55, cross_loadings = 0.05,
+  #   correlations = 0.30, sample_size = 1000
+  # )
+  # lf_object = two_factor; cfa_method = "minres";
+  # fit = "cfi"; misfit = "acceptable"; error_method = "cudeck";
+  # tolerance = 0.01; convergence_iterations = 10;
+  # leave_cross_loadings = FALSE
+  
   # Check for appropriate class
   if(!is(lf_object, "lf_simulate")){
     

@@ -786,7 +786,7 @@ yuan <- function(R, lambda, Phi, Psi,
 
 #' @noRd
 # Adds correlated residuals to generated data
-# Updated 12.12.2022
+# Updated 22.01.2022
 correlate_residuals <- function(
     lf_object,
     proportion_LD, allow_multiple = FALSE,
@@ -860,9 +860,31 @@ correlate_residuals <- function(
     # Loop through factors and add local dependence
     for(f in 1:factors){
       
+      # Determine available variables
+      available_variables <- start_variables[f]:end_variables[f]
+      
+      # Check for cross-loading class
+      if(is(lf_object, "lf_cl")){
+        
+        # Obtain loadings for available variables (ensure matrix)
+        available_loadings <- matrix(
+          loadings[available_variables, -f],
+          ncol = factors - 1
+        )
+        
+        # Collect sum of cross-loadings
+        sum_cross_loadings <- rowSums(available_loadings)
+        
+        # Remove variables with non-zero cross-loadings
+        available_variables <- available_variables[
+          sum_cross_loadings == 0
+        ]
+        
+      }
+      
       # Item rows
       item_rows <- sample(
-        start_variables[f]:end_variables[f],
+        available_variables,
         variables_LD[f],
         replace = allow_multiple
       )
@@ -871,13 +893,13 @@ correlate_residuals <- function(
       if(isTRUE(allow_multiple)){
         
         # Do not remove variables
-        remaining_variables <- start_variables[f]:end_variables[f]
+        remaining_variables <- available_variables
         
       }else{
         
         # Remove already included variables
         remaining_variables <- setdiff(
-          start_variables[f]:end_variables[f], item_rows
+          available_variables, item_rows
         )
         
       }

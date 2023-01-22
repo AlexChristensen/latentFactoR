@@ -214,10 +214,10 @@ add_local_dependence <- function(
   }
   
   # Convert local dependence proportions to proportions
-  if(any(proportion_LD > 1)){
+  if(any(proportion_LD >= 1)){
     
     # Target values
-    target_LD <- which(proportion_LD > 1)
+    target_LD <- which(proportion_LD >= 1)
     
     # Ensure proportions
     proportion_LD[target_LD] <-
