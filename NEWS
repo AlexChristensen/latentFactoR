@@ -1,3 +1,8 @@
+Changes in version 0.0.6
+
+o MOVE: `add_wording_effects` methods moved from `utils-latentFactoR` to `add_wording_effects-helpers` to facilitate ease of finding code (no observable changes to the user)
+
+
 Changes in version 0.0.5
 
 o FIX: bug in skew when only providing 1 value
