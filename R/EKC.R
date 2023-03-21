@@ -48,7 +48,7 @@
 #' @export
 #'
 # Empirical Kaiser Criterion
-# Updated 24.11.2022
+# Updated 21.03.2022
 EKC <- function(
     data, sample_size
 )
@@ -67,7 +67,7 @@ EKC <- function(
   }
   
   # Obtain correlation matrix (if not already)
-  if(!isSymmetric(data)){
+  if(!is_symmetric(data)){
     
     # Compute correlations
     correlation <- qgraph::cor_auto(
