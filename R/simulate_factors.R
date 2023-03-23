@@ -53,7 +53,7 @@
 #' 
 #' @param categorical_limit Numeric (length = 1).
 #' Values greater than input value are considered continuous.
-#' Defaults to \code{6} meaning that 7 or more categories are considered continuous
+#' Defaults to \code{7} meaning that 8 or more categories are considered continuous
 #' (i.e., variables are \emph{not} categorized from continuous to categorical)
 #' 
 #' @param skew Numeric (length = 1 or categorical variables).
@@ -179,7 +179,7 @@
 #' @export
 #'
 # Main factor simulation function
-# Updated 17.01.2022
+# Updated 23.03.2023
 simulate_factors <- function(
     factors,
     variables, variables_range = NULL,
@@ -187,7 +187,7 @@ simulate_factors <- function(
     cross_loadings, cross_loadings_range = NULL,
     correlations, correlations_range = NULL,
     sample_size, variable_categories = Inf,
-    categorical_limit = 6,
+    categorical_limit = 7,
     skew = 0, skew_range = NULL
 )
 {
@@ -266,8 +266,8 @@ simulate_factors <- function(
   
   # Ensure appropriate ranges
   range_error(factors, c(1, Inf)); range_error(variables, c(3, Inf));
-  range_error(sample_size, c(1, Inf)); range_error(variable_categories, c(2, Inf));
-  range_error(categorical_limit, c(2, 6)); range_error(skew, c(-2, 2))
+  range_error(sample_size, c(1, Inf)); range_error(skew, c(-2, 2));
+  range_error(variable_categories, c(2, Inf));
   
   # Determine total number of variables
   if(length(variables) == 1){
