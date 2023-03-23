@@ -504,7 +504,7 @@ simulate_factors <- function(
       
       data[,categorize_columns[i]] <- categorize(
         data = data[,categorize_columns[i]],
-        categories = variable_categories[i],
+        categories = variable_categories[categorize_columns[i]],
         skew_value = skew[i]
       )
       
