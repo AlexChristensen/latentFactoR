@@ -2,6 +2,10 @@ Changes in version 0.0.6
 
 o MOVE: `add_wording_effects` methods moved from `utils-latentFactoR` to `add_wording_effects-helpers` to facilitate ease of finding code (no observable changes to the user)
 
+o FIX: categories greater than 7 were not previously allowed (they are now)
+
+o FIX: correlations in `EKC` were not used appropriately and led to an error
+
 
 Changes in version 0.0.5
 
