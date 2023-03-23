@@ -464,14 +464,36 @@ simulate_factors <- function(
   categorize_columns <- which(variable_categories <= categorical_limit)
   continuous_columns <- setdiff(1:ncol(data), categorize_columns)
   
+  # Store skew (bug fix for later use of `skew`)
+  skew_stored <- skew
+  
   ## Check for categories
   if(length(categorize_columns) != 0){
     
     # Set skew
-    if(length(skew) == 1){
-      skew <- rep(skew, length(categorize_columns))
-    }else if(length(skew) != ncol(data)){
-      skew <- sample(skew, length(categorize_columns), replace = TRUE)
+    if(length(skew_stored) == 1){
+      skew <- rep(skew_stored, length(categorize_columns))
+    }else if(length(skew_stored) != ncol(data)){
+      skew <- sample(skew_stored, length(categorize_columns), replace = TRUE)
+    }
+    
+    # Check for categories greater than 6
+    if(any(variable_categories[categorize_columns] > 6)){
+      
+      # Obtain indices
+      categories_greater <- which(variable_categories[categorize_columns] > 6)
+      
+      # Check for skew not equal to zero
+      if(any(skew[categories_greater] != 0)){
+        
+        # Set them equal to zero (overwrite all skews)
+        skew[categories_greater] <- 0
+        
+        # Send warning
+        warning("Variables with categories > 6 are not available to add skew. Skew for these variables were set to zero.")
+        
+      }
+      
     }
     
     # Loop through columns
@@ -491,10 +513,10 @@ simulate_factors <- function(
   if(length(continuous_columns) != 0){
     
     # Set skew
-    if(length(skew) == 1){
-      skew <- rep(skew, length(continuous_columns))
-    }else if(length(skew) != ncol(data)){
-      skew <- sample(skew, length(continuous_columns), replace = TRUE)
+    if(length(skew_stored) == 1){
+      skew <- rep(skew_stored, length(continuous_columns))
+    }else if(length(skew_stored) != ncol(data)){
+      skew <- sample(skew_stored, length(continuous_columns), replace = TRUE)
     }
     
     # Loop through columns

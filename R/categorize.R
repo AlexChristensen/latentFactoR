@@ -66,7 +66,7 @@
 #' @export
 #'
 # Categorization function
-# Updated 03.12.2022
+# Updated 23.03.2023
 categorize <- function(data, categories, skew_value = 0)
 {
   
@@ -94,37 +94,48 @@ categorize <- function(data, categories, skew_value = 0)
     envir = environment()
   ))
   
-  # Switch categories to character
-  categories <- switch(
-    as.character(categories),
-    "2" = "two",
-    "3" = "three",
-    "4" = "four",
-    "5" = "five",
-    "6" = "six"
-  )
-  
-  # Obtain skew table
-  skew_table <- skew_tables[[categories]]
-  
-  # Sometimes R will treat numeric zeros
-  # as having negatives (seriously, why?)
-  # This fix prevents R from making
-  # 0 = "-0.00" and ensures 0 = "0.00"
-  if(skew_value == 0){
-    skew_value <- abs(skew_value)
+  # Check for categories greater than 6
+  if(categories > 6){
+    
+    # Make categorical using `cut` (skew will be zero)
+    skewed_data <- as.numeric(cut(data, breaks = categories))
+    
+  }else{
+    
+    # Switch categories to character
+    categories <- switch(
+      as.character(categories),
+      "2" = "two",
+      "3" = "three",
+      "4" = "four",
+      "5" = "five",
+      "6" = "six"
+    )
+    
+    # Obtain skew table
+    skew_table <- skew_tables[[categories]]
+    
+    # Sometimes R will treat numeric zeros
+    # as having negatives (seriously, why?)
+    # This fix prevents R from making
+    # 0 = "-0.00" and ensures 0 = "0.00"
+    if(skew_value == 0){
+      skew_value <- abs(skew_value)
+    }
+    
+    # Obtain skew values
+    skew_values <- skew_table[,formatC(
+      skew_value, digits = 2,
+      format = "f", flag = "0"
+    )]
+    
+    # Add skew to data (see `utils-latentFactoR` for function)
+    skewed_data <- skew_single_variable(
+      data = data, skew_values = skew_values
+    )
+    
+    
   }
-  
-  # Obtain skew values
-  skew_values <- skew_table[,formatC(
-    skew_value, digits = 2,
-    format = "f", flag = "0"
-  )]
-  
-  # Add skew to data (see `utils-latentFactoR` for function)
-  skewed_data <- skew_single_variable(
-    data = data, skew_values = skew_values
-  )
   
   # Return categorized data
   return(skewed_data)
