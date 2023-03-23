@@ -467,6 +467,9 @@ simulate_factors <- function(
   # Store skew (bug fix for later use of `skew`)
   skew_stored <- skew
   
+  # Initialize final skew
+  final_skew <- numeric(ncol(data))
+  
   ## Check for categories
   if(length(categorize_columns) != 0){
     
@@ -507,6 +510,8 @@ simulate_factors <- function(
       
     }
     
+    # Add to final skew
+    final_skew[categorize_columns] <- skew
   }
   
   ## Check for continuous
@@ -529,6 +534,9 @@ simulate_factors <- function(
       
     }
     
+    # Add to final skew
+    final_skew[continuous_columns] <- skew
+    
   }
   
   # Add column names to data
@@ -549,7 +557,7 @@ simulate_factors <- function(
     factor_correlations = correlation_matrix,
     categories = variable_categories,
     categorical_limit = categorical_limit,
-    skew = skew
+    skew = final_skew
   )
   
   # Populate results
