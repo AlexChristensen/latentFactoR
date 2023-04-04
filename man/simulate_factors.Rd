@@ -16,7 +16,7 @@ simulate_factors(
   correlations_range = NULL,
   sample_size,
   variable_categories = Inf,
-  categorical_limit = 6,
+  categorical_limit = 7,
   skew = 0,
   skew_range = NULL
 )
@@ -71,7 +71,7 @@ values reflect number of categories}
 
 \item{categorical_limit}{Numeric (length = 1).
 Values greater than input value are considered continuous.
-Defaults to \code{6} meaning that 7 or more categories are considered continuous
+Defaults to \code{7} meaning that 8 or more categories are considered continuous
 (i.e., variables are \emph{not} categorized from continuous to categorical)}
 
 \item{skew}{Numeric (length = 1 or categorical variables).
