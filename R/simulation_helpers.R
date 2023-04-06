@@ -42,6 +42,9 @@ effect_plot <- function(
 )
 {
   
+  # Initialize variables for {ggplot2}
+  Eta <- Method <- Term <- NULL
+  
   # Create long format data frame
   long_df <- data.frame(
     Method = rep(

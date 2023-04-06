@@ -21,14 +21,13 @@
 #' # Compute polychoric correlation matrix
 #' correlations <- polychoric_matrix(two_factor_polytomous$data)
 #' 
-#' 
 #' @author
 #' Alexander P. Christensen <alexpaulchristensen@gmail.com> with assistance from GPT-4
 #'
 #' @export
 #'
 # Compute polychoric correlation matrix
-# Updated 03.04.2023
+# Updated 04.04.2023
 polychoric_matrix <- function(data)
 {
   
@@ -41,6 +40,15 @@ polychoric_matrix <- function(data)
     data,
     PACKAGE = "latentFactoR"
   )
+  
+  # Check for variable names
+  if(!is.null(colnames(data))){
+    
+    # Add names to rows and columns
+    colnames(correlations) <- 
+      row.names(correlations) <- 
+      colnames(data)
+  }
 
   # Return
   return(correlations)

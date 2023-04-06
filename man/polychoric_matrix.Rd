@@ -32,7 +32,6 @@ two_factor_polytomous <- simulate_factors(
 # Compute polychoric correlation matrix
 correlations <- polychoric_matrix(two_factor_polytomous$data)
 
-
 }
 \author{
 Alexander P. Christensen <alexpaulchristensen@gmail.com> with assistance from GPT-4
