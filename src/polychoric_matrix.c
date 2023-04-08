@@ -299,7 +299,6 @@ double genz_bivariate_normal(double t1, double t2, double rho, double p1, double
     double bvp = 0.0;
 
     // Initialize size
-    int size_w = 0;
     int size_x = 0;
     double w[20];
     double x[20];
@@ -333,7 +332,6 @@ double genz_bivariate_normal(double t1, double t2, double rho, double p1, double
         if(abs_rho < 0.30){ // Gauss Legendre points and weights n = 6
 
             // Set size
-            size_w = 6;
             size_x = 6;
 
             // Initialize w and x (performs the [w w] and [1-x 1+x] here)
@@ -361,7 +359,6 @@ double genz_bivariate_normal(double t1, double t2, double rho, double p1, double
         }else if(abs_rho < 0.75){ // Gauss Legendre points and weights n = 12
 
             // Set size
-            size_w = 12;
             size_x = 12;
 
             // Initialize w and x (performs the [w w] and [1-x 1+x] here)
@@ -395,7 +392,6 @@ double genz_bivariate_normal(double t1, double t2, double rho, double p1, double
         }else{ // Gauss Legendre points and weights n = 20
 
             // Set size
-            size_w = 20;
             size_x = 20;
 
             // Initialize w and x (performs the [w w] and [1-x 1+x] here)
