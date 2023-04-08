@@ -980,7 +980,7 @@ double polychoric(int* X, int max_X, int* Y, int max_Y, int n){
     double lower = -1.0;
     double upper = 1.0;
     double tol = 1e-04; // same tolerance as `optimize` in R
-    int max_iter = 1000;
+    int max_iter = 100;
 
     // Perform optimization
     double rho_optimum = optimize(
