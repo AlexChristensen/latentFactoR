@@ -490,7 +490,7 @@ double genz_bivariate_normal(double t1, double t2, double rho, double p1, double
 
                 // Initialize and update variables
                 a = a / 2;
-                double xs, rs, ep, inner_b;
+                double xs, rs, ep;
                 double inner_a = 0.0;
 
                 // Compute asr
