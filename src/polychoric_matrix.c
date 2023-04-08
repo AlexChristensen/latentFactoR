@@ -25,7 +25,8 @@
 #define P 0.3275911
 
 // Constants in `genz_bivariate_normal`
-#define PI 3.14159265358979323846
+// #define PI 3.14159265358979323846
+// Use M_PI instead
 
 //// Constants in `drezner_bivariate_normal`
 //#define INT_NX 5
@@ -318,7 +319,7 @@ double genz_bivariate_normal(double t1, double t2, double rho, double p1, double
         // bvn = bvp
 
         // Initialize variables
-        double tp = 2 * PI;
+        double tp = 2 * M_PI;
         double t12 = t1 * t2;
         double abs_rho = fabs(rho);
         int size_w, size_x;
