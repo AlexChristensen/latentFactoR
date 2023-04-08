@@ -486,8 +486,7 @@ double genz_bivariate_normal(double t1, double t2, double rho, double p1, double
 
     }
 
-    // return fmax(0, fmin(1, bvp));
-    return bvp;
+    return fmax(0, fmin(1, bvp));
 
 }
 
