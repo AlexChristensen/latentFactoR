@@ -319,7 +319,7 @@ double genz_bivariate_normal(double t1, double t2, double rho, double p1, double
         // bvn = bvp
 
         // Initialize variables
-        double tp = 2 * PI;
+        double tp = 2 * M_PI;
         double t12 = t1 * t2;
         double abs_rho = fabs(rho);
         int size_w, size_x;
