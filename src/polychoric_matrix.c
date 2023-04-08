@@ -84,6 +84,16 @@ int** joint_frequency_table(int *X, int max_X, int *Y, int max_Y, int n){
         joint_frequency[X[i]][Y[i]]++;
     }
 
+    // Add 1 case to cells (for empty cells)
+    double add_case = 1 / (max_X * max_Y);
+
+    // Loop over and add to table
+    for(int i = 0; i <= max_X; i++){
+        for(int j = 0; j <= max_Y; j++){
+            joint_frequency[i][j] += add_case;
+        }
+    }
+
     // Return joint frequency table
     return joint_frequency;
 }
