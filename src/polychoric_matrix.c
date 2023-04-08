@@ -324,10 +324,6 @@ double genz_bivariate_normal(double t1, double t2, double rho, double p1, double
         double abs_rho = fabs(rho);
         int size_w, size_x;
 
-        // Allocate memory for w and x (use maximum size)
-        double w[20];
-        double x[20];
-
         // Check for smaller correlation
         if(abs_rho < 0.30){ // Gauss Legendre points and weights n = 6
 
