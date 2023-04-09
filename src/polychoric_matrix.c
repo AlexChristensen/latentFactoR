@@ -35,55 +35,6 @@ const double DOUBLE_W[INT_NX] = {0.018854042, 0.038088059, 0.0452707394, 0.03808
 // Constants in `optimize`
 #define ZEPS 1e-10
 
-// Obtain maximum categories from a specific column in a matrix
-int find_max_categories(int* input_data, int rows, int cols, int col_idx) {
-
-    // Initialize variables
-    int arr_max = input_data[col_idx * rows];
-
-    // Find maximum categories
-    for (int i = 1; i < rows; i++) {
-        if (input_data[i + col_idx * rows] > arr_max) {
-            arr_max = input_data[i + col_idx * rows];
-        }
-    }
-
-    // Return maximum value
-    return arr_max;
-
-}
-
-// Define cumulative sum function
-void cumulative_sum(double* arr, int n) {
-
-    // Initialize result
-    arr[0] = 0;
-
-    // Compute cumulative sum
-    for (int i = 1; i < n; i++) {
-        arr[i] += arr[i-1];
-    }
-
-}
-
-// Obtain joint frequency table
-int** joint_frequency_table(int *X, int max_X, int *Y, int max_Y, int n){
-
-    // Allocate memory space for table
-    int** joint_frequency = (int**) malloc((max_X + 1) * sizeof(int*));
-    for (int i = 0; i <= max_X; i++) {
-        joint_frequency[i] = (int*) calloc(max_Y + 1, sizeof(int));
-    }
-
-    // Populate table
-    for (int i = 0; i < n; i++) {
-        joint_frequency[X[i]][Y[i]]++;
-    }
-
-    // Return joint frequency table
-    return joint_frequency;
-}
-
 // Using the Beasley-Springer-Moro algorithm to perform `qnorm` function
 double bsm_inverse_cdf(double probability){
 
@@ -133,6 +84,53 @@ double bsm_inverse_cdf(double probability){
 
 }
 
+// Find starting index
+int starting_index(int* frequency){
+
+    // Find starting index
+    for (int i = 0; i < 8; i++) {
+        if (frequency[i] != 0) {
+            return i;
+        }
+    }
+
+}
+
+// Find ending index
+int ending_index(int* frequency){
+
+    // Find ending index
+    for (int i = 7; i >= 0; i--) {
+        if (frequency[i] != 0) {
+            return i;
+        }
+    }
+
+}
+
+// Obtain joint frequency table
+int** joint_frequency_table(int* input_data, int rows, int i, int j) {
+
+    // Allocate memory space for table
+    int** joint_frequency = (int**) malloc((8) * sizeof(int*));
+    for (int i = 0; i < 8; i++) {
+        joint_frequency[i] = (int*) calloc(8, sizeof(int));
+    }
+
+    // Initialize X and Y
+    int X, Y;
+
+    // Populate table
+    for (int k = 0; k < rows; k++) {
+        X = input_data[k + i * rows];
+        Y = input_data[k + j * rows];
+        joint_frequency[X][Y]++;
+    }
+
+    // Return joint frequency table
+    return joint_frequency;
+}
+
 // Define structure for return values
 struct ThresholdsResult {
     int** joint_frequency;
@@ -140,81 +138,97 @@ struct ThresholdsResult {
     double* threshold_Y;
     double* probability_X;
     double* probability_Y;
+    int num_elements;
 };
 
 // Compute thresholds
-struct ThresholdsResult thresholds(int *X, int max_X, int *Y, int max_Y, int n){
+struct ThresholdsResult thresholds(int* input_data, int rows, int i, int j) {
 
     // Obtain joint frequency table
-    int** joint_frequency = joint_frequency_table(X, max_X, Y, max_Y, n);
+    int** joint_frequency_max = joint_frequency_table(input_data, rows, i, j);
 
     // Initialize memory space for frequencies
-    int* frequency_X = (int*) calloc(max_X, sizeof(int));
-    int* frequency_Y = (int*) calloc(max_Y, sizeof(int));
+    int* frequency_X = (int*) calloc(8, sizeof(int));
+    int* frequency_Y = (int*) calloc(8, sizeof(int));
 
     // Obtain frequencies
-    for (int i = 0; i <= max_X; i++) {
-        for (int j = 0; j <= max_Y; j++) {
-            frequency_X[i] += joint_frequency[i][j];
-            frequency_Y[j] += joint_frequency[i][j];
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            frequency_X[i] += joint_frequency_max[i][j];
+            frequency_Y[j] += joint_frequency_max[i][j];
         }
     }
 
-    // Initialize memory space for probabilities and thresholds
-    double* probability_X = (double*) malloc((max_X + 1) * sizeof(double));
-    double* probability_Y = (double*) malloc((max_Y + 1) * sizeof(double));
-    double* threshold_X = (double*) malloc((max_X) * sizeof(double));
-    double* threshold_Y = (double*) malloc((max_Y) * sizeof(double));
+    // Find starting and ending index for X and Y
+    int min_X = starting_index(frequency_X);
+    int max_X = ending_index(frequency_X);
+    int min_Y = starting_index(frequency_Y);
+    int max_Y = ending_index(frequency_Y);
+    int min_min = fmin(min_X, min_Y);
+    int max_max = fmax(max_X, max_Y);
 
-    // Avoid using two for loops (if possible)
-    if(max_X == max_Y){
+    // Allocate new arrays for non-zero frequencies
+    int num_elements = max_max - min_min;
 
-        // Compute probabilities
-        for(int i = 0; i <= max_X; i++) {
-            probability_X[i] = (double) frequency_X[i] / n;
-            probability_Y[i] = (double) frequency_Y[i] / n;
-        }
-
-    }else{
-
-        // Compute probabilities
-        for(int i = 0; i <= max_X; i++) {
-            probability_X[i] = (double) frequency_X[i] / n;
-        }
-        for(int j = 0; j <= max_Y; j++) {
-            probability_Y[j] = (double) frequency_Y[j] / n;
-        }
-
+    // Allocate memory space for table
+    int** joint_frequency = (int**) malloc((num_elements + 1) * sizeof(int*));
+    for (int i = 0; i <= num_elements; i++) {
+        joint_frequency[i] = (int*) calloc(num_elements + 1, sizeof(int));
     }
 
-    // Compute cumulative probabilities
-    cumulative_sum(probability_X, max_X);
-    cumulative_sum(probability_Y, max_Y);
-
-    // Avoid using two for loops (if possible)
-    if(max_X == max_Y){
-
-        // Obtain thresholds
-        for (int i = 1; i < max_X; i++) {
-            threshold_X[i] = bsm_inverse_cdf(probability_X[i]);
-            threshold_Y[i] = bsm_inverse_cdf(probability_Y[i]);
-        }
-
-    }else{
-
-        // Obtain thresholds
-        for (int i = 1; i < max_X; i++) {
-            threshold_X[i] = bsm_inverse_cdf(probability_X[i]);
-        }
-        for (int j = 1; j < max_Y; j++) {
-            threshold_Y[j] = bsm_inverse_cdf(probability_Y[j]);
-        }
-
+    // Populate table
+    for (int i = 0; i <= num_elements; i++) {
+        for(int j = 0; j <= num_elements; j++)
+        joint_frequency[i][j] = joint_frequency_max[i + min_min][j + min_min];
     }
 
     // Free memory
+    for (int i = 0; i < 8; ++i) {
+        free(joint_frequency_max[i]);
+    }
+    free(joint_frequency_max);
+
+    // Initialize non-zero elements
+    int* non_zero_freq_X = (int*) malloc(num_elements * sizeof(int));
+    int* non_zero_freq_Y = (int*) malloc(num_elements * sizeof(int));
+
+    // Copy non-zero elements for X
+    for (int i = 0; i < num_elements; i++) {
+        non_zero_freq_X[i] = frequency_X[min_min + i];
+        non_zero_freq_Y[i] = frequency_Y[min_min + i];
+    }
+
+    // Free the memory for frequency_X and frequency_Y
     free(frequency_X);
     free(frequency_Y);
+
+    // Initialize memory space for probabilities and thresholds
+    double* probability_X = (double*) malloc((num_elements) * sizeof(double));
+    double* probability_Y = (double*) malloc((num_elements) * sizeof(double));
+    double* threshold_X = (double*) malloc((num_elements) * sizeof(double));
+    double* threshold_Y = (double*) malloc((num_elements) * sizeof(double));
+
+    // Compute probabilities
+    for(int i = 0; i < num_elements; i++) {
+        probability_X[i] = (double) non_zero_freq_X[i] / rows;
+        probability_Y[i] = (double) non_zero_freq_Y[i] / rows;
+    }
+
+    // Compute cumulative sums
+    for (int i = 0; i < num_elements - 1; i++) {
+        probability_X[i + 1] += probability_X[i];
+        probability_Y[i + 1] += probability_Y[i];
+    }
+
+    // Obtain thresholds
+    for (int i = 0; i < num_elements; i++) {
+        threshold_X[i] = bsm_inverse_cdf(probability_X[i]);
+        threshold_Y[i] = bsm_inverse_cdf(probability_Y[i]);
+    }
+
+    // Free memory
+    free(non_zero_freq_X);
+    free(non_zero_freq_Y);
 
     // Create structure for return values
     struct ThresholdsResult result;
@@ -223,6 +237,7 @@ struct ThresholdsResult thresholds(int *X, int max_X, int *Y, int max_Y, int n){
     result.threshold_Y = threshold_Y;
     result.probability_X = probability_X;
     result.probability_Y = probability_Y;
+    result.num_elements = num_elements;
 
     // Return
     return result;
@@ -369,139 +384,82 @@ double polychoric_log_likelihood(
     double rho, int** joint_frequency,
     double* threshold_X, double* threshold_Y,
     double* probability_X, double* probability_Y,
-    int max_X, int max_Y
+    int num_elements
 ) {
 
-  // Set upper and lowers (thresholds and probabilities)
-    double lower_ti[max_X], upper_ti[max_X], lower_pi[max_X], upper_pi[max_X];
-    double lower_tj[max_Y], upper_tj[max_Y], lower_pj[max_Y], upper_pj[max_Y];
+    // Set upper and lowers (thresholds and probabilities)
+    double lower_ti, upper_ti, lower_pi, upper_pi;
+    double lower_tj, upper_tj, lower_pj, upper_pj;
 
-    // Avoid need for double loop (if possible)
-    if(max_X == max_Y){
+    // Initialize variables
+    double log_likelihood = 0.0;
+    double probability, log_prob;
 
-        // Set up bounds for X and Y
-        for (int i = 0; i < max_X; i++) {
-            if(i == 0){
-                // X
-                lower_ti[i] = -INFINITY;
-                upper_ti[i] = threshold_X[i + 1];
-                lower_pi[i] = 0;
-                upper_pi[i] = probability_X[i + 1];
-                // Y
-                lower_tj[i] = -INFINITY;
-                upper_tj[i] = threshold_Y[i + 1];
-                lower_pj[i] = 0;
-                upper_pj[i] = probability_Y[i + 1];
-            }else if(i == max_X - 1){
-                // X
-                lower_ti[i] = threshold_X[i];
-                upper_ti[i] = INFINITY;
-                lower_pi[i] = probability_X[i];
-                upper_pi[i] = 1;
-                // Y
-                lower_tj[i] = threshold_Y[i];
-                upper_tj[i] = INFINITY;
-                lower_pj[i] = probability_Y[i];
-                upper_pj[i] = 1;
-            }else{
-                // X
-                lower_ti[i] = threshold_X[i];
-                upper_ti[i] = threshold_X[i + 1];
-                lower_pi[i] = probability_X[i];
-                upper_pi[i] = probability_X[i + 1];
-                // Y
-                lower_tj[i] = threshold_Y[i];
-                upper_tj[i] = threshold_Y[i + 1];
-                lower_pj[i] = probability_Y[i];
-                upper_pj[i] = probability_Y[i + 1];
-            }
+      // Compute log-likelihood
+      for (int i = 0; i <= num_elements; ++i) {
+        for (int j = 0; j <= num_elements; ++j) {
+
+          // Set up thresholds and probabilities
+          // X
+          if(i == 0){
+            lower_ti = -INFINITY; lower_pi = 0;
+            upper_ti = threshold_X[i]; upper_pi = probability_X[i];
+          }else if(i == num_elements){
+            lower_ti = threshold_X[i - 1]; lower_pi = probability_X[i - 1];
+            upper_ti = INFINITY; upper_pi = 1;
+          }else{
+            lower_ti = threshold_X[i - 1]; lower_pi = probability_X[i - 1];
+            upper_ti = threshold_X[i]; upper_pi = probability_X[i];
+          }
+          // Y
+          if(j == 0){
+            lower_tj = -INFINITY; lower_pj = 0;
+            upper_tj = threshold_Y[j]; upper_pj = probability_Y[j];
+          }else if(j == num_elements){
+            lower_tj = threshold_Y[j - 1]; lower_pj = probability_Y[j - 1];
+            upper_tj = INFINITY; upper_pj = 1;
+          }else{
+            lower_tj = threshold_Y[j - 1]; lower_pj = probability_Y[j - 1];
+            upper_tj = threshold_Y[j]; upper_pj = probability_Y[j];
+          }
+
+          // Compute bivariate normal CDF
+          probability = drezner_bivariate_normal(upper_ti, upper_tj, rho, upper_pi, upper_pj) -
+                        drezner_bivariate_normal(lower_ti, upper_tj, rho, lower_pi, upper_pj) -
+                        drezner_bivariate_normal(upper_ti, lower_tj, rho, upper_pi, lower_pj) +
+                        drezner_bivariate_normal(lower_ti, lower_tj, rho, lower_pi, lower_pj);
+
+          // Handle probabilities equal to zero
+          if (probability == 0) {
+            probability = DBL_MIN;
+          }
+
+          // Compute log probability
+          log_prob = log(probability);
+
+          // Handle infinite log probabilities
+          if (isinf(log_prob)) {
+            log_prob = DBL_MIN;
+          }
+
+          // Update log-likelihood
+          log_likelihood += joint_frequency[i][j] * log_prob;
+
         }
-
-
-    }else{
-
-        // Set up bounds for X
-        for (int i = 0; i < max_X; i++) {
-            if(i == 0){
-                lower_ti[i] = -INFINITY;
-                upper_ti[i] = threshold_X[i + 1];
-                lower_pi[i] = 0;
-                upper_pi[i] = probability_X[i + 1];
-            }else if(i == max_X - 1){
-                lower_ti[i] = threshold_X[i];
-                upper_ti[i] = INFINITY;
-                lower_pi[i] = probability_X[i];
-                upper_pi[i] = 1;
-            }else{
-                lower_ti[i] = threshold_X[i];
-                upper_ti[i] = threshold_X[i + 1];
-                lower_pi[i] = probability_X[i];
-                upper_pi[i] = probability_X[i + 1];
-            }
-        }
-
-        // Set up bounds for Y
-        for (int j = 0; j < max_Y; j++) {
-            if(j == 0){
-                lower_tj[j] = -INFINITY;
-                upper_tj[j] = threshold_Y[j + 1];
-                lower_pj[j] = 0;
-                upper_pj[j] = probability_Y[j + 1];
-            }else if(j == max_Y - 1){
-                lower_tj[j] = threshold_Y[j];
-                upper_tj[j] = INFINITY;
-                lower_pj[j] = probability_Y[j];
-                upper_pj[j] = 1;
-            }else{
-                lower_tj[j] = threshold_Y[j];
-                upper_tj[j] = threshold_Y[j + 1];
-                lower_pj[j] = probability_Y[j];
-                upper_pj[j] = probability_Y[j + 1];
-            }
-        }
-
-    }
-
-  // Initialize variables
-  double log_likelihood = 0.0;
-  double probability, log_prob;
-
-  // Compute log-likelihood
-  for (int i = 0; i < max_X; ++i) {
-    for (int j = 0; j < max_Y; ++j) {
-
-      // Compute bivariate normal CDF
-      probability = drezner_bivariate_normal(upper_ti[i], upper_tj[j], rho, upper_pi[i], upper_pj[j]) -
-                    drezner_bivariate_normal(lower_ti[i], upper_tj[j], rho, lower_pi[i], upper_pj[j]) -
-                    drezner_bivariate_normal(upper_ti[i], lower_tj[j], rho, upper_pi[i], lower_pj[j]) +
-                    drezner_bivariate_normal(lower_ti[i], lower_tj[j], rho, lower_pi[i], lower_pj[j]);
-
-      // Handle probabilities equal to zero
-      if (probability == 0) {
-        probability = DBL_MIN;
       }
 
-      // Compute log probability
-      log_prob = log(probability);
-
-      // Handle infinite log probabilities
-      if (isinf(log_prob)) {
-        log_prob = DBL_MIN;
-      }
-
-      // Update log-likelihood
-      log_likelihood += joint_frequency[i + 1][j + 1] * log_prob;
-
-    }
-  }
-
-  // Return negative log-likelihood
-  return -log_likelihood;
+      // Return negative log-likelihood
+      return -log_likelihood;
 
 }
 
 // Brent's method for optimization
-double optimize(double (*f)(double, int**, double*, double*, double*, double*, int, int), int** joint_frequency, double* threshold_X, double* threshold_Y, double* probability_X, double* probability_Y, int max_X, int max_Y, double lower, double upper, double tol, int max_iter) {
+double optimize(double (*f)(double, int**, double*, double*, double*, double*, int),
+                int** joint_frequency, double* threshold_X, double* threshold_Y,
+                double* probability_X, double* probability_Y,
+                int num_elements,
+                double lower, double upper, double tol, int max_iter
+) {
 
     // Initialize variables for the optimization algorithm
     double a = lower;
@@ -512,7 +470,7 @@ double optimize(double (*f)(double, int**, double*, double*, double*, double*, i
     double w = c;
     double v = c;
 
-    double fx = f(x, joint_frequency, threshold_X, threshold_Y, probability_X, probability_Y, max_X, max_Y);
+    double fx = f(x, joint_frequency, threshold_X, threshold_Y, probability_X, probability_Y, num_elements);
     double fw = fx;
     double fv = fx;
 
@@ -576,7 +534,7 @@ double optimize(double (*f)(double, int**, double*, double*, double*, double*, i
 
         // Calculate the function value at the trial point
         u = (fabs(d) >= tol1) ? x + d : x + ((d >= 0.0) ? tol1 : -tol1);
-        fu = f(u, joint_frequency, threshold_X, threshold_Y, probability_X, probability_Y, max_X, max_Y);
+        fu = f(u, joint_frequency, threshold_X, threshold_Y, probability_X, probability_Y, num_elements);
 
         // Update the intervals based on the function values at the trial point
         if (fu <= fx) {
@@ -614,10 +572,10 @@ double optimize(double (*f)(double, int**, double*, double*, double*, double*, i
 }
 
 // Compute polychoric correlation
-double polychoric(int* X, int max_X, int* Y, int max_Y, int n){
+double polychoric(int* input_data, int rows, int i, int j) {
 
     // Obtain joint frequency table, probability_X, and probability_Y from thresholds function
-    struct ThresholdsResult thresholds_result = thresholds(X, max_X, Y, max_Y, n);
+    struct ThresholdsResult thresholds_result = thresholds(input_data, rows, i, j);
 
     // Initialize parameters for optimization
     double lower = -1.0;
@@ -630,11 +588,12 @@ double polychoric(int* X, int max_X, int* Y, int max_Y, int n){
         polychoric_log_likelihood, thresholds_result.joint_frequency,
         thresholds_result.threshold_X, thresholds_result.threshold_Y,
         thresholds_result.probability_X, thresholds_result.probability_Y,
-        max_X, max_Y, lower, upper, tol, max_iter
+        thresholds_result.num_elements,
+        lower, upper, tol, max_iter
     );
 
     // Free memory
-    for (int i = 0; i < max_X; ++i) {
+    for (int i = 0; i <= thresholds_result.num_elements; i++) {
         free(thresholds_result.joint_frequency[i]);
     }
     free(thresholds_result.joint_frequency);
@@ -654,17 +613,10 @@ double** polychoric_correlation_matrix(int* input_data, int rows, int cols) {
     // Initialize iterators
     int i, j, k;
 
-    // Initialize X and Y
-    int X[rows], Y[rows];
-
-    // Initialize maximum categories vector
-    int max_categories[cols];
-
     // Allocate memory for polychoric_matrix
     double** polychoric_matrix = malloc(cols * sizeof(double*));
     for (i = 0; i < cols; i++) {
       polychoric_matrix[i] = malloc(cols * sizeof(double)); // Change rows to cols
-      max_categories[i] = find_max_categories(input_data, rows, cols, i); // Saves a loop
     }
 
     // Perform polychoric correlations over the input_matrix
@@ -680,19 +632,15 @@ double** polychoric_correlation_matrix(int* input_data, int rows, int cols) {
 
             }else if (i > j) { // Fill lower triangle
 
-                // Obtain X and Y
-                for (k = 0; k < rows; k++) {
-                    X[k] = input_data[k + i * rows];
-                    Y[k] = input_data[k + j * rows];
-                }
-
                 // Compute correlation
                 double correlation = polychoric(
-                    X, max_categories[i], Y, max_categories[j], rows
+                    input_data, rows, i, j
                 );
 
-                // Fill matrix
+                // Add to matrix
                 polychoric_matrix[i][j] = correlation;
+
+                // Fill opposite of triangle
                 polychoric_matrix[j][i] = correlation;
 
             }
