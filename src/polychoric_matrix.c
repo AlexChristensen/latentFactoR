@@ -94,12 +94,6 @@ double bsm_inverse_cdf(double probability){
         return(INFINITY);
     }
 
-    // Define constants
-    double const_a[6] = CONST_A;
-    double const_b[5] = CONST_B;
-    double const_c[6] = CONST_C;
-    double const_d[4] = CONST_D;
-
     // Initialize variables once
     double q, r, x;
 
@@ -113,7 +107,7 @@ double bsm_inverse_cdf(double probability){
         r = q * q;
 
         // Define x
-        x = ((((((const_a[0] * r + const_a[1]) * r + const_a[2]) * r + const_a[3]) * r + const_a[4]) * r + const_a[5]) * q) / (((((const_b[0] * r + const_b[1]) * r + const_b[2]) * r + const_b[3]) * r + const_b[4]) * r + 1);
+        x = ((((((CONST_A[0] * r + CONST_A[1]) * r + CONST_A[2]) * r + CONST_A[3]) * r + CONST_A[4]) * r + CONST_A[5]) * q) / (((((CONST_B[0] * r + CONST_B[1]) * r + CONST_B[2]) * r + CONST_B[3]) * r + CONST_B[4]) * r + 1);
 
     } else { // Ends
 
@@ -125,7 +119,7 @@ double bsm_inverse_cdf(double probability){
         }
 
         // Define x
-        x = (((((const_c[0] * q + const_c[1]) * q + const_c[2]) * q + const_c[3]) * q + const_c[4]) * q + const_c[5]) / ((((const_d[0] * q + const_d[1]) * q + const_d[2]) * q + const_d[3]) * q + 1);
+        x = (((((CONST_C[0] * q + CONST_C[1]) * q + CONST_C[2]) * q + CONST_C[3]) * q + CONST_C[4]) * q + CONST_C[5]) / ((((CONST_D[0] * q + CONST_D[1]) * q + CONST_D[2]) * q + CONST_D[3]) * q + 1);
 
         // Check if the sign needs to be reversed
         if(probability >= 0.02425){
