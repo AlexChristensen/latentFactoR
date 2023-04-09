@@ -10,6 +10,9 @@
 
 // Define constants in commonly used functions (optimization process)
 
+// Constant for hard cut-off for polychoric
+#define CUT 11 // similar to {Turbofuns}
+
 // Constants in `bsm_inverse_cdf`
 const double CONST_A[6] = {-39.69683028665376, 220.9460984245205, -275.928510446969, 138.357751867269, -30.66479806614716, 2.506628277459239};
 const double CONST_B[5] = {-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572};
@@ -87,24 +90,37 @@ double bsm_inverse_cdf(double probability){
 // Find starting index
 int starting_index(int* frequency){
 
+    // Initialize start
+    int start = 0;
+
     // Find starting index
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < CUT; i++) {
         if (frequency[i] != 0) {
-            return i;
+            start = i;
+            break
         }
     }
 
+    // Return start
+    return start;
 }
 
 // Find ending index
 int ending_index(int* frequency){
 
+    // Initialize end
+    int end = 0;
+
     // Find ending index
-    for (int i = 7; i >= 0; i--) {
+    for (int i = CUT - 1; i >= 0; i--) {
         if (frequency[i] != 0) {
-            return i;
+            end = i;
+            break
         }
     }
+
+    // Return end
+    return end;
 
 }
 
@@ -112,9 +128,9 @@ int ending_index(int* frequency){
 int** joint_frequency_table(int* input_data, int rows, int i, int j) {
 
     // Allocate memory space for table
-    int** joint_frequency = (int**) malloc((8) * sizeof(int*));
-    for (int i = 0; i < 8; i++) {
-        joint_frequency[i] = (int*) calloc(8, sizeof(int));
+    int** joint_frequency = (int**) malloc((CUT) * sizeof(int*));
+    for (int i = 0; i < CUT; i++) {
+        joint_frequency[i] = (int*) calloc(CUT, sizeof(int));
     }
 
     // Initialize X and Y
@@ -148,12 +164,12 @@ struct ThresholdsResult thresholds(int* input_data, int rows, int i, int j) {
     int** joint_frequency_max = joint_frequency_table(input_data, rows, i, j);
 
     // Initialize memory space for frequencies
-    int* frequency_X = (int*) calloc(8, sizeof(int));
-    int* frequency_Y = (int*) calloc(8, sizeof(int));
+    int* frequency_X = (int*) calloc(CUT, sizeof(int));
+    int* frequency_Y = (int*) calloc(CUT, sizeof(int));
 
     // Obtain frequencies
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
+    for (int i = 0; i < CUT; i++) {
+        for (int j = 0; j < CUT; j++) {
             frequency_X[i] += joint_frequency_max[i][j];
             frequency_Y[j] += joint_frequency_max[i][j];
         }
@@ -183,7 +199,7 @@ struct ThresholdsResult thresholds(int* input_data, int rows, int i, int j) {
     }
 
     // Free memory
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < CUT; ++i) {
         free(joint_frequency_max[i]);
     }
     free(joint_frequency_max);
@@ -611,7 +627,7 @@ double polychoric(int* input_data, int rows, int i, int j) {
 double** polychoric_correlation_matrix(int* input_data, int rows, int cols) {
 
     // Initialize iterators
-    int i, j, k;
+    int i, j;
 
     // Allocate memory for polychoric_matrix
     double** polychoric_matrix = malloc(cols * sizeof(double*));
