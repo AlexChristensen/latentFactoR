@@ -97,7 +97,7 @@ int starting_index(int* frequency){
     for (int i = 0; i < CUT; i++) {
         if (frequency[i] != 0) {
             start = i;
-            break
+            break;
         }
     }
 
@@ -115,7 +115,7 @@ int ending_index(int* frequency){
     for (int i = CUT - 1; i >= 0; i--) {
         if (frequency[i] != 0) {
             end = i;
-            break
+            break;
         }
     }
 
