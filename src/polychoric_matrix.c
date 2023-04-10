@@ -124,29 +124,6 @@ int ending_index(int* frequency){
 
 }
 
-// Obtain joint frequency table
-int** joint_frequency_table(int* input_data, int rows, int i, int j) {
-
-    // Allocate memory space for table
-    int** joint_frequency = (int**) malloc((CUT) * sizeof(int*));
-    for (int i = 0; i < CUT; i++) {
-        joint_frequency[i] = (int*) calloc(CUT, sizeof(int));
-    }
-
-    // Initialize X and Y
-    int X, Y;
-
-    // Populate table
-    for (int k = 0; k < rows; k++) {
-        X = input_data[k + i * rows];
-        Y = input_data[k + j * rows];
-        joint_frequency[X][Y]++;
-    }
-
-    // Return joint frequency table
-    return joint_frequency;
-}
-
 // Define structure for return values
 struct ThresholdsResult {
     int** joint_frequency;
@@ -160,58 +137,45 @@ struct ThresholdsResult {
 // Compute thresholds
 struct ThresholdsResult thresholds(int* input_data, int rows, int i, int j) {
 
-    // Obtain joint frequency table
-    int** joint_frequency_max = joint_frequency_table(input_data, rows, i, j);
+    // Initialize iterators and temporary variables
+    int k, X, Y;
 
     // Initialize memory space for frequencies
     int* frequency_X = (int*) calloc(CUT, sizeof(int));
     int* frequency_Y = (int*) calloc(CUT, sizeof(int));
 
-    // Obtain frequencies
-    for (int i = 0; i < CUT; i++) {
-        for (int j = 0; j < CUT; j++) {
-            frequency_X[i] += joint_frequency_max[i][j];
-            frequency_Y[j] += joint_frequency_max[i][j];
-        }
-    }
-
-    // Find starting and ending index for X and Y
-    int min_X = starting_index(frequency_X);
-    int max_X = ending_index(frequency_X);
-    int min_Y = starting_index(frequency_Y);
-    int max_Y = ending_index(frequency_Y);
-    int min_min = fmin(min_X, min_Y);
-    int max_max = fmax(max_X, max_Y);
-
-    // Allocate new arrays for non-zero frequencies
-    int num_elements = max_max - min_min;
-
     // Allocate memory space for table
-    int** joint_frequency = (int**) malloc((num_elements + 1) * sizeof(int*));
-    for (int i = 0; i <= num_elements; i++) {
-        joint_frequency[i] = (int*) calloc(num_elements + 1, sizeof(int));
+    int** joint_frequency = (int**) malloc(CUT * sizeof(int*));
+    for (k = 0; k < CUT; k++) {
+        joint_frequency[k] = (int*) calloc(CUT, sizeof(int));
     }
 
-    // Populate table
-    for (int i = 0; i <= num_elements; i++) {
-        for(int j = 0; j <= num_elements; j++)
-        joint_frequency[i][j] = joint_frequency_max[i + min_min][j + min_min];
+    // Populate joint_frequency and calculate frequencies
+    for (k = 0; k < rows; k++) {
+        X = input_data[k + i * rows];
+        Y = input_data[k + j * rows];
+        joint_frequency[X][Y]++;
+        frequency_X[X]++;
+        frequency_Y[Y]++;
     }
 
-    // Free memory
-    for (int i = 0; i < CUT; ++i) {
-        free(joint_frequency_max[i]);
-    }
-    free(joint_frequency_max);
+    // Obtain index values
+    int min_X = starting_index(frequency_X); // starting index for X
+    int max_X = ending_index(frequency_X); // ending index for X
+    int min_Y = starting_index(frequency_Y); // starting index for Y
+    int max_Y = ending_index(frequency_Y); // ending index for Y
+    int min_min = fmin(min_X, min_Y); // minimum of the minimum indices
+    int max_max = fmax(max_X, max_Y); // maximum of the maximum indices
+    int num_elements = max_max - min_min; // number of total possible elements
 
     // Initialize non-zero elements
     int* non_zero_freq_X = (int*) malloc(num_elements * sizeof(int));
     int* non_zero_freq_Y = (int*) malloc(num_elements * sizeof(int));
 
     // Copy non-zero elements for X
-    for (int i = 0; i < num_elements; i++) {
-        non_zero_freq_X[i] = frequency_X[min_min + i];
-        non_zero_freq_Y[i] = frequency_Y[min_min + i];
+    for (k = 0; k < num_elements; k++) {
+        non_zero_freq_X[k] = frequency_X[min_min + k];
+        non_zero_freq_Y[k] = frequency_Y[min_min + k];
     }
 
     // Free the memory for frequency_X and frequency_Y
@@ -225,21 +189,21 @@ struct ThresholdsResult thresholds(int* input_data, int rows, int i, int j) {
     double* threshold_Y = (double*) malloc((num_elements) * sizeof(double));
 
     // Compute probabilities
-    for(int i = 0; i < num_elements; i++) {
-        probability_X[i] = (double) non_zero_freq_X[i] / rows;
-        probability_Y[i] = (double) non_zero_freq_Y[i] / rows;
+    for(k = 0; k < num_elements; k++) {
+        probability_X[k] = (double) non_zero_freq_X[k] / rows;
+        probability_Y[k] = (double) non_zero_freq_Y[k] / rows;
     }
 
     // Compute cumulative sums
-    for (int i = 0; i < num_elements - 1; i++) {
-        probability_X[i + 1] += probability_X[i];
-        probability_Y[i + 1] += probability_Y[i];
+    for (k = 0; k < num_elements - 1; k++) {
+        probability_X[k + 1] += probability_X[k];
+        probability_Y[k + 1] += probability_Y[k];
     }
 
     // Obtain thresholds
-    for (int i = 0; i < num_elements; i++) {
-        threshold_X[i] = bsm_inverse_cdf(probability_X[i]);
-        threshold_Y[i] = bsm_inverse_cdf(probability_Y[i]);
+    for (k = 0; k < num_elements; k++) {
+        threshold_X[k] = bsm_inverse_cdf(probability_X[k]);
+        threshold_Y[k] = bsm_inverse_cdf(probability_Y[k]);
     }
 
     // Free memory
@@ -259,8 +223,13 @@ struct ThresholdsResult thresholds(int* input_data, int rows, int i, int j) {
     return result;
 }
 
-// Error function
-double error_function(double x) {
+// Univariate normal CDF
+double univariate_normal(double x) {
+
+  // Update  x
+  x = x / sqrt(2);
+
+  // Start of error function
 
   // Initialize values
   double t_value, y;
@@ -277,19 +246,14 @@ double error_function(double x) {
   // Set y
   y = 1 - (((((A5 * t_value + A4) * t_value) + A3) * t_value + A2) * t_value + A1) * t_value * exp(-x * x);
 
-  // Add sign
-  return sign_x * y;
-}
-
-// Univariate normal CDF
-double univariate_normal(double x) {
+  // End of error function
 
   // This function is streamlined for use in this function
   //
   // With mean = 0 and sd = 1, then the z-score of x is x
 
   // With the error function, obtain CDF
-  double cdf = 0.5 * (1 + error_function(x / sqrt(2)));
+  double cdf = 0.5 * (1 + sign_x * y);
 
   // Return CDF
   return cdf;
