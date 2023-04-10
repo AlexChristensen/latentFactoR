@@ -223,13 +223,8 @@ struct ThresholdsResult thresholds(int* input_data, int rows, int i, int j) {
     return result;
 }
 
-// Univariate normal CDF
-double univariate_normal(double x) {
-
-  // Update  x
-  x = x / sqrt(2);
-
-  // Start of error function
+// Error function
+double error_function(double x) {
 
   // Initialize values
   double t_value, y;
@@ -246,14 +241,19 @@ double univariate_normal(double x) {
   // Set y
   y = 1 - (((((A5 * t_value + A4) * t_value) + A3) * t_value + A2) * t_value + A1) * t_value * exp(-x * x);
 
-  // End of error function
+  // Add sign
+  return sign_x * y;
+}
+
+// Univariate normal CDF
+double univariate_normal(double x) {
 
   // This function is streamlined for use in this function
   //
   // With mean = 0 and sd = 1, then the z-score of x is x
 
   // With the error function, obtain CDF
-  double cdf = 0.5 * (1 + sign_x * y);
+  double cdf = 0.5 * (1 + error_function(x / sqrt(2)));
 
   // Return CDF
   return cdf;
