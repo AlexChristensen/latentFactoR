@@ -574,3 +574,25 @@ simulate_factors <- function(
   return(results)
   
 }
+
+# Bug checking ----
+# factors = 3; variables = 6;
+# variables_range = NULL; loadings = 0.55;
+# loadings_range = NULL; cross_loadings = 0.10;
+# cross_loadings_range = NULL; correlations = 0.30;
+# correlations_range = NULL; sample_size = 1000;
+# variable_categories = Inf; categorical_limit = 7;
+# skew = 0; skew_range = NULL;
+# 
+# source("D:/R Packages/latentFactoR/R/simulation_helpers.R")
+# source("D:/R Packages/latentFactoR/R/utils-latentFactoR.R")
+
+
+
+
+
+
+
+
+
+
