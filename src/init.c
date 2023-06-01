@@ -10,7 +10,7 @@ static const R_CallMethodDef CallEntries[] = {
     {
         "r_polychoric_correlation_matrix", // Name of function call in R
         (DL_FUNC)&r_polychoric_correlation_matrix, // Name of C function
-         1 // Number of arguments
+         3 // Number of arguments
     },
     {NULL, NULL, 0}
 };
