@@ -20,5 +20,5 @@ Imports: BBmisc, EGAnet, fspe, googledrive, ineq,
 	   qgraph, rstudioapi, xgboost
 Suggests: ggplot2
 Encoding: UTF-8
-Byte-Compile: yes
+Byte-Compile: true
 RoxygenNote: 7.2.3
