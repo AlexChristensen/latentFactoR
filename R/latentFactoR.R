@@ -24,8 +24,6 @@
 #' Hudson Golino <hfg9s@virginia.edu>,
 #' Luis Eduardo Garrido <luisgarrido@pucmm.edu>
 #' 
-#' @useDynLib latentFactoR, .registration = TRUE
-#' 
 #' @importFrom utils packageDescription
 #'
 "_PACKAGE"

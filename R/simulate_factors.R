@@ -265,7 +265,7 @@ simulate_factors <- function(
   length_error(sample_size, 1); length_error(categorical_limit, 1)
   
   # Ensure appropriate ranges
-  range_error(factors, c(1, Inf)); range_error(variables, c(3, Inf));
+  range_error(factors, c(1, Inf)); # range_error(variables, c(3, Inf));
   range_error(sample_size, c(1, Inf)); range_error(skew, c(-2, 2));
   range_error(variable_categories, c(2, Inf));
   
@@ -289,8 +289,6 @@ simulate_factors <- function(
   }
   
   # Ensure appropriate lengths
-  length_error(loadings, c(1, factors, total_variables, factors * total_variables))
-  length_error(cross_loadings, c(1, factors, factors * total_variables))
   length_error(correlations, c(1, factors * factors))
   
   # Ensure appropriate ranges
