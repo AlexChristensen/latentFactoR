@@ -44,23 +44,15 @@ model_CFA <- function(variables, loadings)
 
 #' @noRd
 # Standardized Root Mean Resdiual
-# Updated 28.09.2022
+# Updated 24.11.2022
 srmr <- function(population, error)
 {
   
   # Obtain lower triangles
-  population_lower <- population[lower.tri(population)]
-  error_lower <- error[lower.tri(error)]
-  
-  # Compute SRMR
-  SRMR <- sqrt(
-    mean(
-      (population_lower - error_lower)^2
-    )
-  )
+  lower_triangle <- lower.tri(population)
   
   # Return SRMR
-  return(SRMR)
+  return(sqrt(mean((population[lower_triangle] - error[lower_triangle])^2)))
   
 }
 
@@ -260,7 +252,7 @@ gURhat <- function(p) {
 #' @noRd
 #' @importFrom stats lm
 # Adds population error using Cudeck method to generated data
-# Updated 13.10.2022 -- Marcos
+# Updated 05.12.2023 -- Marcos
 cudeck <- function(R, lambda, Phi, Psi,
                    fit = "rmsr", misfit = "close",
                    method = "minres") {
@@ -324,7 +316,7 @@ cudeck <- function(R, lambda, Phi, Psi,
   # Generate random error:
   
   m <- p+1
-  U <- replicate(p, stats::runif(m, 0, 1))
+  U <- replicate(p, stats::runif(m, -1, 1)) # sample from -1 to 1 (changed from 0 to -1 on 05.12.2023)
   A1 <- t(U) %*% U
   sq <- diag(1/sqrt(diag(A1)))
   A2 <- sq %*% A1 %*% sq

@@ -145,7 +145,7 @@ effect_table <- function(
       paste0(
         "'", method, "' was not found in the `data`. ",
         "Make sure the `method` argument is a column name in data"
-      )
+      ), call. = FALSE
     )
   }
   
@@ -166,7 +166,7 @@ effect_table <- function(
       paste0(
         "Only one method, '", unique_methods, "', was found ",
         "in the data. Results will only include this method."
-      )
+      ), call. = FALSE
     )
     
   }
