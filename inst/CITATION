@@ -12,11 +12,11 @@ bibentry(
 			    person("Abad,", "Francisco"),
 			    person("Garcia-Garzon,", "Eduardo"),
 			    person("Franco,", "Vithor R")),
-	year	= "2022",
-	note    = "R package version 0.0.4",
+	year	= "2023",
+	note    = "R package version 0.0.6",
 
   textVersion  =
-  paste0("Christensen, A. P., Nieto Canaveras, M. D., Golino, H., Garrido, L. E., Jimenez, M., Abad, F., Garcia-Garzon, E., & Franco, V. R. (2022). ",
+  paste0("Christensen, A. P., Nieto Canaveras, M. D., Golino, H., Garrido, L. E., Jimenez, M., Abad, F., Garcia-Garzon, E., & Franco, V. R. (2023). ",
         "latentFactoR: Data simulation based on latent factors. ",
-	"R package version 0.0.4")
+	"R package version 0.0.6")
 )
