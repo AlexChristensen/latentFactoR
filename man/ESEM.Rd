@@ -44,7 +44,7 @@ If scaled values are available (not \code{NA}), then scaled fit measures
 will be used.}
 
 \item{variable_polarity}{Numeric/character (length = 1 or total variables).
-Whether all (length = 1) or each variable (length = total variables) are 
+Whether all (length = 1) or each variable (length = total variables) are
 positive (\code{1}, \code{"p"}, \code{"pos"}, \code{"positive"}) or
 negative (\code{-1}, \code{"n"}, \code{"neg"}, \code{"negative"})
 polarity on the factor}
@@ -103,6 +103,7 @@ two_factor <- simulate_factors(
   variable_categories = 5 # 5-point Likert scale
 )
 
+\dontrun{
 # Estimate ESEM model with no wording effects
 esem_no_wording_effects <- ESEM(
   data = two_factor,
@@ -122,7 +123,7 @@ esem_wording_effects <- ESEM(
   data = two_factor_acquiescence,
   estimator = "WLSMV",
   wording_factor = "RI"
-)
+)}
 
 }
 \author{

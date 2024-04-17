@@ -6,8 +6,6 @@ o FIX: categories greater than 7 were not previously allowed (they are now)
 
 o FIX: correlations in `EKC` were not used appropriately and led to an error
 
-o ADD: `polychoric_matrix` to compute categorical correlations using a fast C implementation; handles missing data ("pairwise" or "listwise") as well as empty cells in the joint frequency table (see documentation: `?polychoric_matrix`)
-
 o UPDATE: switched on "Byte-Compile" (byte-compiles on our end and not when the user installs)
 
 

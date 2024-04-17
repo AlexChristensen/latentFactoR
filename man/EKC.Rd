@@ -26,7 +26,7 @@ Returns a list containing:
 \item{reference}{Reference values compared against eigenvalues}
 }
 \description{
-Estimates the number of dimensions in data using 
+Estimates the number of dimensions in data using
 Empirical Kaiser Criterion (Braeken & Van Assen, 2017).
 See examples to get started
 }
