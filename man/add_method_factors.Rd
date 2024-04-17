@@ -50,12 +50,12 @@ Returns a list containing:
 \item{unbiased_data}{The corresponding unbiased data prior to replacing values
 to generate the (biased) \code{data}}
 
-\item{parameters}{Bias-adjusted parameters of the \code{lf_object} input into function} 
+\item{parameters}{Bias-adjusted parameters of the \code{lf_object} input into function}
 
 \item{original_results}{Original \code{lf_object} input into function}
 }
 \description{
-Adds methods factors to simulated data from \code{\link[latentFactoR]{simulate_factors}}. 
+Adds methods factors to simulated data from \code{\link[latentFactoR]{simulate_factors}}.
 See examples to get started
 }
 \examples{

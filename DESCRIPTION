@@ -20,4 +20,4 @@ Imports: BBmisc, EGAnet, fspe, googledrive, ineq,
 	 qgraph, rstudioapi, xgboost
 Suggests: ggplot2
 Encoding: UTF-8
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
