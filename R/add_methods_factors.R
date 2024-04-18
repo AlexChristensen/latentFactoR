@@ -64,10 +64,15 @@
 #' Alexander P. Christensen <alexpaulchristensen@gmail.com>,
 #' Luis Eduardo Garrido <luisgarrido@pucmm.edu>
 #'
+#' @references
+#' Garcia-Pardina, A., Abad, F. J., Christensen, A. P., Golino, H., & Garrido, L. E. (2024).
+#' Dimensionality assessment in the presence of wording effects: A network psychometric and factorial approach.
+#' \emph{Behavior Research Methods}.
+#'
 #' @export
 #'
 # Add methods factors to simulated data ----
-# Updated 17.04.2024
+# Updated 18.04.2024
 add_method_factors <- function(
     lf_object,
     proportion_negative = 0.50,

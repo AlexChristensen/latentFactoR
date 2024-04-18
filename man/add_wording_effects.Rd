@@ -27,29 +27,25 @@ Description of methods:
 
 \itemize{
 
-\item{\code{"acquiescence"}}
-{Generates new data with flipped dominant loadings 
+\item \code{"acquiescence"} ---Generates new data with flipped dominant loadings
 (based on \code{proportion_negative}) and ensures a bias
 such that variables have a restricted range of responding
-(e.g., only 4s and 5s on a 5-point Likert scale)}
+(e.g., only 4s and 5s on a 5-point Likert scale)
 
-\item{\code{"difficulty"}}
-{Generates new data with flipped dominant loadings 
+\item \code{"difficulty"} --- Generates new data with flipped dominant loadings
 (based on \code{proportion_negative}) and uses this data
 as the data without wording effects. Then, the signs of the
-dominant loadings are obtained and the dominant loadings are 
+dominant loadings are obtained and the dominant loadings are
 made to be absolute. Finally, the skews are multiplied by
 the signs of the original dominant loadings when generating
-the data with the wording effects}
+the data with the wording effects
 
-\item{\code{"random_careless"}}
-{Number of cases up to \code{proportion_biased_cases} are sampled
-and replaced by values from a random uniform distribution ranging
+\item \code{"random_careless"} --- Number of cases up to \code{proportion_biased_cases}
+are sampled and replaced by values from a random uniform distribution ranging
 between the lowest and highest response category for each variable.
-These values then replace the values in the original data} 
+These values then replace the values in the original data
 
-\item{\code{"straight_line"}}
-{Coming soon...} 
+\item \code{"straight_line"} --- Coming soon...
 
 }}
 
@@ -87,7 +83,7 @@ Defaults to \code{NULL}}
 \item{proportion_biased_person}{Numeric (length = 1 or \code{proportion_biased_cases} x \code{sample_size}).
 Person-specific parameter of how many much bias the \code{proportion_biased_cases} will
 have over the possible biased variables. This parameter interacts with
-\code{proportion_biased_variables}. Parameter specifies the proportion of variables 
+\code{proportion_biased_variables}. Parameter specifies the proportion of variables
 that should have bias per person.
 If one value is provided, then all biased cases will have the same proportion of variables biased.
 Individual values are possible by providing values for each biased case
@@ -111,12 +107,12 @@ to generate the (biased) \code{data}}
 
 \item{biased_sample_size}{The number of cases that have biased data}
 
-\item{adjusted_results}{Bias-adjusted \code{lf_object} input into function} 
+\item{adjusted_results}{Bias-adjusted \code{lf_object} input into function}
 
 \item{original_results}{Original \code{lf_object} input into function}
 }
 \description{
-Adds wording effects to simulated data from \code{\link[latentFactoR]{simulate_factors}}. 
+Adds wording effects to simulated data from \code{\link[latentFactoR]{simulate_factors}}.
 See examples to get started
 }
 \examples{

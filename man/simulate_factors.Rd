@@ -99,23 +99,17 @@ A list containing the parameters used to generate the data:
 
 \itemize{
 
-\item{\code{factors}}
-{Number of factors}
+\item \code{factors} --- Number of factors
 
-\item{\code{variables}}
-{Variables on each factor}
+\item \code{variables} --- Variables on each factor
 
-\item{\code{loadings}}
-{Loading matrix}
+\item \code{loadings} --- Loading matrix
 
-\item{\code{factor_correlations}}
-{Correlations between factors}
+\item \code{factor_correlations} --- Correlations between factors
 
-\item{\code{categories}}
-{Categories for each variable}
+\item \code{categories} --- Categories for each variable
 
-\item{\code{skew}}
-{Skew for each variable}
+\item \code{skew} --- Skew for each variable
 
 }
 

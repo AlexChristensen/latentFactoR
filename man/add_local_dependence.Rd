@@ -25,16 +25,13 @@ and threshold-shift methods. Description of methods:
 
 \itemize{
 
-\item{\code{"correlate_residuals"}}
-{Adds residuals directly to the population correlation matrix
-prior to data generation (uses population correlation matrix
-from \code{\link[latentFactoR]{simulate_factors}})}
+\item \code{"correlate_residuals"} --- Adds residuals directly to the population
+correlation matrix prior to data generation (uses population correlation matrix
+from \code{\link[latentFactoR]{simulate_factors}})
 
-\item{\code{"minor_factors"}}
-{Coming soon...}
+\item \code{"minor_factors"} --- Coming soon...
 
-\item{\code{"threshold_shifts"}}
-{Coming soon...} 
+\item \code{"threshold_shifts"} --- Coming soon...
 
 }}
 
@@ -82,7 +79,7 @@ magnitude of the added residual for each locally dependent pair}
 \item{original_results}{Original \code{lf_object} input into function}
 }
 \description{
-Adds local dependence to simulated data from \code{\link[latentFactoR]{simulate_factors}}. 
+Adds local dependence to simulated data from \code{\link[latentFactoR]{simulate_factors}}.
 See examples to get started
 }
 \examples{
@@ -101,7 +98,7 @@ two_factor_LD <- add_local_dependence(
   lf_object = two_factor,
   proportion_LD = 0.25,
   add_residuals = 0.20,
-  allow_multiple = FALSE 
+  allow_multiple = FALSE
 )
 
 # Randomly vary proportions
@@ -109,7 +106,7 @@ two_factor_LD <- add_local_dependence(
   lf_object = two_factor,
   proportion_LD_range = c(0.10, 0.50),
   add_residuals = 0.20,
-  allow_multiple = FALSE 
+  allow_multiple = FALSE
 )
 
 # Randomly vary residuals
@@ -117,10 +114,10 @@ two_factor_LD <- add_local_dependence(
   lf_object = two_factor,
   proportion_LD = 0.25,
   add_residuals_range = c(0.20, 0.40),
-  allow_multiple = FALSE 
+  allow_multiple = FALSE
 )
 
-# Randomly vary proportions, residuals, and allow multiple 
+# Randomly vary proportions, residuals, and allow multiple
 two_factor_LD <- add_local_dependence(
   lf_object = two_factor,
   proportion_LD_range = c(0.10, 0.50),
@@ -130,9 +127,9 @@ two_factor_LD <- add_local_dependence(
 
 }
 \references{
-Christensen, A. P., Garrido, L. E., & Golino, H. (2022).
+Christensen, A. P., Garrido, L. E., & Golino, H. (2023).
 Unique variable analysis: A network psychometrics method to detect local dependence.
-\emph{PsyArXiv}
+\emph{Multivariate Behavioral Research}, 1–18.
 }
 \author{
 Alexander P. Christensen <alexpaulchristensen@gmail.com>,

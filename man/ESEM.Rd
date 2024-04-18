@@ -56,17 +56,13 @@ Options include:
 
 \itemize{
 
-\item{"CTCM1"}
-{Description coming soon...}
+\item \code{"CTCM1"} --- Description coming soon...
 
-\item{"CTCM1_each"}
-{Description coming soon...}
+\item \code{"CTCM1_each"} --- Description coming soon...
 
-\item{"RI"}
-{Description coming soon...}
+\item \code{"RI"} --- Description coming soon...
 
-\item{"RI_each"}
-{Description coming soon...}
+\item \code{"RI_each"} --- Description coming soon...
 
 }}
 

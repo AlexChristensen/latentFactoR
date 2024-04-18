@@ -31,14 +31,11 @@ Must be set:
 
 \itemize{
 
-\item{\code{"cor"}}
-{Pearson's correlation}
+\item \code{"cor"} --- Pearson's correlation
 
-\item{\code{"poly"}}
-{Polychoric correlation}
+\item \code{"poly"} --- Polychoric correlation
 
-\item{\code{"tet"}}
-{Tetrachoric correlation}
+\item \code{"tet"} --- Tetrachoric correlation
 
 }}
 }
@@ -86,7 +83,7 @@ in exploratory factor analysis.
 # Authors of Factor Forest \cr
 David Goretzko and Markus Buhner
 
-# Authors of {latentFactoR} \cr
+# Authors of \{latentFactoR\} \cr
 Alexander P. Christensen <alexpaulchristensen@gmail.com>,
 Hudson Golino <hfg9s@virginia.edu>,
 Luis Eduardo Garrido <luisgarrido@pucmm.edu>

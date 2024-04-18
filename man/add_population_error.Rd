@@ -25,11 +25,9 @@ Available options:
 
 \itemize{
 
-\item{\code{"minres"}}
-{Minimum residual}
+\item \code{"minres"} --- Minimum residual
 
-\item{\code{"ml"}}
-{Maximum likelihood}
+\item \code{"ml"} --- Maximum likelihood
 
 }}
 
@@ -40,17 +38,13 @@ Available options:
 
 \itemize{
 
-\item{\code{"cfi"}}
-{Comparative fit index}
+\item \code{"cfi"} --- Comparative fit index
 
-\item{\code{"rmsea"}}
-{Root mean square error of approximation}
+\item \code{"rmsea"} --- Root mean square error of approximation
 
-\item{\code{"rmsr"}}
-{Root mean square residuals}
+\item \code{"rmsr"} --- Root mean square residuals
 
-\item{\code{"raw"}}
-{Direct application of error}
+\item \code{"raw"} --- Direct application of error
 
 }}
 
@@ -61,11 +55,9 @@ Available options:
 
 \itemize{
 
-\item{\code{"close"}}
-{Slight deviations from original population correlation matrix}
+\item \code{"close"} --- Slight deviations from original population correlation matrix
 
-\item{\code{"acceptable"}}
-{Moderate deviations from original population correlation matrix}
+\item \code{"acceptable"} --- Moderate deviations from original population correlation matrix
 
 }
 
@@ -80,12 +72,10 @@ Description of methods:
 
 \itemize{
 
-\item{\code{"cudeck"}}
-{Description coming soon... see Cudeck & Browne, 1992
-for more details}
+\item \code{"cudeck"} --- Description coming soon... see Cudeck & Browne, 1992
+for more details
 
-\item{\code{"yuan"}}
-{Description coming soon...}
+\item \code{"yuan"} --- Description coming soon...
 
 }}
 
@@ -123,21 +113,17 @@ A list containing the parameters used to generate population error:
 
 \itemize{
 
-\item{\code{error_correlation}}
-{Correlation matrix with population error added
-(same as \code{population_correlation})}
+\item \code{error_correlation} --- Correlation matrix with population
+error added (same as \code{population_correlation})
 
-\item{\code{fit}}
-{Fit measure used to control population error}
+\item \code{fit} --- Fit measure used to control population error
 
-\item{\code{delta}}
-{Minimum of the objective function corresponding to the misfit value}
+\item \code{delta} --- Minimum of the objective function corresponding
+to the misfit value
 
-\item{\code{misfit}}
-{Specified misfit value}
+\item \code{misfit} --- Specified misfit value
 
-\item{\code{loadings}}
-{Estiamted CFA loadings after error has been added}
+\item \code{loadings} --- Estiamted CFA loadings after error has been added
 
 }
 
@@ -146,7 +132,7 @@ A list containing the parameters used to generate population error:
 \item{original_results}{Original \code{lf_object} input into function}
 }
 \description{
-Adds population error to simulated data from \code{\link[latentFactoR]{simulate_factors}}. 
+Adds population error to simulated data from \code{\link[latentFactoR]{simulate_factors}}.
 See examples to get started
 }
 \examples{
@@ -178,17 +164,9 @@ two_factor_Yuan <- add_population_error(
 
 }
 \references{
-Christensen, A. P., Garrido, L. E., & Golino, H. (2022).
-Unique variable analysis: A network psychometrics method to detect local dependence.
-\emph{PsyArXiv}
-
 Cudeck, R., & Browne, M.W. (1992).
 Constructing a covariance matrix that yields a specified minimizer and a specified minimum discrepancy function value.
 \emph{Psychometrika}, \emph{57}, 357–369.
-
-Jimenez, M., Abad, F. J., Garcia-Garzon, E., Golino, H., Christensen, A. P., & Garrido, L. E. (2022).
-Dimensionality assessment in generalized bi-factor structures: A network psychometrics approach.
-\emph{PsyArXiv}
 }
 \author{
 {\code{\link{bifactor}}} authors \cr

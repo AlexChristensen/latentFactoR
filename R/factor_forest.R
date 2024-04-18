@@ -23,14 +23,11 @@
 #'
 #' \itemize{
 #'
-#' \item{\code{"cor"}}
-#' {Pearson's correlation}
+#' \item \code{"cor"} --- Pearson's correlation
 #'
-#' \item{\code{"poly"}}
-#' {Polychoric correlation}
+#' \item \code{"poly"} --- Polychoric correlation
 #'
-#' \item{\code{"tet"}}
-#' {Tetrachoric correlation}
+#' \item \code{"tet"} --- Tetrachoric correlation
 #'
 #' }
 #'
@@ -60,7 +57,7 @@
 #' # Authors of Factor Forest \cr
 #' David Goretzko and Markus Buhner
 #'
-#' # Authors of {latentFactoR} \cr
+#' # Authors of \{latentFactoR\} \cr
 #' Alexander P. Christensen <alexpaulchristensen@gmail.com>,
 #' Hudson Golino <hfg9s@virginia.edu>,
 #' Luis Eduardo Garrido <luisgarrido@pucmm.edu>
@@ -83,7 +80,7 @@
 #' @export
 #'
 # Factor Forest
-# Updated 17.04.2024
+# Updated 18.04.2024
 factor_forest <- function(
     data, sample_size,
     maximum_factors = 8,

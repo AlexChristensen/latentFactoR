@@ -79,6 +79,11 @@ two_factor_methods_effect <- add_method_factors(
 )
 
 }
+\references{
+Garcia-Pardina, A., Abad, F. J., Christensen, A. P., Golino, H., & Garrido, L. E. (2024).
+Dimensionality assessment in the presence of wording effects: A network psychometric and factorial approach.
+\emph{Behavior Research Methods}.
+}
 \author{
 Alexander P. Christensen <alexpaulchristensen@gmail.com>,
 Luis Eduardo Garrido <luisgarrido@pucmm.edu>

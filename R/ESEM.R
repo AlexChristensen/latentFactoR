@@ -44,17 +44,13 @@
 #'
 #' \itemize{
 #'
-#' \item{"CTCM1"}
-#' {Description coming soon...}
+#' \item \code{"CTCM1"} --- Description coming soon...
 #'
-#' \item{"CTCM1_each"}
-#' {Description coming soon...}
+#' \item \code{"CTCM1_each"} --- Description coming soon...
 #'
-#' \item{"RI"}
-#' {Description coming soon...}
+#' \item \code{"RI"} --- Description coming soon...
 #'
-#' \item{"RI_each"}
-#' {Description coming soon...}
+#' \item \code{"RI_each"} --- Description coming soon...
 #'
 #' }
 #'
@@ -113,7 +109,7 @@
 #' @export
 #'
 # Exploratory Structural Equation Modeling
-# Updated 06.12.2022
+# Updated 18.04.2024
 ESEM <- function(
     data, factors, variables,
     estimator = c("MLR", "WLSMV"),
