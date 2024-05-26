@@ -7,13 +7,13 @@
 # Updated 01.10.2022
 model_CFA <- function(variables, loadings)
 {
-  
+
   # Initialize model
   model <- ""
-  
+
   # Loop through factors
   for(i in 1:ncol(loadings)){
-    
+
     # Append model
     if(i != ncol(loadings)){
       model <- paste0(
@@ -34,12 +34,12 @@ model_CFA <- function(variables, loadings)
         )
       )
     }
-    
+
   }
-  
+
   # Return model
   return(model)
-  
+
 }
 
 #' @noRd
@@ -47,13 +47,13 @@ model_CFA <- function(variables, loadings)
 # Updated 24.11.2022
 srmr <- function(population, error)
 {
-  
+
   # Obtain lower triangles
   lower_triangle <- lower.tri(population)
-  
+
   # Return SRMR
   return(sqrt(mean((population[lower_triangle] - error[lower_triangle])^2)))
-  
+
 }
 
 #' @noRd
@@ -62,22 +62,22 @@ srmr <- function(population, error)
 # Grid search for Cudeck function
 # Updated 17.09.2022
 grid_search <- function(delta, G) {
-  
+
   n <- 1000
   x <- seq(-1e3, 1e3, length.out = n)
   y <- vector(length = n)
   for(i in 1:n) y[i] <- root_ml(x[i], delta, G)
-  
+
   index <- which.min(y)
   x <- seq(x[index-1], x[index+1], length.out = n)
   for(i in 1:n) y[i] <- root_ml(x[i], delta, G)
-  
+
   index <- which.min(y)
   x <- seq(x[index-1], x[index+1], length.out = n)
   for(i in 1:n) y[i] <- root_ml(x[i], delta, G)
-  
+
   return(x[which.min(y)])
-  
+
 }
 
 #' @noRd
@@ -86,12 +86,12 @@ grid_search <- function(delta, G) {
 # Maximum likelhood for grid search in Cudeck function
 # Updated 17.09.2022
 root_ml <- function(x, delta, G) {
-  
+
   I <- diag(nrow(G))
   f <- x*sum(diag(G)) - log(det(I + x*G)) - delta
-  
+
   return(f^2)
-  
+
 }
 
 #' @noRd
@@ -100,14 +100,14 @@ root_ml <- function(x, delta, G) {
 # Maximum likelhood for grid search in Cudeck function
 # Updated 17.09.2022
 groot_ml <- function(x, delta, G) {
-  
+
   I <- diag(nrow(G))
   f <- x*sum(diag(G)) - log(det(I + x*G)) - delta
   g <- sum(diag(G)) - sum(diag(solve(I + x*G) %*% G))
   g <- 2*g*f
-  
+
   return(g)
-  
+
 }
 
 #' @noRd
@@ -117,15 +117,15 @@ groot_ml <- function(x, delta, G) {
 # Optimization function
 # Updated 17.09.2022
 opt <- function(x, delta, G) {
-  
+
   # x <- stats::runif(1, 0, 1)
   # det(diag(nrow(G)) + x*G)
   root <- optim(x, fn = root_ml, gr = groot_ml, method = "L-BFGS-B",
                        lower = -Inf, upper = Inf, G = G, delta = delta)
   k <- root$par
-  
+
   return(k)
-  
+
 }
 
 #' @noRd
@@ -134,10 +134,10 @@ opt <- function(x, delta, G) {
 # Error catch for optimization function
 # Updated 17.09.2022
 opt_error <- function(x, delta, G) {
-  
+
   x <- tryCatch({opt(x, delta, G)}, error = return(x))
   return(x)
-  
+
 }
 
 #' @noRd
@@ -146,24 +146,24 @@ opt_error <- function(x, delta, G) {
 # Derivative function for Rhat methods
 # Updated 17.09.2022
 dxt <- function(X) {
-  
+
   # derivative wrt transpose (just a permutation matrix)
-  
+
   p <- nrow(X)
   q <- ncol(X)
   pq <- p*q
-  
+
   res <- array(0, dim = c(pq, pq))
   null <- matrix(0, p, q)
-  
+
   for(i in 1:pq) {
     temp <- null
     temp[i] <- 1
     res[, i] <- c(t(temp))
   }
-  
+
   return(res)
-  
+
 }
 
 #' @noRd
@@ -172,22 +172,22 @@ dxt <- function(X) {
 # LRhat function for Cudeck method
 # Updated 17.09.2022
 gLRhat <- function(Lambda, Phi) {
-  
+
   # derivative of Lambda wrt Rhat
-  
+
   p <- nrow(Lambda)
   g1 <- (Lambda %*% Phi) %x% diag(p)
   g21 <- diag(p) %x% (Lambda %*% Phi)
   g2 <- g21 %*% dxt(Lambda)
   g <- g1 + g2
-  
+
   # Ensure matrix
   if(!is.matrix(g)){
     g <- matrix(g, ncol = 1)
   }
-  
+
   return(g)
-  
+
 }
 
 #' @noRd
@@ -196,19 +196,19 @@ gLRhat <- function(Lambda, Phi) {
 # PRhat function for Cudeck method
 # Updated 17.09.2022
 gPRhat <- function(Lambda, Phi) {
-  
+
   g1 <- Lambda %x% Lambda
   g2 <- g1 %*% dxt(Phi)
   g <- g1 + g2
   g <- g[, which(lower.tri(Phi))]
-  
+
   # Ensure matrix
   if(!is.matrix(g)){
     g <- matrix(g, ncol = 1)
   }
-  
+
   return(g)
-  
+
 }
 
 #' @noRd
@@ -217,18 +217,18 @@ gPRhat <- function(Lambda, Phi) {
 # Rhat function for Cudeck method
 # Updated 17.09.2022
 guRhat <- function(p) {
-  
+
   gu <- matrix(0, p*p, p)
-  
+
   for(i in 1:p) {
-    
+
     index <- (i-1)*p + i
     gu[index, i] <- 1
-    
+
   }
-  
+
   return(gu)
-  
+
 }
 
 #' @noRd
@@ -236,62 +236,72 @@ guRhat <- function(p) {
 # Updated 07.10.2022
 # For Psi
 gURhat <- function(p) {
-  
+
   pcov <- p*(p+1)*0.5
-  
+
   Psi <- diag(p)
   gPsi <- diag(p) %x% diag(p)
   gPsi <- gPsi + dxt(Psi) %*% gPsi
   gPsi <- gPsi[, lower.tri(Psi, diag = TRUE)]
   gPsi[gPsi != 0] <- 1
-  
+
   return(gPsi)
-  
+
 }
 
 #' @noRd
 #' @importFrom stats lm
 # Adds population error using Cudeck method to generated data
-# Updated 05.12.2023 -- Marcos
+# Updated 26.05.2024
 cudeck <- function(R, lambda, Phi, Psi,
                    fit = "rmsr", misfit = "close",
-                   method = "minres") {
-  
+                   method = "minres", efa = FALSE) {
+
   # Method of Cudeck and Browne (1992):
-  
+
   p <- nrow(lambda)
   q <- ncol(lambda)
   uniquenesses <- diag(Psi)
-  
+
   # Count the number of parameters
   nlambda <- sum(lambda != 0)
   nphi <- sum(Phi[lower.tri(Phi)] != 0)
   npsi <- sum(Psi[lower.tri(Psi, diag = TRUE)] != 0)
   npars <- nlambda + nphi + npsi
   df <- p*(p+1)/2 - npars # Degrees of freedom
-  
+
   if(nlambda + nphi > p*q - 0.5*q*(q-1)) {
     warning("The model is not identified. There exists infinite solutions for the model parameters.")
   }
-  
+
   if(nlambda + nphi + npsi > p*(p+1)/2) {
     warning("The true model has negative degrees of freedom.")
   }
-  
+
   # Create the matrix of derivatives wrt the correlation model:
-  
-  dS_dL <- gLRhat(lambda, Phi)[, which(lambda != 0)]
-  dS_dP <- gPRhat(lambda, Phi)[, which(Phi[lower.tri(Phi)] != 0)]
-  dS_dU <- gURhat(p)[, which(Psi[lower.tri(Psi, diag = TRUE)] != 0)]
-  gS <- cbind(dS_dL, dS_dP, dS_dU)
-  
+
+  if(efa) {
+
+    dS_dL <- gLRhat(lambda, Phi)
+    dS_dU <- gURhat(p)[, which(Psi[lower.tri(Psi, diag = TRUE)] != 0)]
+    gS <- cbind(dS_dL, dS_dU)
+
+  } else {
+
+    dS_dL <- gLRhat(lambda, Phi)[, which(lambda != 0)]
+    dS_dP <- gPRhat(lambda, Phi)[, which(Phi[lower.tri(Phi)] != 0)]
+    dS_dU <- gURhat(p)[, which(Psi[lower.tri(Psi, diag = TRUE)] != 0)]
+    gS <- cbind(dS_dL, dS_dP, dS_dU)
+
+  }
+
   if(method == "minres" || method == "ols") {
-    
+
     # Select the nonduplicated elements of the correlation matrix wrt each parameter
     B <- -gS[lower.tri(R, diag = TRUE), ]
-    
+
   } else if(method == "ml") {
-    
+
     # K <- transition(p)
     # MP_inv <- solve(t(K) %*% K) %*% t(K)
     # D <- MP_inv %*% t(MP_inv)
@@ -309,36 +319,36 @@ cudeck <- function(R, lambda, Phi, Psi,
     # B <- t(vecs[which(upper.tri(R, diag = TRUE)), ]) %*% D
     # B <- t(B)
     B <- -apply(gS, 2, FUN = function(x) t((R_inv %*% matrix(x, p, p) %*% R_inv)[which(upper.tri(R, diag = TRUE))]) %*% D)
-    # The error must be orthogonal to the derivative of each parameter derivative wrt the correlation model
-    
+    # The error must be orthogonal to the derivative of each parameter wrt correlation model
+
   }
-  
+
   # Generate random error:
-  
+
   m <- p+1
-  U <- replicate(p, stats::runif(m, -1, 1)) # sample from -1 to 1 (changed from 0 to -1 on 05.12.2023)
-  A1 <- t(U) %*% U
+  U <- replicate(p, stats::runif(m, 1, 1))
+  A1 <- crossprod(U) # t(U) %*% U
   sq <- diag(1/sqrt(diag(A1)))
   A2 <- sq %*% A1 %*% sq
   diag_u <- diag(sqrt(uniquenesses))
   y <- diag_u %*% A2 %*% diag_u
   y <- y[lower.tri(y, diag = TRUE)]
   # y <- A2[lower.tri(A2, diag = TRUE)]
+  # v <- MASS::ginv(t(B) %*% B) %*% t(B) %*% y
   # e <- y - B %*% v # equation 7 from Cudeck and Browne (1992)
   Q <- qr.Q(qr(B))
-  e <- y - Q %*% t(Q) %*% y
-  
-  # Get the error matrix:
-  
+  e <- y - tcrossprod(Q) %*% y # y - Q %*% t(Q) %*% y
+
   # Adjust the error to satisfy the desired amount of misfit:
-  
+
   if(method == "minres" || method == "ols") {
-    
+
     E <- matrix(0, p, p)
     E[lower.tri(E, diag = TRUE)] <- e
     E <- t(E) + E
+    # diag(E) <- diag(E)/2
     diag(E) <- 0
-    
+
     if(fit == "rmsr") {
       if(misfit == "close") {
         r2 <- mean(1-uniquenesses)
@@ -357,353 +367,17 @@ cudeck <- function(R, lambda, Phi, Psi,
     } else if(fit == "raw") {
       delta <- misfit
     }
-    
+
     k <- sqrt(2*delta/sum(E*E))
     E <- k*E
-    
+
   } else if(method == "ml") {
-    
+
     E <- matrix(0, p, p)
     E[upper.tri(R, diag = TRUE)] <- e
     E <- t(E) + E
     diag(E) <- 0
-    
-    if(fit == "rmsr") {
-      delta <- "A given RMSR is compatible with multiple maximum likelihood discrepancy values and is not provided"
-    } else if(fit == "cfi") {
-      null_f <- -log(det(R))
-      delta <- (1-misfit)*null_f
-    } else if(fit == "rmsea") {
-      delta <- misfit^2 * df
-    } else if(fit == "raw") {
-      delta <- misfit
-    }
-    
-    if(fit == "rmsr") {
-      
-      k <- sqrt((0.5*p*(p-1))*2*misfit^2/sum(E*E))
-      E <- k*E
-      
-    } else {
-      
-      constant <- 1e-04 / sqrt(mean(E*E))
-      E <- constant*E
-      R_inv <- solve(R)
-      G <- R_inv %*% E
-      x <- suppressWarnings(grid_search(delta, G))
-      # x <- sqrt(2*delta/sum(G*G)) # Initial value suggested by Cudeck
-      k <- opt(x, delta, G)
-      # limits <- c(-1e05, 1e05)
-      # k <- GSS(delta, G, limits)
-      # k <- grad_descend(delta, G)
-      E <- k*E
-      
-    }
-  }
-  
-  R_error <- R + E
-  
-  # check for positiveness:
-  minimum_eigval <- min(eigen(R_error, symmetric = TRUE, only.values = TRUE)$values)
-  if(minimum_eigval <= 0) warning("The matrix was not positive-definite. The amount of misfit may be too big.")
-  
-  return(list(R_error = R_error, fit = fit, delta = delta, misfit = misfit))
-  
-}
 
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Minimum residual function for CFA in Yuan method
-# Updated 13.10.2022
-f_minres <- function(
-    x, S, ldetS, q,
-    indexes_lambda, lambda_p,
-    indexes_phi, phi_p,
-    indexes_psi
-)
-{
-  
-  p <- nrow(S)
-  lambda_p <- length(indexes_lambda)
-  Lambda <- matrix(0, p, q)
-  Lambda[indexes_lambda] <- x[1:lambda_p]
-  phi_p <- length(indexes_phi)
-  Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
-  Phi <- t(Phi) + Phi
-  diag(Phi) <- 1
-  # Psi added 07.10.2022 -- Marcos
-  Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
-  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
-  Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi
-  res <- S - Rhat
-  f <- 0.5*sum(res*res)
-  
-  return(f)
-  
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Minimum residual function for CFA in Yuan method
-# Updated 07.10.2022
-g_minres <- function(
-    x, S, ldetS, q,
-    indexes_lambda, lambda_p,
-    indexes_phi, phi_p,
-    indexes_psi
-)
-{
-  
-  p <- nrow(S)
-  lambda_p <- length(indexes_lambda)
-  Lambda <- matrix(0, p, q)
-  Lambda[indexes_lambda] <- x[1:lambda_p]
-  phi_p <- length(indexes_phi)
-  Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
-  Phi <- t(Phi) + Phi
-  diag(Phi) <- 1
-  # Psi added 07.10.2022 -- Marcos
-  Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
-  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
-  Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi
-  res <- S - Rhat
-  
-  # Change 07.10.2022 -- Marcos
-  g1 <- (res %*% Lambda %*% Phi)[indexes_lambda]
-  g2 <- (t(Lambda) %*% res %*% Lambda)[indexes_phi]
-  # g <- -2*c(g1, g2, 0.5*diag(res))
-  res2 <- res
-  res2[lower.tri(res2)] <- 2*res[lower.tri(res)]
-  g <- -2*c(g1, g2, 0.5*res2[indexes_psi])
-  
-  return(g)
-  
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Maximum likelihood function for CFA in Yuan method
-# Updated 07.10.2022
-f_ml <- function(
-    x, S, ldetS, q,
-    indexes_lambda, lambda_p,
-    indexes_phi, phi_p,
-    indexes_psi
-)
-{
-  
-  p <- nrow(S)
-  lambda_p <- length(indexes_lambda)
-  Lambda <- matrix(0, p, q)
-  Lambda[indexes_lambda] <- x[1:lambda_p]
-  phi_p <- length(indexes_phi)
-  Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
-  Phi <- t(Phi) + Phi
-  diag(Phi) <- 1
-  # Psi added 07.10.2022 -- Marcos
-  Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
-  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
-  Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi
-  f <- log(det(Rhat)) - ldetS + sum(S*solve(Rhat)) - p
-  
-  return(f)
-  
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Maximum likelihood function for CFA in Yuan method
-# Updated 07.10.2022
-g_ml <- function(
-    x, S, ldetS, q,
-    indexes_lambda, lambda_p,
-    indexes_phi, phi_p,
-    indexes_psi
-)
-{
-  
-  p <- nrow(S)
-  lambda_p <- length(indexes_lambda)
-  Lambda <- matrix(0, p, q)
-  Lambda[indexes_lambda] <- x[1:lambda_p]
-  phi_p <- length(indexes_phi)
-  Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
-  Phi <- t(Phi) + Phi
-  diag(Phi) <- 1
-  Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
-  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
-  
-  Rhat <- Lambda %*% Phi %*% t(Lambda) + Psi
-  Rhat_inv <- solve(Rhat)
-  Ri_res_Ri <- 2*Rhat_inv %*% (Rhat - S) %*% Rhat_inv
-  Ri_res_Ri2 <- Ri_res_Ri
-  Ri_res_Ri2[lower.tri(Ri_res_Ri2)] <- 2*Ri_res_Ri[lower.tri(Ri_res_Ri)]
-  
-  # Joreskog (page 10; 1965) Testing a simple structure in factor analysis
-  # g <- c(c(Ri_res_Ri %*% Lambda %*% Phi)[indexes_lambda],
-  #        c(t(Lambda) %*% Ri_res_Ri %*% Lambda)[indexes_phi],
-  #        diag(Ri_res_Ri)*0.5)
-  g <- c(c(Ri_res_Ri %*% Lambda %*% Phi)[indexes_lambda],
-         c(t(Lambda) %*% Ri_res_Ri %*% Lambda)[indexes_phi],
-         Ri_res_Ri2[indexes_psi]*0.5)
-  
-  return(g)
-  
-}
-
-#' @noRd
-#' @importFrom stats runif nlminb
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# CFA function
-# Updated 07.10.2022 -- Marcos
-CFA <- function(S, target, targetphi, targetpsi = diag(nrow(target)), method = "minres") {
-  
-  p <- nrow(target)
-  q <- ncol(target)
-  indexes_lambda <- which(target != 0) # Which lambdas are estimated
-  indexes_phi <- which(targetphi != 0 & lower.tri(targetphi)) # Which phis are estimated
-  indexes_psi <- which(targetpsi != 0 & lower.tri(targetpsi, diag = TRUE)) # Which psies are estimated
-  lambda_p <- length(indexes_lambda) # Number of lambda parameters
-  phi_p <- length(indexes_phi) # Number of phi parameters
-  psi_p <- length(indexes_psi) # Number of psi parameters
-  
-  init_diag_psi <- 1/diag(solve(S)) # Initial diagonal psi parameter values
-  init_psi <- rep(0, times = psi_p)
-  diag_indexes <- (p+1)*0:(p-1)+1 # Indexes for the diagonal of Psi
-  offdiag_indexes <- which(targetpsi != 0 & lower.tri(targetpsi)) # Indexes for the off-diagonal of Psi
-  cor_res_indexes <- which(indexes_psi %in% offdiag_indexes) # Indexes for correlated residuals
-  # Allocate init_diag_psi in the positions of the vector corresponding to the diagonal of Psi:
-  init_psi[-cor_res_indexes] <- init_diag_psi
-  
-  lower_psi <- rep(0.005, psi_p) # Lower bounds for the uniquenessess
-  lower_psi[cor_res_indexes] <- -0.995 # Lower bounds for correlated residuals
-  upper_psi <- rep(0.995, psi_p) # Upper bounds for correlated residuals
-  lower <- c(rep(-Inf, lambda_p), rep(-1, phi_p), lower_psi)
-  upper <- c(rep(Inf, lambda_p), rep(1, phi_p), upper_psi)
-  
-  x <- c(runif(lambda_p), rep(0, phi_p), init_psi)
-  
-  if(method == "minres") {
-    
-    ldetS <- NULL
-    f <- f_minres
-    g <- g_minres
-    
-  } else if(method == "ml") {
-    
-    ldetS <- log(det(S))
-    f <- f_ml
-    g <- g_ml
-    
-  }
-  
-  cfa <- nlminb(
-    start = x, objective = f, gradient = g,
-    lower = lower, upper = upper,
-    S = S, ldetS = ldetS, q = q,
-    indexes_lambda = indexes_lambda, lambda_p = lambda_p,
-    indexes_phi = indexes_phi, phi_p = phi_p,
-    indexes_psi = indexes_psi,
-    control = list(iter.max = 1e4, eval.max = 1e4)
-  )
-  
-  # Arrange lambda parameter estimates:
-  lambda_hat <- matrix(0, p, q)
-  lambda_hat[indexes_lambda] <- cfa$par[1:lambda_p]
-  
-  # Arrange phi parameter estimates:
-  phi_hat <- matrix(0, q, q)
-  phi_hat[indexes_phi] <- cfa$par[(lambda_p+1):(lambda_p + phi_p)]
-  phi_hat <- t(phi_hat) + phi_hat
-  diag(phi_hat) <- 1
-  
-  # Arrange psi parameter estimates:
-  psi_hat <- matrix(0, p, p)
-  psi_hat[indexes_psi] <- cfa$par[-(1:(lambda_p + phi_p))]
-  psi_hat[upper.tri(psi_hat)] <- t(psi_hat)[upper.tri(psi_hat)]
-  
-  # Model matrix:
-  S_hat <- lambda_hat %*% phi_hat %*% t(lambda_hat) + psi_hat
-  uniquenesses_hat <- diag(psi_hat)
-  diag(S_hat) <- 1 # Fix rounding errors from the optimization
-  residuals <- S - S_hat
-  
-  # Degrees of freedom:
-  df <- p*(p+1)/2 - (lambda_p + phi_p + psi_p)
-  
-  results <- list(f = cfa$objective, convergence = cfa$convergence,
-                  iterations = cfa$iterations, df = df,
-                  lambda = lambda_hat, phi = phi_hat,
-                  psi = psi_hat, uniquenesses = uniquenesses_hat,
-                  model = S_hat, residuals = residuals)
-  
-  return(results)
-  
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Adds population error using Yuan method to generated data
-# Updated 07.10.2022 -- Marcos
-yuan <- function(R, lambda, Phi, Psi,
-                 fit = "rmsr", misfit = "close",
-                 method = "minres") {
-  
-  p <- nrow(R)
-  q <- ncol(lambda)
-  uniquenesses <- diag(Psi)
-  
-  # Count the number of parameters
-  nlambda <- sum(lambda != 0)
-  nphi <- sum(Phi[lower.tri(Phi)] != 0)
-  npsi <- sum(Psi[lower.tri(Psi, diag = TRUE)] != 0)
-  npars <- nlambda + nphi + npsi
-  df <- p*(p+1)/2 - npars # Degrees of freedom
-  
-  if(nlambda + nphi > p*q - 0.5*q*(q-1)) {
-    warning("The population model is not identified. There exists infinite solutions for the model parameters.")
-  }
-  
-  if(nlambda + nphi + npsi > p*(p+1)/2) {
-    warning("The population model has negative degrees of freedom.")
-  }
-  
-  # Add an small error to the population parameters
-  # lambda_error <- lambda - 1e-04
-  # Rerror <- lambda_error %*% Phi %*% t(lambda_error) + Psi; diag(Rerror) <- 1
-  Rerror <- R
-  Rerror[lower.tri(R)] <- Rerror[lower.tri(R)] + runif(0.5*p*(p-1), -1e-06, 1e-06)
-  Rerror[upper.tri(R)] <- t(Rerror)[upper.tri(R)]
-  
-  # Create the FA model
-  target <- ifelse(lambda != 0, 1, 0)
-  targetphi <- ifelse(Phi != 0, 1, 0)
-  targetpsi <- ifelse(Psi != 0, 1, 0)
-  cfa <- CFA(Rerror, target, targetphi, targetpsi, method = method)
-  Phat <- cfa$model
-  
-  # Get the error matrix:
-  E <- Rerror - Phat
-  # Hopefully, the error is orthogonal to the derivative of each parameter derivative wrt the discrepancy function
-  
-  # Adjust the error to satisfy the desired amount of misfit:
-  
-  if(method == "minres" || method == "ols") {
-    
     if(fit == "rmsr") {
       if(misfit == "close") {
         r2 <- mean(1-uniquenesses)
@@ -712,23 +386,6 @@ yuan <- function(R, lambda, Phi, Psi,
         r2 <- mean(1-uniquenesses)
         misfit <- 0.10*r2
       }
-      delta <- misfit^2*0.5*p*(p-1)
-      # delta <- (1-misfit2)*(0.5*(sum(R_error^2) - p))
-    } else if(fit == "cfi") {
-      null_f <- 0.5*(sum(R^2) - p)
-      delta <- (1-misfit)*null_f
-    } else if(fit == "rmsea") {
-      delta <- misfit^2 * df
-    } else if(fit == "raw") {
-      delta <- misfit
-    }
-    
-    k <- sqrt(2*delta/sum(E*E))
-    E <- k*E
-    
-  } else if(method == "ml") {
-    
-    if(fit == "rmsr") {
       delta <- "A given RMSR is compatible with multiple maximum likelihood discrepancy values and is not provided"
     } else if(fit == "cfi") {
       null_f <- -log(det(R))
@@ -738,14 +395,14 @@ yuan <- function(R, lambda, Phi, Psi,
     } else if(fit == "raw") {
       delta <- misfit
     }
-    
+
     if(fit == "rmsr") {
-      
+
       k <- sqrt((0.5*p*(p-1))*2*misfit^2/sum(E*E))
       E <- k*E
-      
+
     } else {
-      
+
       constant <- 1e-04 / sqrt(mean(E*E))
       E <- constant*E # Fix this to avoid NAs
       R_inv <- solve(R)
@@ -757,20 +414,395 @@ yuan <- function(R, lambda, Phi, Psi,
       # k <- GSS(delta, G, limits)
       # k <- grad_descend(delta, G)
       E <- k*E
-      
+
     }
   }
-  
-  R_error <- Phat + E
-  
-  # check for positiveness:
+
+  R_error <- R + E
+
+  if(method == "ml" & fit == "rmsr") {
+    delta <- log(det(R)) - log(det(R_error)) + sum(R_error*solve(R)) - nrow(R)
+  }
+
+  # Check for positiveness:
   minimum_eigval <- min(eigen(R_error, symmetric = TRUE, only.values = TRUE)$values)
-  if(minimum_eigval <= 0) warning("The matrix was not positive-definite. The amount of misfit may be too big.")
-  
-  return(list(R_error = R_error, fit = fit, delta = delta, misfit = misfit))
-  
+  positive <- TRUE
+  if(minimum_eigval <= 0) {
+    warning("The matrix was not positive-definite. The amount of misfit may be too big.")
+    positive <- FALSE
+  }
+
+  return(list(R_error = R_error, fit = fit, delta = delta, misfit = misfit, positive = positive))
+
 }
 
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Minimum residual function for CFA in Yuan method
+# Updated 26.05.2024
+f_minres <- function(
+    x, S, ldetS, q,
+    indexes_lambda, lambda_p,
+    indexes_phi, phi_p,
+    indexes_psi
+)
+{
+
+  p <- nrow(S)
+  lambda_p <- length(indexes_lambda)
+  Lambda <- matrix(0, p, q)
+  Lambda[indexes_lambda] <- x[1:lambda_p]
+  phi_p <- length(indexes_phi)
+  Phi <- matrix(0, q, q)
+  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
+  Phi <- t(Phi) + Phi
+  diag(Phi) <- 1
+  # Psi added 07.10.2022 -- Marcos
+  Psi <- matrix(0, p, p)
+  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
+  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
+  Rhat <- Lambda %*% tcrossprod(Phi, Lambda) + Psi # Lambda %*% Phi %*% t(Lambda) + Psi
+  res <- S - Rhat
+  f <- 0.5*sum(res*res)
+
+  return(f)
+
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Minimum residual function for CFA in Yuan method
+# Updated 26.05.2024
+g_minres <- function(
+    x, S, ldetS, q,
+    indexes_lambda, lambda_p,
+    indexes_phi, phi_p,
+    indexes_psi
+)
+{
+
+  p <- nrow(S)
+  lambda_p <- length(indexes_lambda)
+  Lambda <- matrix(0, p, q)
+  Lambda[indexes_lambda] <- x[1:lambda_p]
+  phi_p <- length(indexes_phi)
+  Phi <- matrix(0, q, q)
+  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
+  Phi <- t(Phi) + Phi
+  diag(Phi) <- 1
+  # Psi added 07.10.2022 -- Marcos
+  Psi <- matrix(0, p, p)
+  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
+  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
+  Rhat <- Lambda %*% tcrossprod(Phi, Lambda) + Psi # Lambda %*% Phi %*% t(Lambda) + Psi
+  res <- S - Rhat
+
+  # Change 07.10.2022 -- Marcos
+  g1 <- (res %*% Lambda %*% Phi)[indexes_lambda]
+  g2 <- (crossprod(Lambda, res) %*% Lambda)[indexes_phi] # (t(Lambda) %*% res %*% Lambda)[indexes_phi]
+  # g <- -2*c(g1, g2, 0.5*diag(res))
+  res2 <- res
+  res2[lower.tri(res2)] <- 2*res[lower.tri(res)]
+  g <- -2*c(g1, g2, 0.5*res2[indexes_psi])
+
+  return(g)
+
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Maximum likelihood function for CFA in Yuan method
+# Updated 26.05.2024
+f_ml <- function(
+    x, S, ldetS, q,
+    indexes_lambda, lambda_p,
+    indexes_phi, phi_p,
+    indexes_psi
+)
+{
+
+  p <- nrow(S)
+  lambda_p <- length(indexes_lambda)
+  Lambda <- matrix(0, p, q)
+  Lambda[indexes_lambda] <- x[1:lambda_p]
+  phi_p <- length(indexes_phi)
+  Phi <- matrix(0, q, q)
+  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
+  Phi <- t(Phi) + Phi
+  diag(Phi) <- 1
+  # Psi added 07.10.2022 -- Marcos
+  Psi <- matrix(0, p, p)
+  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
+  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
+  Rhat <- Lambda %*% tcrossprod(Phi, Lambda) + Psi # Lambda %*% Phi %*% t(Lambda) + Psi
+  f <- log(det(Rhat)) - ldetS + sum(S*solve(Rhat)) - p
+
+  return(f)
+
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# Maximum likelihood function for CFA in Yuan method
+# Updated 26.05.2024
+g_ml <- function(
+    x, S, ldetS, q,
+    indexes_lambda, lambda_p,
+    indexes_phi, phi_p,
+    indexes_psi
+)
+{
+
+  p <- nrow(S)
+  lambda_p <- length(indexes_lambda)
+  Lambda <- matrix(0, p, q)
+  Lambda[indexes_lambda] <- x[1:lambda_p]
+  phi_p <- length(indexes_phi)
+  Phi <- matrix(0, q, q)
+  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
+  Phi <- t(Phi) + Phi
+  diag(Phi) <- 1
+  Psi <- matrix(0, p, p)
+  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
+  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
+
+  Rhat <- Lambda %*% tcrossprod(Phi, Lambda) + Psi # Lambda %*% Phi %*% t(Lambda) + Psi
+  Rhat_inv <- solve(Rhat)
+  Ri_res_Ri <- 2*Rhat_inv %*% (Rhat - S) %*% Rhat_inv
+  Ri_res_Ri2 <- Ri_res_Ri
+  Ri_res_Ri2[lower.tri(Ri_res_Ri2)] <- 2*Ri_res_Ri[lower.tri(Ri_res_Ri)]
+
+  # Joreskog (page 10; 1965) Testing a simple structure in factor analysis
+  # g <- c(c(Ri_res_Ri %*% Lambda %*% Phi)[indexes_lambda],
+  #        c(t(Lambda) %*% Ri_res_Ri %*% Lambda)[indexes_phi],
+  #        diag(Ri_res_Ri)*0.5)
+  g <- c(c(Ri_res_Ri %*% Lambda %*% Phi)[indexes_lambda],
+         c(crossprod(Lambda, Ri_res_Ri) %*% Lambda)[indexes_phi], # c(t(Lambda) %*% Ri_res_Ri %*% Lambda)[indexes_phi],
+         Ri_res_Ri2[indexes_psi]*0.5)
+
+  return(g)
+
+}
+
+#' @noRd
+#' @importFrom stats runif nlminb
+# From {bifactor} version 0.1.0
+# Accessed on 17.09.2022
+# CFA function
+# Updated 07.10.2022 -- Marcos
+CFA <- function(S, target, targetphi, targetpsi = diag(nrow(target)), method = "minres") {
+
+  p <- nrow(target)
+  q <- ncol(target)
+  indexes_lambda <- which(target != 0) # Which lambdas are estimated
+  indexes_phi <- which(targetphi != 0 & lower.tri(targetphi)) # Which phis are estimated
+  indexes_psi <- which(targetpsi != 0 & lower.tri(targetpsi, diag = TRUE)) # Which psies are estimated
+  lambda_p <- length(indexes_lambda) # Number of lambda parameters
+  phi_p <- length(indexes_phi) # Number of phi parameters
+  psi_p <- length(indexes_psi) # Number of psi parameters
+
+  init_diag_psi <- 1/diag(solve(S)) # Initial diagonal psi parameter values
+  init_psi <- rep(0, times = psi_p)
+  diag_indexes <- (p+1)*0:(p-1)+1 # Indexes for the diagonal of Psi
+  offdiag_indexes <- which(targetpsi != 0 & lower.tri(targetpsi)) # Indexes for the off-diagonal of Psi
+  cor_res_indexes <- which(indexes_psi %in% offdiag_indexes) # Indexes for correlated residuals
+  # Allocate init_diag_psi in the positions of the vector corresponding to the diagonal of Psi:
+  init_psi[-cor_res_indexes] <- init_diag_psi
+
+  lower_psi <- rep(0.005, psi_p) # Lower bounds for the uniquenessess
+  lower_psi[cor_res_indexes] <- -0.995 # Lower bounds for correlated residuals
+  upper_psi <- rep(0.995, psi_p) # Upper bounds for correlated residuals
+  lower <- c(rep(-Inf, lambda_p), rep(-1, phi_p), lower_psi)
+  upper <- c(rep(Inf, lambda_p), rep(1, phi_p), upper_psi)
+
+  x <- c(runif(lambda_p), rep(0, phi_p), init_psi)
+
+  if(method == "minres") {
+
+    ldetS <- NULL
+    f <- f_minres
+    g <- g_minres
+
+  } else if(method == "ml") {
+
+    ldetS <- log(det(S))
+    f <- f_ml
+    g <- g_ml
+
+  }
+
+  cfa <- nlminb(
+    start = x, objective = f, gradient = g,
+    lower = lower, upper = upper,
+    S = S, ldetS = ldetS, q = q,
+    indexes_lambda = indexes_lambda, lambda_p = lambda_p,
+    indexes_phi = indexes_phi, phi_p = phi_p,
+    indexes_psi = indexes_psi,
+    control = list(iter.max = 1e4, eval.max = 1e4)
+  )
+
+  # Arrange lambda parameter estimates:
+  lambda_hat <- matrix(0, p, q)
+  lambda_hat[indexes_lambda] <- cfa$par[1:lambda_p]
+
+  # Arrange phi parameter estimates:
+  phi_hat <- matrix(0, q, q)
+  phi_hat[indexes_phi] <- cfa$par[(lambda_p+1):(lambda_p + phi_p)]
+  phi_hat <- t(phi_hat) + phi_hat
+  diag(phi_hat) <- 1
+
+  # Arrange psi parameter estimates:
+  psi_hat <- matrix(0, p, p)
+  psi_hat[indexes_psi] <- cfa$par[-(1:(lambda_p + phi_p))]
+  psi_hat[upper.tri(psi_hat)] <- t(psi_hat)[upper.tri(psi_hat)]
+
+  # Model matrix:
+  S_hat <- lambda_hat %*% tcrossprod(phi_hat, lambda_hat) + psi_hat # lambda_hat %*% phi_hat %*% t(lambda_hat) + psi_hat
+  uniquenesses_hat <- diag(psi_hat)
+  diag(S_hat) <- 1 # Fix rounding errors from the optimization
+  residuals <- S - S_hat
+
+  # Degrees of freedom:
+  df <- p*(p+1)/2 - (lambda_p + phi_p + psi_p)
+
+  results <- list(f = cfa$objective, convergence = cfa$convergence,
+                  iterations = cfa$iterations, df = df,
+                  lambda = lambda_hat, phi = phi_hat,
+                  psi = psi_hat, uniquenesses = uniquenesses_hat,
+                  model = S_hat, residuals = residuals)
+
+  return(results)
+
+}
+
+#' @noRd
+# From {bifactor} version 0.1.0
+# Accessed on 26.05.2024
+# Adds population error using Yuan method to generated data
+# Updated 26.05.2024
+yuan <- function(R, lambda, Phi, Psi,
+                 fit = "rmsr", misfit = "close",
+                 method = "minres") {
+
+  p <- nrow(R)
+  q <- ncol(lambda)
+  uniquenesses <- diag(Psi)
+
+  # Count the number of parameters
+  nlambda <- sum(lambda != 0)
+  nphi <- sum(Phi[lower.tri(Phi)] != 0)
+  npsi <- sum(Psi[lower.tri(Psi, diag = TRUE)] != 0)
+  npars <- nlambda + nphi + npsi
+  df <- p*(p+1)/2 - npars # Degrees of freedom
+
+  if(nlambda + nphi > p*q - 0.5*q*(q-1)) {
+    warning("The population model is not identified. There exists infinite solutions for the model parameters.")
+  }
+
+  if(nlambda + nphi + npsi > p*(p+1)/2) {
+    warning("The population model has negative degrees of freedom.")
+  }
+
+  # Add an small error to the population parameters
+  # lambda_error <- lambda - 1e-04
+  # Rerror <- lambda_error %*% Phi %*% t(lambda_error) + Psi; diag(Rerror) <- 1
+  Rerror <- R
+  Rerror[lower.tri(R)] <- Rerror[lower.tri(R)] + stats::runif(0.5*p*(p-1), -1e-06, 1e-06)
+  Rerror[upper.tri(R)] <- t(Rerror)[upper.tri(R)]
+
+  # Create the FA model
+  target <- ifelse(lambda != 0, 1, 0)
+  targetphi <- ifelse(Phi != 0, 1, 0)
+  targetpsi <- ifelse(Psi != 0, 1, 0)
+  cfa <- CFA(Rerror, target, targetphi, targetpsi, method = method, W = NULL)
+  Phat <- cfa$model
+
+  # Get the error matrix:
+  E <- Rerror - Phat
+  # Hopefully, the error is orthogonal to the derivative of each parameter wrt correlation model
+
+  # Adjust the error to satisfy the desired amount of misfit:
+
+  if(method == "minres" || method == "ols") {
+
+    if(fit == "rmsr") {
+      if(misfit == "close") {
+        r2 <- mean(1-uniquenesses)
+        misfit <- 0.05*r2
+      } else if(misfit == "acceptable") {
+        r2 <- mean(1-uniquenesses)
+        misfit <- 0.10*r2
+      }
+      delta <- misfit^2*0.5*p*(p-1)
+      # delta <- (1-misfit2)*(0.5*(sum(R_error^2) - p))
+    } else if(fit == "cfi") {
+      null_f <- 0.5*(sum(R^2) - p)
+      delta <- (1-misfit)*null_f
+    } else if(fit == "rmsea") {
+      delta <- misfit^2 * df
+    } else if(fit == "raw") {
+      delta <- misfit
+    }
+
+    k <- sqrt(2*delta/sum(E*E))
+    E <- k*E
+
+  } else if(method == "ml") {
+
+    if(fit == "rmsr") {
+      delta <- "A given RMSR is compatible with multiple maximum likelihood discrepancy values and is not provided"
+    } else if(fit == "cfi") {
+      null_f <- -log(det(R))
+      delta <- (1-misfit)*null_f
+    } else if(fit == "rmsea") {
+      delta <- misfit^2 * df
+    } else if(fit == "raw") {
+      delta <- misfit
+    }
+
+    if(fit == "rmsr") {
+
+      k <- sqrt((0.5*p*(p-1))*2*misfit^2/sum(E*E))
+      E <- k*E
+
+    } else {
+
+      constant <- 1e-04 / sqrt(mean(E*E))
+      E <- constant*E # Fix this to avoid NAs
+      R_inv <- solve(R)
+      G <- R_inv %*% E
+      x <- suppressWarnings(grid_search(delta, G))
+      # x <- sqrt(2*delta/sum(G*G)) # Initial value suggested by Cudeck
+      k <- opt(x, delta, G)
+      # limits <- c(-1e05, 1e05)
+      # k <- GSS(delta, G, limits)
+      # k <- grad_descend(delta, G)
+      E <- k*E
+
+    }
+  }
+
+  R_error <- Phat + E
+
+  if(method == "ml" & fit == "rmsr") {
+    delta <- log(det(R)) - log(det(R_error)) + sum(R_error*solve(R)) - nrow(R)
+  }
+
+  # Check for positiveness:
+  minimum_eigval <- min(eigen(R_error, symmetric = TRUE, only.values = TRUE)$values)
+  positive <- TRUE
+  if(minimum_eigval <= 0) {
+    warning("The matrix was not positive-definite. The amount of misfit may be too big.")
+    positive <- FALSE
+  }
+
+  return(list(R_error = R_error, fit = fit, delta = delta, misfit = misfit, positive = positive))
+
+}
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
 # add_local_dependence ----
@@ -785,10 +817,10 @@ correlate_residuals <- function(
     add_residuals, add_residuals_range
 )
 {
-  
+
   # Obtain parameters
   parameters <- lf_object$parameters
-  
+
   # Set parameters
   factors <- parameters$factors
   variables <- parameters$variables
@@ -800,19 +832,19 @@ correlate_residuals <- function(
   skew <- parameters$skew
   original_correlation <- lf_object$population_correlation
   population_correlation <- original_correlation
-  
+
   # Obtain number of local dependencies
   variables_LD <- round(proportion_LD * variables)
-  
+
   # If variables cannot have multiple local dependencies,
   # then number of local dependencies needs to be cut in half (per factor)
   if(!isTRUE(allow_multiple)){
     variables_LD <- ifelse(
       variables_LD == 1, variables_LD,
-      floor(variables_LD / 2) 
+      floor(variables_LD / 2)
     )
   }
-  
+
   # Check for add residual range
   if(!is.null(add_residuals_range)){
     type_error(add_residuals_range, "numeric") # object type error
@@ -824,169 +856,169 @@ correlate_residuals <- function(
       max = max(add_residuals_range)
     )
   }
-  
+
   # Ensure appropriate types
   type_error(add_residuals, "numeric");
-  
+
   # Ensure appropriate lengths
   length_error(add_residuals, c(1, parameters$factors, sum(variables_LD)));
-  
+
   # Ensure appropriate ranges
   range_error(add_residuals, c(0, 1));
-  
+
   # Set start and end points for variables
   end_variables <- cumsum(variables)
   start_variables <- end_variables + 1 - variables
-  
+
   # Initialize checks
   check_eigenvalues <- TRUE
-  
+
   # Run through loop
   while(isTRUE(check_eigenvalues)){
-    
+
     # Initialize correlated residual matrix
     correlated_residuals <- matrix(
       0, nrow = 0, ncol = 2
     )
-    
+
     # Loop through factors and add local dependence
     for(f in 1:factors){
-      
+
       # Determine available variables
       available_variables <- start_variables[f]:end_variables[f]
-      
+
       # Check for cross-loading class
       if(is(lf_object, "lf_cl")){
-        
+
         # Obtain loadings for available variables (ensure matrix)
         available_loadings <- matrix(
           loadings[available_variables, -f],
           ncol = factors - 1
         )
-        
+
         # Collect sum of cross-loadings
         sum_cross_loadings <- rowSums(available_loadings)
-        
+
         # Remove variables with non-zero cross-loadings
         available_variables <- available_variables[
           sum_cross_loadings == 0
         ]
-        
+
       }
-      
+
       # Item rows
       item_rows <- sample(
         available_variables,
         variables_LD[f],
         replace = allow_multiple
       )
-      
+
       # Set remaining variables
       if(isTRUE(allow_multiple)){
-        
+
         # Do not remove variables
         remaining_variables <- available_variables
-        
+
       }else{
-        
+
         # Remove already included variables
         remaining_variables <- setdiff(
           available_variables, item_rows
         )
-        
+
       }
-      
+
       # Item columns
       item_columns <- sample(
         remaining_variables,
         variables_LD[f],
         replace = allow_multiple
       )
-      
+
       # Bind to correlated residual matrix
       correlated_residuals <- rbind(
         correlated_residuals,
         cbind(item_rows, item_columns)
       )
-      
+
       # Obtain same variable rows
       same_variable_rows <- which(
         correlated_residuals[,"item_rows"] ==
           correlated_residuals[,"item_columns"]
       )
-      
+
       # Replace until there are no duplicate rows
       while(any(same_variable_rows)){
-        
+
         # Replace second column with new variable
         correlated_residuals[same_variable_rows, 2] <- sample(
           remaining_variables,
           length(same_variable_rows),
           replace = allow_multiple
         )
-        
+
         # Re-check for duplicate rows
         same_variable_rows <- which(
           correlated_residuals[,"item_rows"] ==
             correlated_residuals[,"item_columns"]
         )
-        
+
       }
-      
+
       # Obtain duplicate rows
       duplicate_rows <- match_row(correlated_residuals)
-      
+
       # Replace until there are no duplicate rows
       while(any(duplicate_rows)){
-        
+
         # Replace second column with new variable
         correlated_residuals[duplicate_rows, 2] <- sample(
           remaining_variables,
           length(duplicate_rows),
           replace = allow_multiple
         )
-        
+
         # Re-check for duplicate rows
         duplicate_rows <- match_row(correlated_residuals)
-        
+
       }
-      
+
     }
-    
+
     # Add column for residual
     correlated_residuals <- cbind(
       correlated_residuals, rep(0, nrow(correlated_residuals))
     )
-    
+
     # Add column name for residual
     colnames(correlated_residuals)[3] <- "residual_correlation"
-    
+
     # Loop through correlated residuals
     if(nrow(correlated_residuals) != 0){
-      
+
       # Check if add residuals length equals 1 or number of factors
       if(length(add_residuals) != sum(variables_LD)){
-        
+
         # If only one value
         if(length(add_residuals) == 1){
           add_residuals <- rep(add_residuals, sum(variables_LD))
         }else if(length(add_residuals) == parameters$factors){# Length of factors
-          
+
           # Loop through number of local dependence variables
           add_residuals <- unlist(lapply(1:parameters$factors, function(i){
             rep(add_residuals[i], variables_LD[i])
           }))
-          
+
         }
-        
+
       }
-      
+
       # Loop through correlated residuals
       if(nrow(correlated_residuals) != 0){
-        
+
         # Loop through correlated residuals
         for(i in 1:nrow(correlated_residuals)){
-          
+
           # Insert or compute random residual
           if(!is.null(add_residuals_range)){
             random_residual <- add_residuals[i]
@@ -997,13 +1029,13 @@ correlate_residuals <- function(
               max = add_residuals[i] + 0.05
             )
           }
-          
+
           # Obtain sign
           original_sign <- sign(original_correlation[
             correlated_residuals[i,1],
             correlated_residuals[i,2]
           ])
-          
+
           # Add residuals to correlation matrix
           population_correlation[
             correlated_residuals[i,1],
@@ -1012,7 +1044,7 @@ correlate_residuals <- function(
             correlated_residuals[i,1],
             correlated_residuals[i,2]
           ]) + random_residual) * original_sign
-          
+
           # Ensure symmetric
           population_correlation[
             correlated_residuals[i,2],
@@ -1021,123 +1053,123 @@ correlate_residuals <- function(
             correlated_residuals[i,1],
             correlated_residuals[i,2]
           ]
-          
+
           # Add random residual to output
           correlated_residuals[i,"residual_correlation"] <-
             random_residual * original_sign
-          
+
         }
-        
+
       }
-      
+
     }
-    
+
     # Check eigenvalues
     check_eigenvalues <- any(eigen(population_correlation)$values <= 0)
-    
+
     # Return population correlation to original state (if necessary)
     if(isTRUE(check_eigenvalues)){
       population_correlation <- original_correlation
     }
-    
+
   }
-  
+
   # Cholesky decomposition
   cholesky <- chol(population_correlation)
-  
+
   # Generate data
   data <- mvtnorm::rmvnorm(sample_size, sigma = diag(total_variables))
-  
+
   # Make data based on factor structure
   data <- data %*% cholesky
-  
+
   # Ensure appropriate type and length for categories
   type_error(variable_categories, "numeric")
   length_error(variable_categories, c(1, total_variables))
-  
+
   # Identify categories to variables
   if(length(variable_categories) == 1){
     variable_categories <- rep(variable_categories, total_variables)
   }
-  
+
   # Check for categories greater than categorical limit and not infinite
   if(any(variable_categories > categorical_limit & !is.infinite(variable_categories))){
-    
+
     # Make variables with categories greater than 7 (or categorical_limit) continuous
     variable_categories[
       variable_categories > categorical_limit & !is.infinite(variable_categories)
     ] <- Inf
-    
+
   }
-  
+
   # Set skew/categories
   ## Target columns to categorize and/or add skew
   categorize_columns <- which(variable_categories <= categorical_limit)
   continuous_columns <- setdiff(1:ncol(data), categorize_columns)
-  
+
   # Ensure skew is in the appropriate direction for correlated residuals
   if(nrow(correlated_residuals) != 0){
-    
+
     # 1. Obtain loading signs
     signs <- numeric(nrow(loadings))
-    
+
     # Ensure proper signs for skew
     for(i in 1:ncol(loadings)){
-      
+
       # Target dominant loadings
       target_loadings <- start_variables[i]:end_variables[i]
-      
+
       # Determine sign
       signs[target_loadings] <- sign(loadings[target_loadings, i])
-      
+
     }
-    
+
     # 2. Obtain correlated residual chains
-    
+
     # Obtain residual variables
     residual_variables <- correlated_residuals[,c(
       "item_rows", "item_columns"
     )]
-    
+
     # Ensure matrix
     if(!is.matrix(residual_variables)){
       residual_variables <- t(as.matrix(residual_variables))
     }
-    
+
     # Initialize residual chain list
     residual_chain <- vector("list", nrow(residual_variables))
-    
+
     # Create residual chain
     while(nrow(residual_variables) != 0){
-      
+
       # Determine if either variable exists in residual chain
       combine_residuals <- unlist(
         lapply(residual_chain, function(x){
-          
+
           if(any(residual_variables[1,] %in% x)){
             return(TRUE)
           }else{
             return(FALSE)
           }
-          
+
         })
       )
-      
+
       # Check for whether to combine
       if(!any(combine_residuals)){
-        
+
         # Find NULL lists
         null_list <- unlist(lapply(residual_chain, is.null))
-        
+
         # First NULL list
         residual_chain[[which(null_list)[1]]] <-
           unique(as.vector(residual_variables[1,]))
-        
+
       }else if(sum(combine_residuals) == 1){
-        
+
         # Find residual chain to add to
         add_to_chain <- which(combine_residuals)
-        
+
         # Add variables to chain
         residual_chain[[add_to_chain]] <- unique( # keep unique
           c(
@@ -1145,15 +1177,15 @@ correlate_residuals <- function(
             as.vector(residual_variables[1,]) # new to add
           )
         )
-        
+
       }else{
-        
+
         # Find residual chains to merge
         merge_chains <- which(combine_residuals)
-        
+
         # Merge into first merge
         residual_chain[[merge_chains[1]]] <- unique(unlist(residual_chain[merge_chains]))
-        
+
         # Add to first merge chain
         residual_chain[[merge_chains[1]]] <- unique( # keep unique
           c(
@@ -1161,81 +1193,81 @@ correlate_residuals <- function(
             as.vector(residual_variables[1,]) # new to add
           )
         )
-        
+
         # Set second merge chain to NULL
         residual_chain[[merge_chains[2]]] <- NULL
-        
+
       }
-      
+
       # Remove residual variables from consideration
       residual_variables <- matrix(residual_variables[-1,], ncol = 2)
-      
+
     }
-    
+
     # Find NULL lists
     null_list <- unlist(lapply(residual_chain, is.null))
-    
+
     # Keep non-NULL chains
     residual_chain <- residual_chain[!null_list]
-    
+
     # Ensure skew in the same direction
     for(i in seq_along(residual_chain)){
-      
+
       # Handle skew
       skew[residual_chain[[i]]] <- handle_skew_signs(
         skews = skew[residual_chain[[i]]],
         signs = signs[residual_chain[[i]]]
       )
-      
+
     }
-    
+
   }
-  
+
   ## Check for categories
   if(length(categorize_columns) != 0){
-    
+
     # Set skew
     if(length(skew) == 1){
       skew <- rep(skew, length(categorize_columns))
     }else if(length(skew) != ncol(data)){
       skew <- sample(skew, length(categorize_columns), replace = TRUE)
     }
-    
+
     # Loop through columns
     for(i in categorize_columns){
-      
+
       data[,i] <- categorize(
         data = data[,i],
         categories = variable_categories[i],
         skew_value = skew[i]
       )
-      
+
     }
-    
+
   }
-  
+
   ## Check for continuous
   if(length(continuous_columns) != 0){
-    
+
     # Set skew
     if(length(skew) == 1){
       skew <- rep(skew, length(continuous_columns))
     }else if(length(skew) != ncol(data)){
       skew <- sample(skew, length(continuous_columns), replace = TRUE)
     }
-    
+
     # Loop through columns
     for(i in continuous_columns){
-      
+
       data[,i] <- skew_continuous( # function in `utils-latentFactoR`
         skewness = skew[i],
         data = data[,i]
       )
-      
+
     }
-    
+
   }
-  
+
   # Add column names to data
   colnames(data) <- paste0(
     "V", formatC(
@@ -1244,10 +1276,10 @@ correlate_residuals <- function(
       flag = "0", format = "d"
     )
   )
-  
+
   # Update skews
   parameters$skew <- skew
-  
+
   # Populate results
   results <- list(
     data = data,
@@ -1256,10 +1288,10 @@ correlate_residuals <- function(
     correlated_residuals = as.data.frame(correlated_residuals),
     original_results = lf_object
   )
-  
+
   # Return results
   return(results)
-  
+
 }
 
 #%%%%%%%%%%%%%%%%
@@ -1270,63 +1302,63 @@ correlate_residuals <- function(
 # Ensures skew is in an appropriate direction based on loadings
 # Updated 12.12.2022
 handle_skew_signs <- function(skews, signs){
-  
+
   # Check if all skew signs are in the same direction
   if(all(sign(skews) == -1)){ # All in negative direction
-    
+
     # Make all skew for negative variables positive
     skews[signs == -1] <- abs(skews[signs == -1])
-    
+
   }else if(all(sign(skews) == 1)){ # All in negative direction
-    
+
     # Make all skew for positive variables negative
     skews[signs == 1] <- -abs(skews[signs == 1])
-    
-  }else{ 
-    
+
+  }else{
+
     # If mixed, base signs on mode of positive variables
     # with preference for negative skew (i.e., ties go to negative skew)
-    
+
     # Obtain skew signs for positive variables
     positive_skew_signs <- sign(skews[signs == 1])
-    
+
     # Determine whether mode with ties going to negative skew
     if(
       sum(positive_skew_signs == -1) >=
       sum(positive_skew_signs == 1)
     ){
-      
+
       # Make all skew for positive variables negative
       skews[signs == 1] <- -abs(skews[signs == 1])
-      
+
       # Make all skew for negative variables positive
       skews[signs == -1] <- abs(skews[signs == -1])
-      
+
     }else{ # Do positive skew for positive variables
-      
+
       # Make all skew for positive variables positive
       skews[signs == 1] <- abs(skews[signs == 1])
-      
+
       # Make all skew for negative variables negative
       skews[signs == -1] <- -abs(skews[signs == -1])
-      
+
     }
-    
+
   }
-  
+
   # Return skews
   return(skews)
-  
+
 }
 
 #' @noRd
 # Adds skew to a single variable based on threshold (skew) values
 # Updated 30.11.2022
 skew_single_variable <- function(data, skew_values){
-  
+
   # Categorize biased data with updated thresholds
   for(i in (length(skew_values) + 1):1){
-    
+
     # First category
     if(i == 1){
       data[data < skew_values[i]] <- i
@@ -1335,15 +1367,15 @@ skew_single_variable <- function(data, skew_values){
     }else{ # Middle category
       data[data >= skew_values[i-1] & data < skew_values[i]] <- i
     }
-    
+
   }
-  
+
   # Return skewed data
   return(data)
-  
+
 }
 
-# Based on 
+# Based on
 # Garrido, L. E., Abad, F. J., & Ponsoda, V. (2011).
 # Performance of Velicer’s minimum average partial factor retention
 # method with categorical variables.
@@ -1360,12 +1392,12 @@ skew_continuous <- function(
     tolerance = 0.00001
 )
 {
-  
+
   # Check for zero skew (skip adding skew)
   if(skewness == 0){
     return(data)
   }
-  
+
   # Obtain absolute skewness
   if(sign(skewness) == -1){
     skewness <- abs(skewness)
@@ -1373,94 +1405,94 @@ skew_continuous <- function(
   }else{
     flip <- FALSE
   }
-  
+
   # Generate data
   if(is.null(data)){
     data <- rnorm(sample_size)
   }
-  
+
   # Kurtosis
   kurtosis <- 1
-  
+
   # Initialize increments
   increments <- 0.01
-  
+
   # Seek along a range of skews
   skew_values <- seq(
     -2, 2, increments
   )
-  
+
   # Compute skews
   skews <- unlist(lapply(skew_values, function(x){
     # Skew data
     skew_data <- sinh(
-      kurtosis * (asinh(data) + x) 
+      kurtosis * (asinh(data) + x)
     )
-    
+
     # Observed skew in data
     psych::skew(skew_data)
   }))
-  
+
   # Compute minimum index
   minimum <- which.min(abs(skewness - skews))
-  
+
   # Check for whether skewness is found
   while(abs(skewness - skews[minimum]) > tolerance){
-    
+
     # Check for minimum value
     if(minimum == 1){
       kurtosis <- kurtosis - 0.1
     }else if(minimum == length(skews)){
       kurtosis <- kurtosis + 0.1
     }else{
-      
+
       # Decrease increments
       increments <- 0.01 * 0.1
-      
+
       # Seek along a range of skews
       skew_values <- seq(
         skew_values[minimum - 1],
         skew_values[minimum + 1],
         length.out = 100
       )
-      
+
     }
-    
+
     # Compute skews
     skews <- unlist(lapply(skew_values, function(x){
       # Skew data
       skew_data <- sinh(
-        kurtosis * (asinh(data) + x) 
+        kurtosis * (asinh(data) + x)
       )
-      
+
       # Observed skew in data
       psych::skew(skew_data)
     }))
-    
+
     # Compute minimum index
     minimum <- which.min(abs(skewness - skews))
-    
+
   }
-  
+
   # Compute final skew data
   skew_data <- sinh(
-    kurtosis * (asinh(data) + skew_values[minimum]) 
+    kurtosis * (asinh(data) + skew_values[minimum])
   )
-  
+
   # Re-scale
   skew_data <- scale(skew_data)
-  
+
   # Flip skew?
   if(isTRUE(flip)){
     skew_data <- -skew_data
   }
-  
+
   # Return skewed data
   return(skew_data)
-  
+
 }
 
-# Based on 
+# Based on
 # Garrido, L. E., Abad, F. J., & Ponsoda, V. (2011).
 # Performance of Velicer’s minimum average partial factor retention
 # method with categorical variables.
@@ -1478,28 +1510,28 @@ skew_generator <- function(
     tolerance = 0.00001
 )
 {
-  
+
   # Initialize skew matrix
   skew_matrix <- matrix(
     0, nrow = categories, ncol = categories
   )
-  
+
   # Initialize cases
   cases <- numeric(sample_size)
-  
+
   # Loop through categories
   for(i in 2:categories){
-    
+
     # Initialize (largest category) proportion
     proportion <- initial_proportion
-    
+
     # Current proportion for rest of categories
     remaining_proportion <- 1 - proportion
-    
+
     # Initialize categories allocations
     allocation <- 1
     allocation_1 <- 1
-    
+
     # Loop through with reduction factor
     if(i > 2){
       for(j in 1:(i-2)){
@@ -1507,15 +1539,15 @@ skew_generator <- function(
         allocation <- allocation + allocation_1
       }
     }
-    
+
     # Divide remaining proportion by allocations
     divided_proportion <- remaining_proportion / allocation
-    
+
     # Undefined objects
     propinf <- 1 / sample_size
     propsup <- initial_proportion
     E <- divided_proportion / reduction_factor
-    
+
     # Loop through
     for(j in 1:i){
       cases[round(sample_size * propinf):round(sample_size * propsup)] <- j
@@ -1523,17 +1555,17 @@ skew_generator <- function(
       propinf <- propsup
       propsup <- propinf + E
     }
-    
+
     # Compute skewness
     skew_actual <- psych::skew(cases)
-    
+
     # Limits
     limitsup <- 1
     limitsinf <- 0
-    
+
     # Ensure skew within tolerance
     while(abs(skew_actual - skewness) > tolerance){
-      
+
       # Skew greater than
       if(skew_actual < skewness){
         limitinf <- proportion
@@ -1542,19 +1574,19 @@ skew_generator <- function(
         limitsup <- proportion
         proportion <- (proportion + limitsinf) / 2
       }
-      
+
       # Update
       # Current proportion for rest of categories
       remaining_proportion <- 1 - proportion
-      
+
       # Divide remaining proportion by allocations
       divided_proportion <- remaining_proportion / allocation
-      
+
       # Undefined objects
       propinf <- 1 / sample_size
       propsup <- proportion
       E <- divided_proportion / reduction_factor
-      
+
       # Loop through
       for(j in 1:i){
         cases[round(sample_size * propinf):round(sample_size * propsup)] <- j
@@ -1562,56 +1594,56 @@ skew_generator <- function(
         propinf <- propsup
         propsup <- propinf + E
       }
-      
+
       # Compute skewness
       skew_actual <- psych::skew(cases)
-      
+
     }
-    
+
     # Set E
     E <- divided_proportion / reduction_factor
     cumulative_probability <- proportion
-    
+
     # Update matrix
     for(j in 1:i){
-      
+
       skew_matrix[i,j] <- cumulative_probability
       E <- E * reduction_factor
       cumulative_probability <- cumulative_probability + E
-      
+
     }
-    
+
   }
-  
+
   # Normal inverse
   norm_inv_matrix <- qnorm(skew_matrix)
-  
+
   # Set infinite values to zero
   norm_inv_matrix[is.infinite(norm_inv_matrix)] <- 0
-  
+
   # Category probability
   category_probability <- matrix(
     0, nrow = categories, ncol = categories
   )
-  
+
   # Fill first column
   category_probability[,1] <- skew_matrix[,1]
-  
+
   # Loop through
   for(i in 2:categories){
     category_probability[,i] <- skew_matrix[,i] - skew_matrix[,i-1]
   }
-  
+
   # Make -1 = 0
   category_probability[category_probability == -1] <- 0
-  
+
   # Return skew
   result <- list(
     skew_matrix = norm_inv_matrix,
     probability = category_probability
   )
   return(result)
-  
+
 }
 
 #%%%%%%%%%%%%%%%%%%%
@@ -1623,30 +1655,30 @@ skew_generator <- function(
 # Updated 23.09.2022
 nearest_decimal <- function(vec)
 {
-  
+
   # Obtain minimum
   minimum <- min(vec[vec!=0])
-  
+
   # Zap digit
   zap_digit <- 0
-  
+
   # Count
   digit <- -1
-  
+
   # Find zap digit where it is not zero
   while(zap_digit == 0){
-    
+
     # Increase digit
     digit <- digit + 1
-    
+
     # Set zap
     zap_digit <- round(minimum, digits = digit)
-    
+
   }
-  
+
   # Return digit
   return(digit)
-  
+
 }
 
 #%%%%%%%%%%%%%%%%%%%
@@ -1664,10 +1696,10 @@ EFA.Comp.Data <- function(Data, F.Max, N.Pop = 10000, N.Samples = 500, Alpha = .
   # F.Max = largest number of factors to consider
   # N.Pop = size of finite populations of comparison data (default = 10,000 cases)
   # N.Samples = number of samples drawn from each population (default = 500)
-  # Alpha = alpha level when testing statistical significance of improvement with add'l factor (default = .30) 
+  # Alpha = alpha level when testing statistical significance of improvement with add'l factor (default = .30)
   # Graph = whether to plot the fit of eigenvalues to those for comparison data (default = F)
   # Spearman = whether to use Spearman rank-order correlations rather than Pearson correlations (default = F)
-  
+
   N <- dim(Data)[1]
   k <- dim(Data)[2]
   if (Spearman) Cor.Type <- "spearman" else Cor.Type <- "pearson"
@@ -1694,7 +1726,7 @@ EFA.Comp.Data <- function(Data, F.Max, N.Pop = 10000, N.Samples = 500, Alpha = .
     if (Sig) x.max <- F.CD - 1
     else x.max <- F.CD
     ys <- apply(RMSR.Eigs[,1:x.max], 2, mean)
-    plot(x = 1:x.max, y = ys, ylim = c(0, max(ys)), xlab = "Factor", ylab = "RMSR Eigenvalue", type = "b", 
+    plot(x = 1:x.max, y = ys, ylim = c(0, max(ys)), xlab = "Factor", ylab = "RMSR Eigenvalue", type = "b",
          main = "Fit to Comparison Data")
     abline(v = F.CD - 1, lty = 3)
   }
@@ -1705,68 +1737,68 @@ EFA.Comp.Data <- function(Data, F.Max, N.Pop = 10000, N.Samples = 500, Alpha = .
 # Data generation
 # Updated 30.09.2022
 GenData <- function(Supplied.Data, N.Factors, N, Max.Trials = 5, Initial.Multiplier = 1, Cor.Type, use){
-  
+
   k <- dim(Supplied.Data)[2]
   Data <- matrix(0, nrow = N, ncol = k)            # Matrix to store the simulated data
   Distributions <- matrix(0, nrow = N, ncol = k)   # Matrix to store each variable's score distribution
   Iteration <- 0                                   # Iteration counter
   Best.RMSR <- 1                                   # Lowest RMSR correlation
   Trials.Without.Improvement <- 0                  # Trial counter
-  
+
   # Generate distribution for each variable (step 2) -------------------------------------------------------------
-  
+
   for (i in 1:k)
     Distributions[,i] <- sort(sample(na.omit(Supplied.Data[,i]), size = N, replace = T))
-  
+
   # Calculate and store a copy of the target correlation matrix (step 3) -----------------------------------------
-  
+
   Target.Corr <- cor(Supplied.Data, method = Cor.Type, use = use)
   Intermediate.Corr <- Target.Corr
-  
+
   # Generate random normal data for shared and unique components, initialize factor loadings (steps 5, 6) --------
-  
+
   Shared.Comp <- matrix(rnorm(N * N.Factors, 0, 1), nrow = N, ncol = N.Factors)
   Unique.Comp <- matrix(rnorm(N * k, 0, 1), nrow = N, ncol = k)
   Shared.Load <- matrix(0, nrow = k, ncol = N.Factors)
   Unique.Load <- matrix(0, nrow = k, ncol = 1)
-  
+
   # Begin loop that ends when specified number of iterations pass without improvement in RMSR correlation --------
-  
+
   while (Trials.Without.Improvement < Max.Trials)
   {
     Iteration <- Iteration + 1
-    
+
     # Calculate factor loadings and apply to reproduce desired correlations (steps 7, 8) ---------------------------
-    
+
     Fact.Anal <- Factor.Analysis(Intermediate.Corr, Corr.Matrix = TRUE, N.Factors = N.Factors, Cor.Type = Cor.Type, use = use)
     if (N.Factors == 1) Shared.Load[,1] <- Fact.Anal$loadings
-    else 
+    else
       for (i in 1:N.Factors)
         Shared.Load[,i] <- Fact.Anal$loadings[,i]
       Shared.Load[Shared.Load > 1] <- 1
       Shared.Load[Shared.Load < -1] <- -1
       if (Shared.Load[1,1] < 0) Shared.Load <- Shared.Load * -1
       for (i in 1:k)
-        if (sum(Shared.Load[i,] * Shared.Load[i,]) < 1) Unique.Load[i,1] <- 
+        if (sum(Shared.Load[i,] * Shared.Load[i,]) < 1) Unique.Load[i,1] <-
         (1 - sum(Shared.Load[i,] * Shared.Load[i,]))
       else Unique.Load[i,1] <- 0
       Unique.Load <- sqrt(Unique.Load)
       for (i in 1:k)
         Data[,i] <- (Shared.Comp %*% t(Shared.Load))[,i] + Unique.Comp[,i] * Unique.Load[i,1]
-      
+
       # Replace normal with nonnormal distributions (step 9) ---------------------------------------------------------
-      
+
       for (i in 1:k)
       {
         Data <- Data[sort.list(Data[,i]),]
         Data[,i] <- Distributions[,i]
       }
-      
+
       # Calculate RMSR correlation, compare to lowest value, take appropriate action (steps 10, 11, 12) --------------
-      
+
       Reproduced.Corr <- cor(Data, method = Cor.Type, use = use)
       Residual.Corr <- Target.Corr - Reproduced.Corr
-      RMSR <- sqrt(sum(Residual.Corr[lower.tri(Residual.Corr)] * Residual.Corr[lower.tri(Residual.Corr)]) / 
+      RMSR <- sqrt(sum(Residual.Corr[lower.tri(Residual.Corr)] * Residual.Corr[lower.tri(Residual.Corr)]) /
                      (.5 * (k * k - k)))
       if (RMSR < Best.RMSR)
       {
@@ -1776,14 +1808,14 @@ GenData <- function(Supplied.Data, N.Factors, N, Max.Trials = 5, Initial.Multipl
         Intermediate.Corr <- Intermediate.Corr + Initial.Multiplier * Residual.Corr
         Trials.Without.Improvement <- 0
       }
-      else 
+      else
       {
         Trials.Without.Improvement <- Trials.Without.Improvement + 1
         Current.Multiplier <- Initial.Multiplier * .5 ^ Trials.Without.Improvement
         Intermediate.Corr <- Best.Corr + Current.Multiplier * Best.Res
       }
   }
-  
+
   Fact.Anal <- Factor.Analysis(Best.Corr, Corr.Matrix = TRUE, N.Factors = N.Factors, Cor.Type = Cor.Type, use = use)
   if (N.Factors == 1) Shared.Load[,1] <- Fact.Anal$loadings
   else
@@ -1805,7 +1837,7 @@ GenData <- function(Supplied.Data, N.Factors, N, Max.Trials = 5, Initial.Multipl
     Data <- Data[sort.list(Data[,i]),]
     Data[,i] <- Distributions[,i]
   }
-  
+
   return(Data)
 }
 
@@ -1895,19 +1927,19 @@ estimate_parameters <- function(
     rank_order
 )
 {
-  
+
   # All possible combinations
   sequences <- expand.grid(
     alpha = alpha_sequence,
     beta = beta_sequence
   )
-  
+
   # Initialize RMSE vector
   sse <- numeric(nrow(sequences))
-  
+
   # Possible values and differences
   for(i in 1:nrow(sequences)){
-    
+
     # Progress message
     cat(
       colortext(
@@ -1917,7 +1949,7 @@ estimate_parameters <- function(
             sequences[i,1], digits = 2,
             format = "f", flag = "0"
           ), "  ",
-          "Estimating beta...", 
+          "Estimating beta...",
           formatC(
             sequences[i,2], digits = 2,
             format = "f", flag = "0"
@@ -1926,22 +1958,22 @@ estimate_parameters <- function(
         defaults = "message"
       )
     )
-    
+
     # Values based on parameters
     values <- zipf_values(
       alpha = sequences[i,1], beta = sequences[i,2],
       rank_order = rank_order
     )
-    
+
     # Difference
     sse[i] <- zipf_sse(
       values = values,
       zipfs = zipfs
     )
-    
-    
+
+
   }
-  
+
   # Update message
   cat(
     colortext(
@@ -1951,7 +1983,7 @@ estimate_parameters <- function(
           sequences[which.min(sse),1], digits = 2,
           format = "f", flag = "0"
         ), "  ",
-        "Estimating beta...", 
+        "Estimating beta...",
         formatC(
           sequences[which.min(sse),2], digits = 2,
           format = "f", flag = "0"
@@ -1960,10 +1992,10 @@ estimate_parameters <- function(
       defaults = "message"
     )
   )
-  
+
   # Return parameters
   return(sequences[which.min(sse),])
-  
+
 }
 
 #%%%%%%%%%%%%%%%%%%%%%
@@ -1974,14 +2006,14 @@ estimate_parameters <- function(
 # Error for object type
 # Updated 30.09.2022
 object_error <- function(input, expected_type){
-  
+
   # Check for possible object types
   possible_types <- sapply(
     X = expected_type,
     FUN = is,
     object = input
   )
-  
+
   # Check for object types
   if(all(!possible_types)){
     stop(
@@ -1993,14 +2025,14 @@ object_error <- function(input, expected_type){
       )
     )
   }
-  
+
 }
 
 #' @noRd
 # Error for input type
 # Updated 08.08.2022
 type_error <- function(input, expected_type){
-  
+
   # Check for type
   if(!is(input, expected_type)){
     stop(
@@ -2019,7 +2051,7 @@ type_error <- function(input, expected_type){
 # Error for input length
 # Updated 08.08.2022
 length_error <- function(input, expected_lengths){
-  
+
   # Check for length of input in expected length
   if(!length(input) %in% expected_lengths){
     stop(
@@ -2031,22 +2063,22 @@ length_error <- function(input, expected_lengths){
       )
     )
   }
-  
+
 }
 
 #' @noRd
 # Error for input range
 # Updated 05.09.2022
 range_error <- function(input, expected_ranges){
-  
+
   # Obtain expected maximum and minimum values
   expected_maximum <- max(expected_ranges)
   expected_minimum <- min(expected_ranges)
-  
+
   # Obtain maximum and minimum values
   actual_maximum <- round(max(input), 3)
   actual_minimum <- round(min(input), 3)
-  
+
   # Check for maximum of input in expected range
   if(actual_maximum > expected_maximum){
     stop(
@@ -2058,7 +2090,7 @@ range_error <- function(input, expected_ranges){
       )
     )
   }
-  
+
   # Check for maximum of input in expected range
   if(actual_minimum < expected_minimum){
     stop(
@@ -2078,57 +2110,57 @@ range_error <- function(input, expected_ranges){
 #%%%%%%%%%%%%%%%%%%%%%%
 
 #' Error report
-#' 
+#'
 #' @description Gives necessary information for user reporting error
-#' 
+#'
 #' @param result Character.
 #' The error from the result
-#' 
+#'
 #' @param SUB_FUN Character.
 #' Sub-routine the error occurred in
-#' 
+#'
 #' @param FUN Character.
 #' Main function the error occurred in
-#' 
+#'
 #' @return Error and message to send to GitHub
-#' 
+#'
 #' @author Alexander Christensen <alexpaulchristensen@gmail.com>
-#' 
+#'
 #' @noRd
-#' 
+#'
 #' @importFrom utils packageVersion
-#' 
+#'
 # Error Report
 # Updated 08.08.2022
 error.report <- function(result, SUB_FUN, FUN)
 {
   # Let user know that an error has occurred
   message(paste("\nAn error has occurred in the '", SUB_FUN, "' function of '", FUN, "':\n", sep =""))
-  
+
   # Give them the error to send to you
   cat(paste(result))
-  
+
   # Tell them where to send it
   message("\nPlease open a new issue on GitHub (bug report): https://github.com/hfgolino/EGAnet/issues/new/choose")
-  
+
   # Give them information to fill out the issue
   OS <- as.character(Sys.info()["sysname"])
   OSversion <- paste(as.character(Sys.info()[c("release", "version")]), collapse = " ")
   Rversion <- paste(R.version$major, R.version$minor, sep = ".")
   latentFactoRversion <- paste(unlist(packageVersion("latentFactoR")), collapse = ".")
-  
+
   # Let them know to provide this information
   message(paste("\nBe sure to provide the following information:\n"))
-  
+
   # To reproduce
   message(styletext("To Reproduce:", defaults = "bold"))
   message(paste(" ", textsymbol("bullet"), " Function error occurred in: ", SUB_FUN, " function of ", FUN, sep = ""))
-  
+
   # R, SemNetCleaner, and SemNetDictionaries
   message(styletext("\nR and latentFactoR versions:", defaults = "bold"))
   message(paste(" ", textsymbol("bullet"), " R version: ", Rversion, sep = ""))
   message(paste(" ", textsymbol("bullet"), " latentFactoR version: ", latentFactoRversion, sep = ""))
-  
+
   # Desktop
   message(styletext("\nOperating System:", defaults = "bold"))
   message(paste(" ", textsymbol("bullet"), " OS: ", OS, sep = ""))
@@ -2151,19 +2183,19 @@ error.report <- function(result, SUB_FUN, FUN)
 system.check <- function (...)
 {
   OS <- unname(tolower(Sys.info()["sysname"]))
-  
+
   RSTUDIO <- ifelse(Sys.getenv("RSTUDIO") == "1", TRUE, FALSE)
-  
+
   TEXT <- TRUE
-  
+
   if(!RSTUDIO){if(OS != "linux"){TEXT <- FALSE}}
-  
+
   res <- list()
-  
+
   res$OS <- OS
   res$RSTUDIO <- RSTUDIO
   res$TEXT <- TEXT
-  
+
   return(res)
 }
 
@@ -2186,13 +2218,13 @@ colortext <- function(text, number = NULL, defaults = NULL)
 {
   # Check system
   sys.check <- system.check()
-  
+
   if(sys.check$TEXT)
   {
     # Defaults for number (white text)
     if(is.null(number) || number < 0 || number > 231)
     {number <- 15}
-    
+
     # Check for default color
     if(!is.null(defaults))
     {
@@ -2201,14 +2233,14 @@ colortext <- function(text, number = NULL, defaults = NULL)
       {
         if(sys.check$RSTUDIO)
         {
-          
+
           if(rstudioapi::getThemeInfo()$dark)
           {number <- 226
           }else{number <- 208}
-          
+
         }else{number <- 208}
       }else{
-        
+
         number <- switch(defaults,
                          message = 204,
                          red = 9,
@@ -2221,13 +2253,13 @@ colortext <- function(text, number = NULL, defaults = NULL)
                          magenta = 13,
                          pink = 211,
         )
-        
+
       }
-      
+
     }
-    
+
     return(paste("\033[38;5;", number, "m", text, "\033[0m", sep = ""))
-    
+
   }else{return(text)}
 }
 
@@ -2250,13 +2282,13 @@ styletext <- function(text, defaults = c("bold", "italics", "highlight",
 {
   # Check system
   sys.check <- system.check()
-  
+
   if(sys.check$TEXT)
   {
     if(missing(defaults))
     {number <- 0
     }else{
-      
+
       # Get number code
       number <- switch(defaults,
                        bold = 1,
@@ -2265,9 +2297,9 @@ styletext <- function(text, defaults = c("bold", "italics", "highlight",
                        highlight = 7,
                        strikethrough = 9
       )
-      
+
     }
-    
+
     return(paste("\033[", number, ";m", text, "\033[0m", sep = ""))
   }else{return(text)}
 }
@@ -2314,7 +2346,7 @@ textsymbol <- function(symbol = c("alpha", "beta", "chi", "delta",
                 x = "\u2717",
                 bullet = "\u2022"
   )
-  
+
   return(sym)
 }
 
@@ -2327,10 +2359,10 @@ textsymbol <- function(symbol = c("alpha", "beta", "chi", "delta",
 # Updated 02.12.2022
 ensure_column_names <- function(data)
 {
-  
+
   # Check for whether column names exist
   if(is.null(colnames(data))){
-    
+
     # Add column names
     colnames(data) <- paste0(
       "V", formatC(
@@ -2338,9 +2370,9 @@ ensure_column_names <- function(data)
         format = "d", flag = "0"
       )
     )
-    
+
   }
-  
+
   # Return data
   return(data)
 
@@ -2353,15 +2385,15 @@ match_row <- function(data)
 {
   # Make data frame
   df <- as.data.frame(data)
-  
+
   # Obtain duplicate indices
   dupe_ind <- duplicated(df)
-  
+
   # Return rows
   return(which(dupe_ind))
-  
-  
-  
+
+
+
 }
 
 #' @noRd
@@ -2369,43 +2401,43 @@ match_row <- function(data)
 # Updated 12.12.2022
 update_defaults <- function(FUN, FUN_args)
 {
-  
+
   # Exploratory Graph Analysis
   if(FUN == "EGA"){
-    
+
     # Defaults
     defaults <- list(
       corr = "cor_auto", uni.method = "louvain",
       model = "glasso", consensus.method = "most_common",
       plot.EGA = FALSE
     )
-    
+
   }
-  
+
   # Factor Forest
   if(FUN == "FF"){
-    
+
     # Defaults
     defaults <- list(
       maximum_factors = 8,
       PA_correlation = "cor"
     )
-    
+
   }
-  
+
   # Out-of-sample Factor Analysis
   if(FUN == "FSPE"){
-    
+
     # Defaults
     defaults <- list(
       maxK = 8, rep = 1, method = "PE", pbar = FALSE
     )
-    
+
   }
-  
+
   # Next Eigenvalue Sufficiency Test
   if(FUN == "NEST"){
-    
+
     # Defaults
     defaults <- list(
       iterations = 1000,
@@ -2413,34 +2445,34 @@ update_defaults <- function(FUN, FUN_args)
       alpha = 0.05,
       convergence = 0.00001
     )
-    
+
   }
-  
+
   # Parallel Analysis
   if(FUN == "PA"){
-    
+
     # Defaults
     defaults <- list(
       fm = "minres", fa = "both", cor = "cor",
       n.iter = 20, sim = FALSE, plot = FALSE
     )
-    
+
   }
-  
+
   # Check for any function arguments
   if(any(names(FUN_args) %in% names(defaults))){
-    
+
     # Obtain indices
     args_index <- which(names(FUN_args) %in% names(defaults))
-    
+
     # Replace arguments
     defaults[names(FUN_args)[args_index]] <- FUN_args[args_index]
-    
+
   }
-  
+
   # Return arguments
   return(defaults)
-  
+
 }
 
 #' @noRd
@@ -2449,31 +2481,31 @@ update_defaults <- function(FUN, FUN_args)
 # Updated 30.09.2022
 obtain_arguments <- function(FUN, FUN_args)
 {
-  
+
   # Obtain formal arguments
   FUN_formals <- formals(FUN)
-  
+
   # Check for input arguments
   if(length(FUN_args) != 0){
-    
+
     ## Check for matching arguments
     if(any(names(FUN_args) %in% names(FUN_formals))){
-      
+
       replace_args <- FUN_args[na.omit(match(names(FUN_formals), names(FUN_args)))]
-      
+
       FUN_formals[names(replace_args)] <- replace_args
     }
-    
+
   }
-  
+
   # Remove ellipses
   if("..." %in% names(FUN_formals)){
     FUN_formals[which(names(FUN_formals) == "...")] <- NULL
   }
-  
+
   # Return agrumnets
   return(FUN_formals)
-  
+
 }
 
 

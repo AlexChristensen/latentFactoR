@@ -169,7 +169,7 @@
 #' @export
 #'
 # Add population error to simulated data
-# Updated 18.04.2024
+# Updated 26.05.2024
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
@@ -434,6 +434,37 @@ add_population_error <- function(
 
         }
 
+      }else if(
+        any(
+          eigen(
+            x = population_error$R_error,
+            symmetric = TRUE,
+            only.values = TRUE
+          )$values < .Machine$double.eps
+        )
+      ){
+
+        # Increase positive definite stuck count
+        pd_stuck_count <- pd_stuck_count + 1
+
+        # Check if a break is necessary
+        if(pd_stuck_count >= convergence_iterations){
+
+          # Stop and tell user to increase convergence iterations
+          stop(
+            paste(
+              "Convergence counter has exceeded its limit.",
+              "There were issues converging the model with proper",
+              "population error. \n\n",
+              "Population error could not converge with a positive",
+              "definite matrix. \n\n",
+              "Try increasing the number of iterations for convergence",
+              "using the `convergence_iterations` argument."
+            )
+          )
+
+        }
+
       }else{
 
         # Set positive definite to be TRUE
@@ -558,7 +589,6 @@ add_population_error <- function(
     }
 
   }
-
 
   # Re-estimate data
   ## Cholesky decomposition

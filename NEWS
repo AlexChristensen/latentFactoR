@@ -1,61 +1,68 @@
+Changes in version 0.0.7
+
++ FIX: error check for positive definite in `add_population_error`
+
++ UPDATE: better ML population error in `add_population_error` (update from {bifactor})
+
+
 Changes in version 0.0.6
 
-o MOVE: `add_wording_effects` methods moved from `utils-latentFactoR` to `add_wording_effects-helpers` to facilitate ease of finding code (no observable changes to the user)
++ MOVE: `add_wording_effects` methods moved from `utils-latentFactoR` to `add_wording_effects-helpers` to facilitate ease of finding code (no observable changes to the user)
 
-o FIX: categories greater than 7 were not previously allowed (they are now)
++ FIX: categories greater than 7 were not previously allowed (they are now)
 
-o FIX: correlations in `EKC` were not used appropriately and led to an error
++ FIX: correlations in `EKC` were not used appropriately and led to an error
 
-o UPDATE: switched on "Byte-Compile" (byte-compiles on our end and not when the user installs)
++ UPDATE: switched on "Byte-Compile" (byte-compiles on our end and not when the user installs)
 
 
 Changes in version 0.0.5
 
-o FIX: bug in skew when only providing 1 value
++ FIX: bug in skew when only providing 1 value
 
-o FIX: further correction to `EKC` (uses `cumsum(eigenvalues)` rather than `sum(eigenvalues)`)
++ FIX: further correction to `EKC` (uses `cumsum(eigenvalues)` rather than `sum(eigenvalues)`)
 
-o ADD: `add_wording_effects` will add wording effects such as acquiescence, difficulty, random careless, straight line, or some combination of the four to a simulated factor model
++ ADD: `add_wording_effects` will add wording effects such as acquiescence, difficulty, random careless, straight line, or some combination of the four to a simulated factor model
 
-o ADD: `ESEM` to perform Exploratory Structural Equation Modeling using {lavaan} (allows wording effects to be estimated)
++ ADD: `ESEM` to perform Exploratory Structural Equation Modeling using {lavaan} (allows wording effects to be estimated)
 
-o FIX: `factor_forest` uses raw data in `psych::fa.parallel` rather than correlation matrix
++ FIX: `factor_forest` uses raw data in `psych::fa.parallel` rather than correlation matrix
 
-o ADD: internal functions for computing effect sizes across conditions are included (see `simulation_helpers.R`)
++ ADD: internal functions for computing effect sizes across conditions are included (see `simulation_helpers.R`)
 
-o ADD: skew in `add_local_dependence` is guaranteed to be same direction for locally dependent variables
++ ADD: skew in `add_local_dependence` is guaranteed to be same direction for locally dependent variables
 
 
 Changes in version 0.0.4
 
-o FIX: correction to `EKC` (used `factor_forest`'s version of EKC which used reference values rather than eigenvalues); `EKC` uses eigenvalues whereas `factor_forest` uses reference (which was what the random forest model was trained on)
++ FIX: correction to `EKC` (used `factor_forest`'s version of EKC which used reference values rather than eigenvalues); `EKC` uses eigenvalues whereas `factor_forest` uses reference (which was what the random forest model was trained on)
 
-o FIX: cross-loadings with population error are screened for communalities >= 0.80; communalities near 0.90 prior to population error would often get stuck and not converge
++ FIX: cross-loadings with population error are screened for communalities >= 0.80; communalities near 0.90 prior to population error would often get stuck and not converge
 
-o ADD: `skew` argument for continuous data
++ ADD: `skew` argument for continuous data
 
 
 Changes in version 0.0.3
 
-o ADD: `add_population_error` will add population error, using {bifactor}, to a simulated factor model
++ ADD: `add_population_error` will add population error, using {bifactor}, to a simulated factor model
 
-o ADD: `data_to_zipfs` to transform data to Zipf's distribution from `simulate_factors`
++ ADD: `data_to_zipfs` to transform data to Zipf's distribution from `simulate_factors`
 
-o ADD: `obtain_zipfs_parameters` to obtain a dataset's best fitting Zipf's distribution parameters
++ ADD: `obtain_zipfs_parameters` to obtain a dataset's best fitting Zipf's distribution parameters
 
-o ADD: `NEST` Next Eigenvalue Sufficiency Test to estimate dimensions
++ ADD: `NEST` Next Eigenvalue Sufficiency Test to estimate dimensions
 
-o ADD: `estimate_dimensions` provides a single function to estimate dimensions using state-of-the-art methods: Exploratory Graph Analysis (EGA),
++ ADD: `estimate_dimensions` provides a single function to estimate dimensions using state-of-the-art methods: Exploratory Graph Analysis (EGA),
 Exploratory Factor Analysis with out-of-sample prediction (FSPE), Next Eigenvalue Sufficiency Test (NEST), parallel analysis (PA), and Factor Forest
 
 
 Changes in version 0.0.2
 
-o UPDATE: skews for categories now include 6 categories
++ UPDATE: skews for categories now include 6 categories
 
-o UPDATE: available skew increments are now 0.05 (were 0.50 previously)
++ UPDATE: available skew increments are now 0.05 (were 0.50 previously)
 
-o ADD: `add_local_dependence` will add local dependence between variables from a simulated factor model
++ ADD: `add_local_dependence` will add local dependence between variables from a simulated factor model
 
 
 Initial commit version 0.0.1
