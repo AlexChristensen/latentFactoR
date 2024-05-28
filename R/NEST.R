@@ -74,7 +74,7 @@
 #' @export
 #'
 # Next Eigenvalue Sufficiency Test
-# Updated 26.05.2024
+# Updated 28.05.2024
 NEST <- function(
     data, sample_size,
     iterations = 1000,
@@ -332,12 +332,17 @@ NEST <- function(
 
   }
 
-  # Set names
-  colnames(loadings) <- paste0("F", factor_sequence)
+  # Check for zero factors
+  if(factors != 0){
 
-  # Check for same number of factors as variables
-  if(factors != dimensions[2]){
-    row.names(loadings) <- colnames(data)
+    # Set names
+    colnames(loadings) <- paste0("F", factor_sequence)
+
+    # Check for same number of factors as variables
+    if(factors != dimensions[2]){
+      row.names(loadings) <- colnames(data)
+    }
+
   }
 
   # Check for convergence
