@@ -144,22 +144,30 @@ opt_error <- function(x, delta, G) {
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # Derivative function for Rhat methods
-# Updated 17.09.2022
+# Updated 26.05.2024
 dxt <- function(X) {
 
   # derivative wrt transpose (just a permutation matrix)
 
-  p <- nrow(X)
-  q <- ncol(X)
-  pq <- p*q
+  dimensions <- dim(X)
 
-  res <- array(0, dim = c(pq, pq))
-  null <- matrix(0, p, q)
+  # p <- nrow(X)
+  # q <- ncol(X)
+  # pq <- p*q
 
-  for(i in 1:pq) {
+  pq <- dimensions[1] * dimensions[2]
+
+  # res <- array(0, dim = c(pq, pq))
+  res <- matrix(0, pq, pq)
+  # null <- matrix(0, p, q)
+  null <- matrix(0, dimensions[1], dimensions[2])
+
+  # for(i in 1:pq) {
+  for(i in seq_len(pq)){
     temp <- null
     temp[i] <- 1
-    res[, i] <- c(t(temp))
+    # res[,i] <- c(t(temp))
+    res[,i] <- t(temp)
   }
 
   return(res)
@@ -170,14 +178,21 @@ dxt <- function(X) {
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # LRhat function for Cudeck method
-# Updated 17.09.2022
+# Updated 26.05.2024
 gLRhat <- function(Lambda, Phi) {
 
   # derivative of Lambda wrt Rhat
 
-  p <- nrow(Lambda)
-  g1 <- (Lambda %*% Phi) %x% diag(p)
-  g21 <- diag(p) %x% (Lambda %*% Phi)
+  I <- diag(dim(Lambda)[1])
+
+  # pre-compute Lambda %*% Phi
+  LP <- Lambda %*% Phi
+
+  # p <- nrow(Lambda)
+  # g1 <- (Lambda %*% Phi) %x% diag(p)
+  g1 <- LP %x% I
+  # g21 <- diag(p) %x% (Lambda %*% Phi)
+  g21 <- I %x% LP
   g2 <- g21 %*% dxt(Lambda)
   g <- g1 + g2
 
@@ -194,20 +209,21 @@ gLRhat <- function(Lambda, Phi) {
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # PRhat function for Cudeck method
-# Updated 17.09.2022
+# Updated 26.05.2024
 gPRhat <- function(Lambda, Phi) {
 
   g1 <- Lambda %x% Lambda
   g2 <- g1 %*% dxt(Phi)
   g <- g1 + g2
-  g <- g[, which(lower.tri(Phi))]
+  # g <- g[,which(lower.tri(Phi))]
+  return(g[, lower.tri(Phi), drop = FALSE])
 
   # Ensure matrix
-  if(!is.matrix(g)){
-    g <- matrix(g, ncol = 1)
-  }
-
-  return(g)
+  # if(!is.matrix(g)){
+  #   g <- matrix(g, ncol = 1)
+  # }
+  #
+  # return(g)
 
 }
 
@@ -215,16 +231,15 @@ gPRhat <- function(Lambda, Phi) {
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # Rhat function for Cudeck method
-# Updated 17.09.2022
+# Updated 26.05.2024
 guRhat <- function(p) {
 
   gu <- matrix(0, p*p, p)
 
-  for(i in 1:p) {
-
-    index <- (i-1)*p + i
-    gu[index, i] <- 1
-
+  # for(i in 1:p) {
+  for(i in seq_len(p)){
+    # index <- (i-1) * p + i
+    gu[(i-1) * p + i, i] <- 1
   }
 
   return(gu)
@@ -237,10 +252,11 @@ guRhat <- function(p) {
 # For Psi
 gURhat <- function(p) {
 
-  pcov <- p*(p+1)*0.5
+  # pcov <- p*(p+1)*0.5
 
   Psi <- diag(p)
-  gPsi <- diag(p) %x% diag(p)
+  # gPsi <- diag(p) %x% diag(p)
+  gPsi <- Psi %x% Psi
   gPsi <- gPsi + dxt(Psi) %*% gPsi
   gPsi <- gPsi[, lower.tri(Psi, diag = TRUE)]
   gPsi[gPsi != 0] <- 1
@@ -263,18 +279,30 @@ cudeck <- function(R, lambda, Phi, Psi,
   q <- ncol(lambda)
   uniquenesses <- diag(Psi)
 
+  # Pre-compute indices
+  lambda_idx <- lambda != 0
+  phi_idx <- Phi[lower.tri(Phi)] != 0
+  psi_idx <- Psi[lower.tri(Psi, diag = TRUE)] != 0
+
   # Count the number of parameters
-  nlambda <- sum(lambda != 0)
-  nphi <- sum(Phi[lower.tri(Phi)] != 0)
-  npsi <- sum(Psi[lower.tri(Psi, diag = TRUE)] != 0)
+  # nlambda <- sum(lambda != 0)
+  nlambda <- sum(lambda_idx)
+  # nphi <- sum(Phi[lower.tri(Phi)] != 0)
+  nphi <- sum(phi_idx)
+  # npsi <- sum(Psi[lower.tri(Psi, diag = TRUE)] != 0)
+  npsi <- sum(psi_idx)
   npars <- nlambda + nphi + npsi
-  df <- p*(p+1)/2 - npars # Degrees of freedom
+  # df <- p*(p+1)/2 - npars # Degrees of freedom
+
+  # pre-compute df
+  pre_df <- p * (p + 1) / 2
+  df <- pre_df - npars
 
   if(nlambda + nphi > p*q - 0.5*q*(q-1)) {
     warning("The model is not identified. There exists infinite solutions for the model parameters.")
   }
 
-  if(nlambda + nphi + npsi > p*(p+1)/2) {
+  if(nlambda + nphi + npsi > pre_df) {
     warning("The true model has negative degrees of freedom.")
   }
 
@@ -288,9 +316,12 @@ cudeck <- function(R, lambda, Phi, Psi,
 
   } else {
 
-    dS_dL <- gLRhat(lambda, Phi)[, which(lambda != 0)]
-    dS_dP <- gPRhat(lambda, Phi)[, which(Phi[lower.tri(Phi)] != 0)]
-    dS_dU <- gURhat(p)[, which(Psi[lower.tri(Psi, diag = TRUE)] != 0)]
+    # dS_dL <- gLRhat(lambda, Phi)[, which(lambda != 0)]
+    dS_dL <- gLRhat(lambda, Phi)[, lambda_idx]
+    # dS_dP <- gPRhat(lambda, Phi)[, which(Phi[lower.tri(Phi)] != 0)]
+    dS_dP <- gPRhat(lambda, Phi)[, phi_idx]
+    # dS_dU <- gURhat(p)[, which(Psi[lower.tri(Psi, diag = TRUE)] != 0)]
+    dS_dU <- gURhat(p)[, psi_idx]
     gS <- cbind(dS_dL, dS_dP, dS_dU)
 
   }
@@ -305,30 +336,42 @@ cudeck <- function(R, lambda, Phi, Psi,
     # K <- transition(p)
     # MP_inv <- solve(t(K) %*% K) %*% t(K)
     # D <- MP_inv %*% t(MP_inv)
-    indexes <- vector(length = p)
-    indexes[1] <- 1
-    for(i in 2:p) {
-      increment <- i
-      indexes[i] <- indexes[i-1]+increment
-    }
-    D <- matrix(0, p*(p+1)/2, p*(p+1)/2)
-    diag(D) <- 2
+    # indexes <- vector(length = p)
+    # indexes[1] <- 1
+    # for(i in 2:p) {
+    #   increment <- i
+    #   indexes[i] <- indexes[i-1]+increment
+    # }
+    indexes <- cumsum(seq_len(p))
+    # D <- matrix(0, p*(p+1)/2, p*(p+1)/2)
+    # diag(D) <- 2
+    D <- diag(2, pre_df, pre_df)
     diag(D)[indexes] <- 1
     R_inv <- solve(R)
     # vecs <- apply(gS, 2, FUN = function(x) -t(R_inv %*% matrix(x, p, p) %*% R_inv))
     # B <- t(vecs[which(upper.tri(R, diag = TRUE)), ]) %*% D
     # B <- t(B)
-    B <- -apply(gS, 2, FUN = function(x) t((R_inv %*% matrix(x, p, p) %*% R_inv)[which(upper.tri(R, diag = TRUE))]) %*% D)
+    # B <- -apply(gS, 2, FUN = function(x) t((R_inv %*% matrix(x, p, p) %*% R_inv)[which(upper.tri(R, diag = TRUE))]) %*% D)
+
+    # Pre-compute upper triangle
+    upper_triangle <- upper.tri(R, diag = TRUE)
+
+    B <- -apply(
+      gS, 2,
+      FUN = function(x){
+          crossprod((R_inv %*% matrix(x, p, p) %*% R_inv)[upper_triangle], D)
+      }
+    )
     # The error must be orthogonal to the derivative of each parameter wrt correlation model
 
   }
 
   # Generate random error:
 
-  m <- p+1
+  m <- p + 1
   U <- replicate(p, stats::runif(m, 1, 1))
   A1 <- crossprod(U) # t(U) %*% U
-  sq <- diag(1/sqrt(diag(A1)))
+  sq <- diag(1 / sqrt(diag(A1)))
   A2 <- sq %*% A1 %*% sq
   diag_u <- diag(sqrt(uniquenesses))
   y <- diag_u %*% A2 %*% diag_u
@@ -336,8 +379,8 @@ cudeck <- function(R, lambda, Phi, Psi,
   # y <- A2[lower.tri(A2, diag = TRUE)]
   # v <- MASS::ginv(t(B) %*% B) %*% t(B) %*% y
   # e <- y - B %*% v # equation 7 from Cudeck and Browne (1992)
-  Q <- qr.Q(qr(B))
-  e <- y - tcrossprod(Q) %*% y # y - Q %*% t(Q) %*% y
+  # Q <- qr.Q(qr(B))
+  e <- y - tcrossprod(qr.Q(qr(B))) %*% y # y - Q %*% t(Q) %*% y
 
   # Adjust the error to satisfy the desired amount of misfit:
 
@@ -379,13 +422,26 @@ cudeck <- function(R, lambda, Phi, Psi,
     diag(E) <- 0
 
     if(fit == "rmsr") {
-      if(misfit == "close") {
-        r2 <- mean(1-uniquenesses)
-        misfit <- 0.05*r2
-      } else if(misfit == "acceptable") {
-        r2 <- mean(1-uniquenesses)
-        misfit <- 0.10*r2
-      }
+
+      # if(misfit == "close") {
+      #   r2 <- mean(1-uniquenesses)
+      #   misfit <- 0.05*r2
+      # } else if(misfit == "acceptable") {
+      #   r2 <- mean(1-uniquenesses)
+      #   misfit <- 0.10*r2
+      # }
+
+      # Switch out misfit with a value
+      misfit_value <- switch(
+        as.character(misfit),
+        "close" = 0.05,
+        "acceptable" = 0.10,
+        as.numeric(misfit)
+      )
+
+      # Compute misfit
+      misfit <- misfit_value * (mean(1 - uniquenesses))
+
       delta <- "A given RMSR is compatible with multiple maximum likelihood discrepancy values and is not provided"
     } else if(fit == "cfi") {
       null_f <- -log(det(R))

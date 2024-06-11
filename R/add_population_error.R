@@ -506,15 +506,12 @@ add_population_error <- function(
     max_abs_res <- max(abs(cfa$residuals))
 
     # Cutoff for the maximum absolute residual
-    if(is.character(misfit)){
-      max_res <- switch(
-        misfit,
-        "close" = 0.10,
-        "acceptable" = 0.15
-      )
-    }else{
-      max_res <- misfit
-    }
+    max_res <- switch(
+      as.character(misfit),
+      "close" = 0.10,
+      "acceptable" = 0.15,
+      as.numeric(misfit) + 0.05
+    )
 
     # Ensure same order of loadings
     error_loadings <- cfa$lambda

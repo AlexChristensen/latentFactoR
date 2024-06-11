@@ -74,7 +74,7 @@
 #' @export
 #'
 # Next Eigenvalue Sufficiency Test
-# Updated 17.04.2024
+# Updated 28.05.2024
 NEST <- function(
     data, sample_size,
     iterations = 1000,
@@ -85,15 +85,18 @@ NEST <- function(
 {
 
   # Check for appropriate data
-  object_error(data, c("matrix", "data.frame", "array"));
-  sink <- apply(data, 2, type_error, expected_type = "numeric");
+  object_error(data, c("matrix", "data.frame", "array"))
+  sink <- apply(data, 2, type_error, expected_type = "numeric")
 
   # Ensure data is matrix
   data <- as.matrix(data)
 
+  # Get dimensions
+  dimensions <- dim(data)
+
   # Check for variable names
   if(is.null(colnames(data))){
-    colnames(data) <- paste0("V", 1:ncol(data))
+    colnames(data) <- paste0("V", seq_len(dimensions[2]))
   }
 
   # Obtain correlation matrix (if not already)
@@ -108,7 +111,7 @@ NEST <- function(
     )
 
     # Set sample size
-    sample_size <- nrow(data)
+    sample_size <- dimensions[1]
 
   }else{
 
@@ -129,27 +132,27 @@ NEST <- function(
   )$mat
 
   # Check for appropriate sample size
-  type_error(sample_size, "numeric"); length_error(sample_size, 1);
+  type_error(sample_size, "numeric"); length_error(sample_size, 1)
   range_error(sample_size, c(2, Inf))
 
   # Check for appropriate input for the rest of the arguments
   ## Type errors
-  type_error(iterations, "numeric"); type_error(maximum_iterations, "numeric");
-  type_error(alpha, "numeric"); type_error(convergence, "numeric");
+  type_error(iterations, "numeric"); type_error(maximum_iterations, "numeric")
+  type_error(alpha, "numeric"); type_error(convergence, "numeric")
 
   ## Length errors
-  length_error(iterations, 1); length_error(maximum_iterations, 1);
-  length_error(alpha, 1); length_error(convergence, 1);
+  length_error(iterations, 1); length_error(maximum_iterations, 1)
+  length_error(alpha, 1); length_error(convergence, 1)
 
   ## Range errors
-  range_error(iterations, c(1, Inf)); range_error(maximum_iterations, c(1, Inf));
-  range_error(alpha, c(0, 1)); range_error(convergence, c(0, 1));
+  range_error(iterations, c(1, Inf)); range_error(maximum_iterations, c(1, Inf))
+  range_error(alpha, c(0, 1)); range_error(convergence, c(0, 1))
 
   # Obtain eigenvalues
   eigenvalues <- eigen(correlation, symmetric = TRUE, only.values = TRUE)$values
 
   # Factor Limit
-  factor_limit <- floor(0.80 * ncol(correlation))
+  factor_limit <- floor(0.80 * dimensions[2])
 
   # Loop through number of factors
   for(factors in 0:factor_limit){
@@ -162,7 +165,7 @@ NEST <- function(
 
     # Set up model
     if(factors == 0){
-      model <- diag(rep(1, ncol(correlation)))
+      model <- diag(rep(1, dimensions[2]))
     }else{
 
       # Copy correlation matrix
@@ -172,38 +175,34 @@ NEST <- function(
       diagonal <- diag(R)
 
       # Loop through iterations
-      for(i in 1:maximum_iterations){
+      for(i in seq_len(maximum_iterations)){
 
         # Obtain eigenvalues and eigenvectors
         eigens <- eigen(R, symmetric = TRUE)
 
-        # Check for unidimensional structure
-        if(factors == 1){
+        # Check eigenvalues and eigenvectors across factors
+        current_factor <- factors
 
-          # Check LD
-          LD <- eigens$vectors[,1] * sqrt(eigens$values[1])
-
-          # Obtain communalities
-          communalities <- LD^2
-
-        }else{
-
-          # Check eigenvalues and eigenvectors across factors
-          current_factor <- factors
-
-          # Loop through factors
-          while(eigens$values[current_factor] <= 0){
-            current_factor <- current_factor - 1
-          }
-
-          # Check LD
-          LD <- eigens$vectors[,1:current_factor] %*%
-            diag(sqrt(eigens$values[1:current_factor]))
-
-          # Obtain communalities
-          communalities <- rowSums(LD^2)
-
+        # Loop through factors
+        while(eigens$values[current_factor] <= 0){
+          current_factor <- current_factor - 1
         }
+
+        # Get current factor sequence
+        current_sequence <- seq_len(current_factor)
+
+        # Check LD
+        LD <- tcrossprod(
+          eigens$vectors[,current_sequence],
+          diag(
+            sqrt(eigens$values[current_sequence]),
+            nrow = current_factor,
+            ncol = current_factor
+          )
+        )
+
+        # Obtain communalities
+        communalities <- rowSums(LD^2)
 
         # Check for communalities greater than 1
         if(max(communalities) > 1){
@@ -253,10 +252,13 @@ NEST <- function(
     }
 
     # Sum of factors and variables
-    factors_variables <- factors + ncol(data)
+    factors_variables <- factors + dimensions[2]
+
+    # Get factor sequence
+    factor_sequence <- seq_len(factors_1)
 
     # Compute rank
-    for(j in 1:iterations){
+    for(j in seq_len(iterations)){
 
       # Generate data
       random_data <- matrix(
@@ -285,24 +287,24 @@ NEST <- function(
 
       # Compute rank
       rank <- rank + (
-        eigens$values[1:factors_1] >=
-          eigenvalues[1:factors_1]
+        eigens$values[factor_sequence] >= eigenvalues[factor_sequence]
       )
 
     }
 
+    # Get factor sequence (overwrites previous)
+    factor_sequence <- seq_len(factors)
+
     # Break out of loop and report results
-    if(any(is.na(new_correlation))){
+    if(anyNA(new_correlation)){
 
       # Obtain loadings
-      loadings <- as.matrix(
-        data.frame(
-          t(model[1:factors,])
-        )
+      loadings <- matrix(
+        model[factor_sequence,],
+        nrow = dimensions[2],
+        ncol = factors,
+        byrow = TRUE
       )
-
-      # Remove loading names
-      loadings <- unname(loadings)
 
       # Send warning
       warning("Estimation stopped. Reporting last results. Interpret with caution.")
@@ -316,38 +318,35 @@ NEST <- function(
     if(rank[factors_1] > alpha * (iterations + 1)){
 
       # Obtain loadings
-      loadings <- as.matrix(
-        data.frame(
-          t(model[1:factors,])
-        )
+      loadings <- matrix(
+        model[factor_sequence,],
+        nrow = dimensions[2],
+        ncol = factors,
+        byrow = TRUE
       )
-
-      # Remove loading names
-      loadings <- unname(loadings)
 
       # Break out of loop
       break
+
     }
 
   }
 
-  # Ensure loadings are a matrix
-  if(!is.matrix(loadings)){
-    loadings <- matrix(loadings, ncol = 1)
-  }
+  # Check for zero factors
+  if(factors != 0){
 
-  # Set names
-  colnames(loadings) <- paste0("F", 1:ncol(loadings))
+    # Set names
+    colnames(loadings) <- paste0("F", factor_sequence)
 
-  # Check for same number of factors as variables
-  if(ncol(loadings) != ncol(data)){
-    row.names(loadings) <- colnames(data)
+    # Check for same number of factors as variables
+    if(factors != dimensions[2]){
+      row.names(loadings) <- colnames(data)
+    }
+
   }
 
   # Check for convergence
-  if(any(is.na(new_correlation))){
-    converged <- FALSE
-  }else{converged <- TRUE}
+  converged <- !anyNA(new_correlation)
 
   # Set up results list
   results <- list(
