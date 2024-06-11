@@ -7,7 +7,7 @@
 #'
 #' @param cfa_method Character (length = 1).
 #' Method to generate population error.
-#' Defaults to \code{"minres"}.
+#' Defaults to \code{"ml"}.
 #' Available options:
 #'
 #' \itemize{
@@ -169,7 +169,7 @@
 #' @export
 #'
 # Add population error to simulated data
-# Updated 26.05.2024
+# Updated 11.06.2024
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
@@ -202,7 +202,7 @@ add_population_error <- function(
 
   # Check for missing CFA method
   if(missing(cfa_method)){
-    cfa_method <- "minres"
+    cfa_method <- "ml"
   }else{cfa_method <- tolower(match.arg(cfa_method))}
 
   # Check for missing fit
@@ -675,6 +675,7 @@ add_population_error <- function(
     delta = population_error$delta,
     misfit = population_error$misfit,
     loadings = error_loadings,
+    MAX_residual = max_abs_res,
     SRMR_difference = SRMR_difference,
     MAE_loadings = MAE
   )

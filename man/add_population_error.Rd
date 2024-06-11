@@ -20,7 +20,7 @@ add_population_error(
 
 \item{cfa_method}{Character (length = 1).
 Method to generate population error.
-Defaults to \code{"minres"}.
+Defaults to \code{"ml"}.
 Available options:
 
 \itemize{
