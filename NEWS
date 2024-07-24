@@ -2,6 +2,8 @@ Changes in version 0.0.7
 
 + FIX: error check for positive definite in `add_population_error`
 
++ FIX: correction when adding negative skew for continuous data (internal function: `skew_continuous`)
+
 + UPDATE: better ML population error in `add_population_error` (update from {bifactor})
 
 + UPDATE: some optimizations to `add_population_error` 

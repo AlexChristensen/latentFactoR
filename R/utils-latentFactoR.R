@@ -1440,7 +1440,7 @@ skew_single_variable <- function(data, skew_values){
 #
 #' @noRd
 # Generates skewed data for continuous data
-# Updated 22.11.2022
+# Updated 24.07.2024
 skew_continuous <- function(
     skewness,
     data = NULL,
@@ -1452,14 +1452,6 @@ skew_continuous <- function(
   # Check for zero skew (skip adding skew)
   if(skewness == 0){
     return(data)
-  }
-
-  # Obtain absolute skewness
-  if(sign(skewness) == -1){
-    skewness <- abs(skewness)
-    flip <- TRUE
-  }else{
-    flip <- FALSE
   }
 
   # Generate data
@@ -1537,11 +1529,6 @@ skew_continuous <- function(
 
   # Re-scale
   skew_data <- scale(skew_data)
-
-  # Flip skew?
-  if(isTRUE(flip)){
-    skew_data <- -skew_data
-  }
 
   # Return skewed data
   return(skew_data)

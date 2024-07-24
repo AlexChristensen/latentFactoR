@@ -1,7 +1,7 @@
 Package: latentFactoR
 Title: Data Simulation Based on Latent Factors
 Version: 0.0.7
-Date: 2024-05-26
+Date: 2024-07-24
 Authors@R: c(
 	person("Alexander", "Christensen", email = "alexpaulchristensen@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-9798-7037")),
 	person("Luis", "Eduardo Garrido", email = "luisgarrido@pucmm.edu", role = "aut", comment = c(ORCID = "0000-0001-8932-6063")),
@@ -20,4 +20,4 @@ Imports: BBmisc, EGAnet, fspe, googledrive, ineq,
 	     rstudioapi, xgboost
 Suggests: ggplot2
 Encoding: UTF-8
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
