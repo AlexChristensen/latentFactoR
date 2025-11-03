@@ -169,7 +169,7 @@ Constructing a covariance matrix that yields a specified minimizer and a specifi
 \emph{Psychometrika}, \emph{57}, 357–369.
 }
 \author{
-{\code{\link{bifactor}}} authors \cr
+{\code{bifactor}} authors \cr
 Marcos Jimenez,
 Francisco J. Abad,
 Eduardo Garcia-Garzon,

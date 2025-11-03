@@ -1,7 +1,7 @@
 Package: latentFactoR
 Title: Data Simulation Based on Latent Factors
 Version: 0.0.7
-Date: 2024-07-24
+Date: 2025-11-03
 Authors@R: c(
 	person("Alexander", "Christensen", email = "alexpaulchristensen@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-9798-7037")),
 	person("Luis", "Eduardo Garrido", email = "luisgarrido@pucmm.edu", role = "aut", comment = c(ORCID = "0000-0001-8932-6063")),
@@ -15,9 +15,9 @@ Maintainer: Alexander Christensen <alexpaulchristensen@gmail.com>
 Description: Generates data based on latent factor models. Data can be continuous, polytomous, dichotomous, or mixed. Skews, cross-loadings, wording effects, population errors, and local dependencies can be added. All parameters can be manipulated. Data categorization is based on Garrido, Abad, and Ponsoda (2011) <doi:10.1177/0013164410389489>.
 Depends: R (>= 3.6.0)
 License: GPL (>= 3.0)
-Imports: BBmisc, EGAnet, fspe, googledrive, ineq,
+Imports: BBmisc, car, EGAnet, fspe, googledrive, ineq,
 	     lavaan, Matrix, methods, mlr, mvtnorm, psych,
 	     rstudioapi, xgboost
 Suggests: ggplot2
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3

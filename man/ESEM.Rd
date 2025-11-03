@@ -83,7 +83,7 @@ Returns a list containing:
 }
 \description{
 A general function to estimate an Exploratory Structural
-Equation Model (ESEM) using the \code{\link{lavaan}} package.
+Equation Model (ESEM) using the \code{\link[lavaan]{lavaan}} package.
 With \code{\link{latentFactoR}} objects,
 the function requires fewer inputs
 }

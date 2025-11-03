@@ -650,7 +650,7 @@ g_ml <- function(
 # Accessed on 17.09.2022
 # CFA function
 # Updated 07.10.2022 -- Marcos
-CFA <- function(S, target, targetphi, targetpsi = diag(nrow(target)), method = "minres") {
+CFA <- function(S, target, targetphi, targetpsi = diag(nrow(target)), method = "minres", W = NULL) {
 
   p <- nrow(target)
   q <- ncol(target)
@@ -742,7 +742,7 @@ CFA <- function(S, target, targetphi, targetpsi = diag(nrow(target)), method = "
 # Updated 26.05.2024
 yuan <- function(R, lambda, Phi, Psi,
                  fit = "rmsr", misfit = "close",
-                 method = "minres") {
+                 method = "minres", W = NULL) {
 
   p <- nrow(R)
   q <- ncol(lambda)

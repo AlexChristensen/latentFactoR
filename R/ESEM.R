@@ -1,7 +1,7 @@
 #' Estimates Exploratory Structural Equation Model
 #'
 #' A general function to estimate an Exploratory Structural
-#' Equation Model (ESEM) using the \code{\link{lavaan}} package.
+#' Equation Model (ESEM) using the \code{\link[lavaan]{lavaan}} package.
 #' With \code{\link{latentFactoR}} objects,
 #' the function requires fewer inputs
 #'
@@ -109,7 +109,7 @@
 #' @export
 #'
 # Exploratory Structural Equation Modeling
-# Updated 18.04.2024
+# Updated 03.11.2025
 ESEM <- function(
     data, factors, variables,
     estimator = c("MLR", "WLSMV"),

@@ -145,7 +145,7 @@
 #' )
 #'
 #' @author
-#' {\code{\link{bifactor}}} authors \cr
+#' {\code{bifactor}} authors \cr
 #' Marcos Jimenez,
 #' Francisco J. Abad,
 #' Eduardo Garcia-Garzon,
@@ -169,7 +169,7 @@
 #' @export
 #'
 # Add population error to simulated data
-# Updated 11.06.2024
+# Updated 03.11.2025
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
