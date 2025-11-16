@@ -217,6 +217,9 @@ effect_table <- function(
     }
   )
 
+  # Add break before sending results
+  cat("\n")
+
   # Stack results
   stacked_results <- t(do.call(
     cbind.data.frame, results
