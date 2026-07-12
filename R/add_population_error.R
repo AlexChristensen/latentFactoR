@@ -229,8 +229,9 @@ add_population_error <- function(
   if(!isTRUE(leave_cross_loadings)){
 
     # Set sequence of variables for each factor
-    end_variables <- cumsum(parameters$variables)
-    start_variables <- (end_variables + 1) - parameters$variables
+    variable_sequence <- factor_variable_sequence(parameters$variables)
+    start_variables <- variable_sequence$start
+    end_variables <- variable_sequence$end
 
     # Loop through loadings
     for(i in seq_len(ncol(loadings))){
@@ -245,84 +246,10 @@ add_population_error <- function(
 
   }else if(is(lf_object, "lf_cl")){
 
-    # Set factor correlations
-    factor_correlations <- parameters$factor_correlations
-
-    # Check communalities
-    communalities <- diag(
-      loadings %*%
-        factor_correlations %*%
-        t(loadings)
+    # Decrease dominant loadings until communalities are below threshold
+    loadings <- decrease_loadings_for_communalities(
+      loadings, parameters$factor_correlations, threshold = 0.80
     )
-
-    # Initialize break count
-    break_count <- 0
-
-    # Loop through until all communalities < 0.80
-    while(any(communalities >= 0.80)){
-
-      # Increase break count
-      break_count <- break_count + 1
-
-      # Message about adjustment
-      if(break_count == 1){
-
-        message(
-          paste(
-            "Communalities for the following variable(s) were >= 0.80:",
-            paste0(
-              which(communalities >= 0.80),
-              collapse = ", "
-            ),
-            "\nThe dominant loadings on these variable(s) were decreased",
-            "incrementally by 0.01 until their communalities were < 0.80"
-          )
-        )
-
-      }
-
-      # Identify loadings with communalities greater than 0.90
-      target_loadings <- matrix(
-        loadings[which(communalities >= 0.80),],
-        ncol = ncol(loadings),
-        byrow = FALSE
-      )
-
-      # Decrease maximum loadings by 0.01
-      replace_loadings <- matrix(
-        apply(target_loadings, 1, function(x){
-
-          # Obtain signs
-          signs <- sign(x)
-
-          # Compute absolute max
-          x <- abs(x)
-
-          # Decrease by 0.01
-          x[which.max(x)] <- x[which.max(x)] - 0.01
-
-          # Add back signs
-          x <- x * signs
-
-          # Return loadings
-          return(x)
-
-        }),
-        ncol = ncol(loadings),
-        byrow = TRUE
-      )
-
-      # Replace loadings
-      loadings[which(communalities >= 0.80),] <- replace_loadings
-
-      # Check communalities
-      communalities <- diag(
-        loadings %*%
-          factor_correlations %*%
-          t(loadings)
-      )
-
-    }
 
   }
 
@@ -594,10 +521,7 @@ add_population_error <- function(
   }
 
   ## Check for categories greater than categorical limit and not infinite
-  categories_check <- (variable_categories > categorical_limit) & (!is.infinite(variable_categories))
-  if(any(categories_check)){
-    variable_categories[categories_check] <- Inf
-  }
+  variable_categories <- mark_continuous_categories(variable_categories, categorical_limit)
 
   ## Find categories
   if(any(variable_categories <= categorical_limit)){

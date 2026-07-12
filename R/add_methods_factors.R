@@ -128,8 +128,9 @@ add_method_factors <- function(
   variables <- parameters$variables
 
   # Set sequence of variables for each factor
-  end_variables <- cumsum(parameters$variables)
-  start_variables <- (end_variables + 1) - parameters$variables
+  variable_sequence <- factor_variable_sequence(parameters$variables)
+  start_variables <- variable_sequence$start
+  end_variables <- variable_sequence$end
 
   # Set factor sequence
   factor_sequence <- seq_len(ncol(loadings))
@@ -226,10 +227,6 @@ add_method_factors <- function(
       methods_loadings_matrix <- matrix(
         0, nrow = loading_dimensions[1], ncol = loading_dimensions[2]
       )
-
-      # Create starting and ending of variable sequences
-      end_variables <- cumsum(variables)
-      start_variables <- (end_variables + 1) - variables
 
       # Identify dominant loadings
       if(length(methods_loadings) == 1){methods_loadings <- rep(methods_loadings, parameters$factors)}
@@ -336,10 +333,7 @@ add_method_factors <- function(
   }
 
   # Check for categories greater than categorical limit and not infinite
-  categories_check <- (variable_categories > parameters$categorical_limit) & (!is.infinite(variable_categories))
-  if(any(categories_check)){
-    variable_categories[categories_check] <- Inf
-  }
+  variable_categories <- mark_continuous_categories(variable_categories, parameters$categorical_limit)
 
   # Set skew/categories
   ## Target columns to categorize and/or add skew

@@ -110,8 +110,9 @@ add_cross_loadings <- function(
   magnitude_cross_loadings <- inputs$magnitude_cross_loadings
 
   # Set sequence of variables for each factor
-  end_variables <- cumsum(parameters$variables)
-  start_variables <- (end_variables + 1) - parameters$variables
+  variable_sequence <- factor_variable_sequence(parameters$variables)
+  start_variables <- variable_sequence$start
+  end_variables <- variable_sequence$end
 
   # Obtain loadings
   loadings <- parameters$loadings
@@ -205,81 +206,10 @@ add_cross_loadings <- function(
 
     }
 
-    # Check communalities
-    communalities <- diag(
-      loadings %*%
-        factor_correlations %*%
-        t(loadings)
+    # Decrease dominant loadings until communalities are below threshold
+    loadings <- decrease_loadings_for_communalities(
+      loadings, factor_correlations, threshold = 0.90
     )
-
-    # Initialize break count
-    break_count <- 0
-
-    # Loop through until all communalities < 0.90
-    while(any(communalities >= 0.90)){
-
-      # Increase break count
-      break_count <- break_count + 1
-
-      # Message about adjustment
-      if(break_count == 1){
-
-        message(
-          paste(
-            "Communalities for the following variable(s) were >= 0.90:",
-            paste0(
-              which(communalities >= 0.90),
-              collapse = ", "
-            ),
-            "\nThe dominant loadings on these variable(s) were decreased",
-            "incrementally by 0.01 until their communalities were < 0.90"
-          )
-        )
-
-      }
-
-      # Identify loadings with communalities greater than 0.90
-      target_loadings <- matrix(
-        loadings[which(communalities >= 0.90),],
-        ncol = ncol(loadings),
-        byrow = FALSE
-      )
-
-      # Decrease maximum loadings by 0.01
-      replace_loadings <- matrix(
-        apply(target_loadings, 1, function(x){
-
-          # Obtain signs
-          signs <- sign(x)
-
-          # Compute absolute max
-          x <- abs(x)
-
-          # Decrease by 0.01
-          x[which.max(x)] <- x[which.max(x)] - 0.01
-
-          # Add back signs
-          x <- x * signs
-
-          # Return loadings
-          return(x)
-
-        }),
-        ncol = ncol(loadings),
-        byrow = TRUE
-      )
-
-      # Replace loadings
-      loadings[which(communalities >= 0.90),] <- replace_loadings
-
-      # Check communalities
-      communalities <- diag(
-        loadings %*%
-          factor_correlations %*%
-          t(loadings)
-      )
-
-    }
 
   }
 
@@ -424,5 +354,93 @@ add_cross_loadings_errors <- function(
       magnitude_cross_loadings = magnitude_cross_loadings
     )
   )
+
+}
+
+#' @noRd
+# Decreases dominant loadings until communalities are below a threshold ----
+# Used across `add_cross_loadings` and `add_population_error`
+# Updated 12.07.2026
+decrease_loadings_for_communalities <- function(loadings, factor_correlations, threshold)
+{
+
+  # Check communalities
+  communalities <- diag(
+    loadings %*%
+      factor_correlations %*%
+      t(loadings)
+  )
+
+  # Initialize break count
+  break_count <- 0
+
+  # Loop through until all communalities are below threshold
+  while(any(communalities >= threshold)){
+
+    # Increase break count
+    break_count <- break_count + 1
+
+    # Message about adjustment
+    if(break_count == 1){
+
+      message(
+        paste(
+          paste0("Communalities for the following variable(s) were >= ", sprintf("%.2f", threshold), ":"),
+          paste0(
+            which(communalities >= threshold),
+            collapse = ", "
+          ),
+          "\nThe dominant loadings on these variable(s) were decreased",
+          paste0("incrementally by 0.01 until their communalities were < ", sprintf("%.2f", threshold))
+        )
+      )
+
+    }
+
+    # Identify loadings with communalities greater than threshold
+    target_loadings <- matrix(
+      loadings[which(communalities >= threshold),],
+      ncol = ncol(loadings),
+      byrow = FALSE
+    )
+
+    # Decrease maximum loadings by 0.01
+    replace_loadings <- matrix(
+      apply(target_loadings, 1, function(x){
+
+        # Obtain signs
+        signs <- sign(x)
+
+        # Compute absolute max
+        x <- abs(x)
+
+        # Decrease by 0.01
+        x[which.max(x)] <- x[which.max(x)] - 0.01
+
+        # Add back signs
+        x <- x * signs
+
+        # Return loadings
+        return(x)
+
+      }),
+      ncol = ncol(loadings),
+      byrow = TRUE
+    )
+
+    # Replace loadings
+    loadings[which(communalities >= threshold),] <- replace_loadings
+
+    # Check communalities
+    communalities <- diag(
+      loadings %*%
+        factor_correlations %*%
+        t(loadings)
+    )
+
+  }
+
+  # Return adjusted loadings
+  return(loadings)
 
 }

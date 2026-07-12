@@ -319,8 +319,9 @@ correlate_residuals <- function(
   population_correlation <- original_correlation
 
   # Set start and end points for variables
-  end_variables <- cumsum(variables)
-  start_variables <- end_variables + 1 - variables
+  variable_sequence <- factor_variable_sequence(variables)
+  start_variables <- variable_sequence$start
+  end_variables <- variable_sequence$end
 
   # Set factor sequence
   factor_sequence <- seq_len(factors)
@@ -546,10 +547,7 @@ correlate_residuals <- function(
   }
 
   # Check for categories greater than categorical limit and not infinite
-  categories_check <- (variable_categories > categorical_limit) & (!is.infinite(variable_categories))
-  if(any(categories_check)){
-    variable_categories[categories_check] <- Inf
-  }
+  variable_categories <- mark_continuous_categories(variable_categories, categorical_limit)
 
   # Set skew/categories
   ## Target columns to categorize and/or add skew

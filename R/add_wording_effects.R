@@ -231,8 +231,9 @@ add_wording_effects <- function(
   variables <- parameters$variables
 
   # Set sequence of variables for each factor
-  end_variables <- cumsum(parameters$variables)
-  start_variables <- (end_variables + 1) - parameters$variables
+  variable_sequence <- factor_variable_sequence(parameters$variables)
+  start_variables <- variable_sequence$start
+  end_variables <- variable_sequence$end
 
   # Set factor sequence
   factor_sequence <- seq_len(ncol(loadings))
@@ -697,8 +698,9 @@ add_wording_acquiescence <- function(
 {
 
   # Set sequence of variables for each factor
-  end_variables <- cumsum(variables)
-  start_variables <- (end_variables + 1) - variables
+  variable_sequence <- factor_variable_sequence(variables)
+  start_variables <- variable_sequence$start
+  end_variables <- variable_sequence$end
 
   # Initialize signs
   candidate_variables <- rep(FALSE, nrow(loadings))
@@ -822,8 +824,9 @@ add_wording_difficulty <- function(
 {
 
   # Set sequence of variables for each factor
-  end_variables <- cumsum(variables)
-  start_variables <- (end_variables + 1) - variables
+  variable_sequence <- factor_variable_sequence(variables)
+  start_variables <- variable_sequence$start
+  end_variables <- variable_sequence$end
 
   # Initialize signs
   signs <- numeric(nrow(loadings))
@@ -953,8 +956,9 @@ add_wording_random_careless <- function(
 {
 
   # Set sequence of variables for each factor
-  end_variables <- cumsum(variables)
-  start_variables <- (end_variables + 1) - variables
+  variable_sequence <- factor_variable_sequence(variables)
+  start_variables <- variable_sequence$start
+  end_variables <- variable_sequence$end
 
   # Initialize signs
   candidate_variables <- rep(FALSE, nrow(loadings))
@@ -1077,8 +1081,9 @@ add_wording_straight_line <- function(
 {
 
   # Set sequence of variables for each factor
-  end_variables <- cumsum(variables)
-  start_variables <- (end_variables + 1) - variables
+  variable_sequence <- factor_variable_sequence(variables)
+  start_variables <- variable_sequence$start
+  end_variables <- variable_sequence$end
 
   # Initialize signs
   candidate_variables <- rep(FALSE, nrow(loadings))

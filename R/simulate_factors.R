@@ -227,8 +227,9 @@ simulate_factors <- function(
   if(length(variables) == 1){variables <- rep(variables, factors)}
 
   # Create starting and ending of variable sequences
-  end_variables <- cumsum(variables)
-  start_variables <- (cumsum(variables) + 1) - variables
+  variable_sequence <- factor_variable_sequence(variables)
+  start_variables <- variable_sequence$start
+  end_variables <- variable_sequence$end
 
   # Verify generalizable lengths
   if(length(loadings) == 1){loadings <- rep(loadings, factors)}
@@ -347,10 +348,7 @@ simulate_factors <- function(
   continuous_data <- data
 
   # Check for categories greater than categorical limit and not infinite
-  categories_check <- (variable_categories > categorical_limit) & (!is.infinite(variable_categories))
-  if(any(categories_check)){
-    variable_categories[categories_check] <- Inf
-  }
+  variable_categories <- mark_continuous_categories(variable_categories, categorical_limit)
 
   # Set skew/categories
   categorize_columns <- which(variable_categories <= categorical_limit)
@@ -601,5 +599,51 @@ simulate_factors_errors <- function(
       cross_loadings = cross_loadings, correlations = correlations, skew = skew
     )
   )
+
+}
+
+# Shared helpers ----
+#' @noRd
+# Sets starting and ending variable indices for each factor ----
+# Used across `simulate_factors`, `add_cross_loadings`, `add_local_dependence`,
+# `add_method_factors`, `add_population_error`, and `add_wording_effects`
+# Updated 12.07.2026
+factor_variable_sequence <- function(variables)
+{
+
+  # Determine ending variable index for each factor
+  end_variables <- cumsum(variables)
+
+  # Determine starting variable index for each factor
+  start_variables <- (end_variables + 1) - variables
+
+  # Return start and end sequences
+  return(
+    list(
+      start = start_variables,
+      end = end_variables
+    )
+  )
+
+}
+
+#' @noRd
+# Converts categories greater than the categorical limit to continuous ----
+# Used across `simulate_factors`, `add_local_dependence`,
+# `add_method_factors`, and `add_population_error`
+# Updated 12.07.2026
+mark_continuous_categories <- function(variable_categories, categorical_limit)
+{
+
+  # Check for categories greater than categorical limit and not infinite
+  categories_check <- (variable_categories > categorical_limit) & (!is.infinite(variable_categories))
+
+  # Make variables with categories greater than the limit continuous
+  if(any(categories_check)){
+    variable_categories[categories_check] <- Inf
+  }
+
+  # Return adjusted categories
+  return(variable_categories)
 
 }
