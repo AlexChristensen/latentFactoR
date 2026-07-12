@@ -4,6 +4,15 @@
 #' manipulable parameters. Parameters do not have default values and
 #' must each be set. See examples to get started
 #'
+#' The population correlation matrix (variable-level) implied by the factor model is:
+#'
+#' \deqn{\boldsymbol{\Sigma} = \boldsymbol{\Lambda} \boldsymbol{\Phi} \boldsymbol{\Lambda}' + \boldsymbol{\Theta}}{Sigma = Lambda * Phi * Lambda' + Theta}
+#'
+#' where \eqn{\boldsymbol{\Lambda}}{Lambda} is the loading matrix (variables x factors; \code{loadings}
+#' and \code{cross_loadings}), \eqn{\boldsymbol{\Phi}}{Phi} is the factor correlation matrix
+#' (\code{correlations}), and \eqn{\boldsymbol{\Theta}}{Theta} is a diagonal matrix of uniquenesses
+#' that ensures unit variance for each variable
+#'
 #' @param factors Numeric (length = 1).
 #' Number of factors
 #'
@@ -174,9 +183,6 @@
 #' Investigating the performance of exploratory graph analysis and traditional techniques to identify the number of latent factors: A simulation and tutorial.
 #' \emph{Psychological Methods}, \emph{25}(3), 292-320.
 #'
-#' @importFrom stats qnorm rnorm runif
-#' @importFrom methods is
-#'
 #' @export
 #'
 # Main factor simulation function
@@ -242,8 +248,27 @@ simulate_factors <- function(
   check_eigenvalues <- TRUE
   check_communalities <- TRUE
 
+  # Initialize iteration counter (guards against an infinite loop when the supplied
+  # structure leaves no randomness to escape an inadmissible solution, e.g. `loadings`
+  # and `correlations` are both fixed matrices rather than drawn from ranges)
+  iterations <- 0
+  max_iterations <- 1000
+
   # Run through loop
   while(isTRUE(check_eigenvalues) | isTRUE(check_communalities)){
+
+    # Increment iteration counter and check against maximum
+    iterations <- iterations + 1
+    if(iterations > max_iterations){
+      stop(
+        paste0(
+          "Could not find an admissible (positive semi-definite) solution after ",
+          max_iterations, " attempts. The supplied `loadings` and `correlations` may be ",
+          "jointly inadmissible (e.g. communalities exceeding .90 or a non-positive-definite ",
+          "correlation matrix). Try relaxing fixed matrices into ranges or adjusting values"
+        )
+      )
+    }
 
     # Generate loadings matrix
     if(!is(loadings, "matrix")){

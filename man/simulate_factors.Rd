@@ -127,6 +127,16 @@ Simulates data from a latent factor model based on many
 manipulable parameters. Parameters do not have default values and
 must each be set. See examples to get started
 }
+\details{
+The population correlation matrix (variable-level) implied by the factor model is:
+
+\deqn{\boldsymbol{\Sigma} = \boldsymbol{\Lambda} \boldsymbol{\Phi} \boldsymbol{\Lambda}' + \boldsymbol{\Theta}}{Sigma = Lambda * Phi * Lambda' + Theta}
+
+where \eqn{\boldsymbol{\Lambda}}{Lambda} is the loading matrix (variables x factors; \code{loadings}
+and \code{cross_loadings}), \eqn{\boldsymbol{\Phi}}{Phi} is the factor correlation matrix
+(\code{correlations}), and \eqn{\boldsymbol{\Theta}}{Theta} is a diagonal matrix of uniquenesses
+that ensures unit variance for each variable
+}
 \examples{
 # Generate factor data
 two_factor <- simulate_factors(

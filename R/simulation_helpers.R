@@ -305,7 +305,6 @@ effect_table <- function(
 }
 
 #' All-in-one ANOVA and partial eta squared
-#' @importFrom stats aov as.formula
 #' @noRd
 # Updated 30.07.2024
 obtain_effect_sizes <- function(

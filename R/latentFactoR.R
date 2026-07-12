@@ -26,8 +26,13 @@
 #'
 #' @useDynLib latentFactoR, .registration = TRUE
 #'
-#' @importFrom stats optimize
-#' @importFrom utils packageDescription
+#' @import mlr
+#' @import xgboost
+#'
+#' @importFrom graphics abline
+#' @importFrom methods is
+#' @importFrom stats aov as.formula cor lm na.omit nlminb optim optimize predict qnorm rnorm runif sd wilcox.test
+#' @importFrom utils capture.output data packageDescription packageVersion
 #'
 "_PACKAGE"
 #> [1] "_PACKAGE"

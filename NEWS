@@ -1,5 +1,13 @@
 Changes in version 0.0.8
 
++ ADD: `simulate_hierarchical_factors` simulates data from a hierarchical (second-order) factor model, where variables load onto lower-order factors and lower-order factors load onto higher-order factors
+
++ ADD: `print`/`summary` methods for `simulate_factors`/`simulate_hierarchical_factors` output, reporting loadings, correlations, disturbances, categories, and skew
+
++ FIX: `simulate_factors` could loop indefinitely when supplied `loadings`/`correlations` were jointly inadmissible; now errors after 1000 attempts with an informative message
+
++ INTERNAL: consolidated `@import`/`@importFrom` roxygen tags into a single package-level block in `latentFactoR.R`
+
 + INTERNAL: cleaned up and optimized code in `simulate_factors`
 
 + INTERNAL: random number generation moved to C

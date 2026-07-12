@@ -73,10 +73,6 @@
 #' in exploratory factor analysis.
 #' \emph{Psychological Methods}, \emph{25}(6), 776-786.
 #'
-#' @import xgboost
-#' @import mlr
-#' @importFrom stats sd predict
-#'
 #' @export
 #'
 # Factor Forest

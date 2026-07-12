@@ -69,8 +69,6 @@
 #' Hudson Golino <hfg9s@virginia.edu>,
 #' Luis Eduardo Garrido <luisgarrido@pucmm.edu>
 #'
-#' @importFrom utils capture.output
-#'
 #' @export
 #'
 # Estimate several different factor recovery methods

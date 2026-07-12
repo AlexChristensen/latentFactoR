@@ -103,8 +103,6 @@
 #' Hudson Golino <hfg9s@virginia.edu>,
 #' Luis Eduardo Garrido <luisgarrido@pucmm.edu>
 #' 
-#' @importFrom stats cor
-#' 
 #' @export
 #'
 # Transform data to Zipf's distribution

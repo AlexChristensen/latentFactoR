@@ -169,8 +169,6 @@
 #' A systematic evaluation of wording effects modeling under the exploratory structural equation modeling framework.
 #' \emph{PsyArXiv}.
 #'
-#' @importFrom utils data
-#'
 #' @export
 #'
 # Add wording effects to simulated data ----

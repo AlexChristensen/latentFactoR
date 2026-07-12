@@ -111,7 +111,6 @@ groot_ml <- function(x, delta, G) {
 }
 
 #' @noRd
-#' @importFrom stats optim
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # Optimization function
@@ -266,7 +265,6 @@ gURhat <- function(p) {
 }
 
 #' @noRd
-#' @importFrom stats lm
 # Adds population error using Cudeck method to generated data
 # Updated 26.05.2024
 cudeck <- function(R, lambda, Phi, Psi,
@@ -645,7 +643,6 @@ g_ml <- function(
 }
 
 #' @noRd
-#' @importFrom stats runif nlminb
 # From {bifactor} version 0.1.0
 # Accessed on 17.09.2022
 # CFA function
@@ -1206,8 +1203,6 @@ nearest_decimal <- function(vec)
 #%%%%%%%%%%%%%%%%%%%
 
 #' @noRd
-#' @importFrom stats wilcox.test
-#' @importFrom graphics abline
 # EFA comparison
 # Updated 30.09.2022
 EFA.Comp.Data <- function(Data, F.Max, N.Pop = 10000, N.Samples = 500, Alpha = .30, Graph = F, Spearman = F, use)
@@ -1668,8 +1663,6 @@ range_error <- function(input, expected_ranges){
 #'
 #' @noRd
 #'
-#' @importFrom utils packageVersion
-#'
 # Error Report
 # Updated 08.08.2022
 error.report <- function(result, SUB_FUN, FUN)
@@ -2016,7 +2009,6 @@ update_defaults <- function(FUN, FUN_args)
 }
 
 #' @noRd
-#' @importFrom stats na.omit
 # Function to obtain arguments
 # Updated 30.09.2022
 obtain_arguments <- function(FUN, FUN_args)
