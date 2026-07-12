@@ -34,7 +34,7 @@ Minimum three variables per factor}
 Range of variables to randomly select from a random uniform distribution.
 Minimum three variables per factor}
 
-\item{loadings}{Numeric or matrix (length = 1, \code{factors}, total number of variables (\code{factors} x \code{variables}), or \code{factors} x total number of variables.
+\item{loadings}{Numeric or matrix (length = 1, \code{factors}, total number of variables (\code{factors} x \code{variables}), or total number of variables x \code{factors}).
 Loadings drawn from a random uniform distribution using +/- 0.10 of value input.
 Can be a single value or as many values as there are factors (corresponding to the factors).
 Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} x \code{variables})
@@ -44,7 +44,7 @@ General effect sizes range from small (0.40), moderate (0.55), to large (0.70)}
 Range of loadings to randomly select from a random uniform distribution.
 General effect sizes range from small (0.40), moderate (0.55), to large (0.70)}
 
-\item{cross_loadings}{Numeric or matrix(length = 1, \code{factors}, or \code{factors} x total number of variables.
+\item{cross_loadings}{Numeric or matrix (length = 1, \code{factors}, or total number of variables x \code{factors}).
 Cross-loadings drawn from a random normal distribution with a mean of 0 and standard deviation of value input.
 Can be a single value or as many values as there are factors (corresponding to the factors).
 Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} x \code{variables})}
@@ -94,6 +94,9 @@ Returns a list containing:
 
 \item{population_correlation}{Population correlation matrix}
 
+\item{continuous_data}{Simulated data before categories and skew were applied
+(i.e., the underlying continuous data)}
+
 \item{parameters}{
 A list containing the parameters used to generate the data:
 
@@ -105,9 +108,13 @@ A list containing the parameters used to generate the data:
 
 \item \code{loadings} --- Loading matrix
 
+\item \code{cross_loadings} --- Cross-loadings used for each factor
+
 \item \code{factor_correlations} --- Correlations between factors
 
 \item \code{categories} --- Categories for each variable
+
+\item \code{categorical_limit} --- Category limit used to determine continuous variables
 
 \item \code{skew} --- Skew for each variable
 

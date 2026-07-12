@@ -1,3 +1,18 @@
+Changes in version 0.0.8
+
++ INTERNAL: cleaned up and optimized code in `simulate_factors`
+
++ INTERNAL: random number generation moved to C
+
++ INTERNAL: cleaned up and optimized code in `add_cross_loadings`, `add_local_dependence`, `add_method_factors`, `add_population_error`, and `add_wording_effects` to match `simulate_factors` (uses C-based random number generation)
+
++ FIX: `add_cross_loadings` could error with "missing value where TRUE/FALSE needed" when a factor was randomly assigned zero cross-loadings (e.g., via `proportion_cross_loadings_range`)
+
++ FIX: `proportion_negative_range` in `add_method_factors` was documented but not implemented; it now works as documented
+
++ FIX: documentation in `simulate_factors` was missing the `continuous_data` return value and the `cross_loadings`/`categorical_limit` parameters list, and had the loadings matrix dimensions reversed
+
+
 Changes in version 0.0.7
 
 + FIX: error check for positive definite in `add_population_error`

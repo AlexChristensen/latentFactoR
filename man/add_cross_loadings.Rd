@@ -18,12 +18,12 @@ add_cross_loadings(
 
 \item{proportion_cross_loadings}{Numeric (length = 1 or \code{factors}).
 Proportion of variables that should be cross-loaded randomly onto
-one other factor. Accepts number of variables to 
+one other factor. Accepts number of variables to
 cross-load onto one other factor as well}
 
 \item{proportion_cross_loadings_range}{Numeric (length = 2).
 Range of proportion of variables that should be cross-loaded randomly onto
-one other factor. Accepts number of variables to 
+one other factor. Accepts number of variables to
 cross-load onto one other factor as well}
 
 \item{magnitude_cross_loadings}{Numeric (length = 1, \code{factors}, or total number of variables to cross-load across all factors).
@@ -49,7 +49,7 @@ and \code{parameters} (specifically, \code{loadings} matrix). Also returns
 original \code{lf_object} in \code{original_results}
 }
 \description{
-Intended to add substantial cross-loadings to simulated data from \code{\link[latentFactoR]{simulate_factors}}. 
+Intended to add substantial cross-loadings to simulated data from \code{\link[latentFactoR]{simulate_factors}}.
 See examples to get started
 }
 \examples{

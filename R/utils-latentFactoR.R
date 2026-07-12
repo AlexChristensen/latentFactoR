@@ -860,496 +860,6 @@ yuan <- function(R, lambda, Phi, Psi,
 
 }
 
-#%%%%%%%%%%%%%%%%%%%%%%%%%%
-# add_local_dependence ----
-#%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-#' @noRd
-# Adds correlated residuals to generated data
-# Updated 22.01.2022
-correlate_residuals <- function(
-    lf_object,
-    proportion_LD, allow_multiple = FALSE,
-    add_residuals, add_residuals_range
-)
-{
-
-  # Obtain parameters
-  parameters <- lf_object$parameters
-
-  # Set parameters
-  factors <- parameters$factors
-  variables <- parameters$variables
-  loadings <- parameters$loadings
-  total_variables <- sum(variables)
-  sample_size <- nrow(lf_object$data)
-  variable_categories <- parameters$categories
-  categorical_limit <- parameters$categorical_limit
-  skew <- parameters$skew
-  original_correlation <- lf_object$population_correlation
-  population_correlation <- original_correlation
-
-  # Obtain number of local dependencies
-  variables_LD <- round(proportion_LD * variables)
-
-  # If variables cannot have multiple local dependencies,
-  # then number of local dependencies needs to be cut in half (per factor)
-  if(!isTRUE(allow_multiple)){
-    variables_LD <- ifelse(
-      variables_LD == 1, variables_LD,
-      floor(variables_LD / 2)
-    )
-  }
-
-  # Check for add residual range
-  if(!is.null(add_residuals_range)){
-    type_error(add_residuals_range, "numeric") # object type error
-    length_error(add_residuals_range, 2) # object length error
-    range_error(add_residuals_range, c(0, 1)) # object range error
-    add_residuals <- runif(
-      sum(variables_LD),
-      min = min(add_residuals_range),
-      max = max(add_residuals_range)
-    )
-  }
-
-  # Ensure appropriate types
-  type_error(add_residuals, "numeric");
-
-  # Ensure appropriate lengths
-  length_error(add_residuals, c(1, parameters$factors, sum(variables_LD)));
-
-  # Ensure appropriate ranges
-  range_error(add_residuals, c(0, 1));
-
-  # Set start and end points for variables
-  end_variables <- cumsum(variables)
-  start_variables <- end_variables + 1 - variables
-
-  # Initialize checks
-  check_eigenvalues <- TRUE
-
-  # Run through loop
-  while(isTRUE(check_eigenvalues)){
-
-    # Initialize correlated residual matrix
-    correlated_residuals <- matrix(
-      0, nrow = 0, ncol = 2
-    )
-
-    # Loop through factors and add local dependence
-    for(f in 1:factors){
-
-      # Determine available variables
-      available_variables <- start_variables[f]:end_variables[f]
-
-      # Check for cross-loading class
-      if(is(lf_object, "lf_cl")){
-
-        # Obtain loadings for available variables (ensure matrix)
-        available_loadings <- matrix(
-          loadings[available_variables, -f],
-          ncol = factors - 1
-        )
-
-        # Collect sum of cross-loadings
-        sum_cross_loadings <- rowSums(available_loadings)
-
-        # Remove variables with non-zero cross-loadings
-        available_variables <- available_variables[
-          sum_cross_loadings == 0
-        ]
-
-      }
-
-      # Item rows
-      item_rows <- sample(
-        available_variables,
-        variables_LD[f],
-        replace = allow_multiple
-      )
-
-      # Set remaining variables
-      if(isTRUE(allow_multiple)){
-
-        # Do not remove variables
-        remaining_variables <- available_variables
-
-      }else{
-
-        # Remove already included variables
-        remaining_variables <- setdiff(
-          available_variables, item_rows
-        )
-
-      }
-
-      # Item columns
-      item_columns <- sample(
-        remaining_variables,
-        variables_LD[f],
-        replace = allow_multiple
-      )
-
-      # Bind to correlated residual matrix
-      correlated_residuals <- rbind(
-        correlated_residuals,
-        cbind(item_rows, item_columns)
-      )
-
-      # Obtain same variable rows
-      same_variable_rows <- which(
-        correlated_residuals[,"item_rows"] ==
-          correlated_residuals[,"item_columns"]
-      )
-
-      # Replace until there are no duplicate rows
-      while(any(same_variable_rows)){
-
-        # Replace second column with new variable
-        correlated_residuals[same_variable_rows, 2] <- sample(
-          remaining_variables,
-          length(same_variable_rows),
-          replace = allow_multiple
-        )
-
-        # Re-check for duplicate rows
-        same_variable_rows <- which(
-          correlated_residuals[,"item_rows"] ==
-            correlated_residuals[,"item_columns"]
-        )
-
-      }
-
-      # Obtain duplicate rows
-      duplicate_rows <- match_row(correlated_residuals)
-
-      # Replace until there are no duplicate rows
-      while(any(duplicate_rows)){
-
-        # Replace second column with new variable
-        correlated_residuals[duplicate_rows, 2] <- sample(
-          remaining_variables,
-          length(duplicate_rows),
-          replace = allow_multiple
-        )
-
-        # Re-check for duplicate rows
-        duplicate_rows <- match_row(correlated_residuals)
-
-      }
-
-    }
-
-    # Add column for residual
-    correlated_residuals <- cbind(
-      correlated_residuals, rep(0, nrow(correlated_residuals))
-    )
-
-    # Add column name for residual
-    colnames(correlated_residuals)[3] <- "residual_correlation"
-
-    # Loop through correlated residuals
-    if(nrow(correlated_residuals) != 0){
-
-      # Check if add residuals length equals 1 or number of factors
-      if(length(add_residuals) != sum(variables_LD)){
-
-        # If only one value
-        if(length(add_residuals) == 1){
-          add_residuals <- rep(add_residuals, sum(variables_LD))
-        }else if(length(add_residuals) == parameters$factors){# Length of factors
-
-          # Loop through number of local dependence variables
-          add_residuals <- unlist(lapply(1:parameters$factors, function(i){
-            rep(add_residuals[i], variables_LD[i])
-          }))
-
-        }
-
-      }
-
-      # Loop through correlated residuals
-      if(nrow(correlated_residuals) != 0){
-
-        # Loop through correlated residuals
-        for(i in 1:nrow(correlated_residuals)){
-
-          # Insert or compute random residual
-          if(!is.null(add_residuals_range)){
-            random_residual <- add_residuals[i]
-          }else{
-            random_residual <- runif(
-              1,
-              min = add_residuals[i] - 0.05,
-              max = add_residuals[i] + 0.05
-            )
-          }
-
-          # Obtain sign
-          original_sign <- sign(original_correlation[
-            correlated_residuals[i,1],
-            correlated_residuals[i,2]
-          ])
-
-          # Add residuals to correlation matrix
-          population_correlation[
-            correlated_residuals[i,1],
-            correlated_residuals[i,2]
-          ] <- (abs(original_correlation[
-            correlated_residuals[i,1],
-            correlated_residuals[i,2]
-          ]) + random_residual) * original_sign
-
-          # Ensure symmetric
-          population_correlation[
-            correlated_residuals[i,2],
-            correlated_residuals[i,1]
-          ] <- population_correlation[
-            correlated_residuals[i,1],
-            correlated_residuals[i,2]
-          ]
-
-          # Add random residual to output
-          correlated_residuals[i,"residual_correlation"] <-
-            random_residual * original_sign
-
-        }
-
-      }
-
-    }
-
-    # Check eigenvalues
-    check_eigenvalues <- any(eigen(population_correlation)$values <= 0)
-
-    # Return population correlation to original state (if necessary)
-    if(isTRUE(check_eigenvalues)){
-      population_correlation <- original_correlation
-    }
-
-  }
-
-  # Cholesky decomposition
-  cholesky <- chol(population_correlation)
-
-  # Generate data
-  data <- mvtnorm::rmvnorm(sample_size, sigma = diag(total_variables))
-
-  # Make data based on factor structure
-  data <- data %*% cholesky
-
-  # Ensure appropriate type and length for categories
-  type_error(variable_categories, "numeric")
-  length_error(variable_categories, c(1, total_variables))
-
-  # Identify categories to variables
-  if(length(variable_categories) == 1){
-    variable_categories <- rep(variable_categories, total_variables)
-  }
-
-  # Check for categories greater than categorical limit and not infinite
-  if(any(variable_categories > categorical_limit & !is.infinite(variable_categories))){
-
-    # Make variables with categories greater than 7 (or categorical_limit) continuous
-    variable_categories[
-      variable_categories > categorical_limit & !is.infinite(variable_categories)
-    ] <- Inf
-
-  }
-
-  # Set skew/categories
-  ## Target columns to categorize and/or add skew
-  categorize_columns <- which(variable_categories <= categorical_limit)
-  continuous_columns <- setdiff(1:ncol(data), categorize_columns)
-
-  # Ensure skew is in the appropriate direction for correlated residuals
-  if(nrow(correlated_residuals) != 0){
-
-    # 1. Obtain loading signs
-    signs <- numeric(nrow(loadings))
-
-    # Ensure proper signs for skew
-    for(i in 1:ncol(loadings)){
-
-      # Target dominant loadings
-      target_loadings <- start_variables[i]:end_variables[i]
-
-      # Determine sign
-      signs[target_loadings] <- sign(loadings[target_loadings, i])
-
-    }
-
-    # 2. Obtain correlated residual chains
-
-    # Obtain residual variables
-    residual_variables <- correlated_residuals[,c(
-      "item_rows", "item_columns"
-    )]
-
-    # Ensure matrix
-    if(!is.matrix(residual_variables)){
-      residual_variables <- t(as.matrix(residual_variables))
-    }
-
-    # Initialize residual chain list
-    residual_chain <- vector("list", nrow(residual_variables))
-
-    # Create residual chain
-    while(nrow(residual_variables) != 0){
-
-      # Determine if either variable exists in residual chain
-      combine_residuals <- unlist(
-        lapply(residual_chain, function(x){
-
-          if(any(residual_variables[1,] %in% x)){
-            return(TRUE)
-          }else{
-            return(FALSE)
-          }
-
-        })
-      )
-
-      # Check for whether to combine
-      if(!any(combine_residuals)){
-
-        # Find NULL lists
-        null_list <- unlist(lapply(residual_chain, is.null))
-
-        # First NULL list
-        residual_chain[[which(null_list)[1]]] <-
-          unique(as.vector(residual_variables[1,]))
-
-      }else if(sum(combine_residuals) == 1){
-
-        # Find residual chain to add to
-        add_to_chain <- which(combine_residuals)
-
-        # Add variables to chain
-        residual_chain[[add_to_chain]] <- unique( # keep unique
-          c(
-            residual_chain[[add_to_chain]], # existing chain
-            as.vector(residual_variables[1,]) # new to add
-          )
-        )
-
-      }else{
-
-        # Find residual chains to merge
-        merge_chains <- which(combine_residuals)
-
-        # Merge into first merge
-        residual_chain[[merge_chains[1]]] <- unique(unlist(residual_chain[merge_chains]))
-
-        # Add to first merge chain
-        residual_chain[[merge_chains[1]]] <- unique( # keep unique
-          c(
-            residual_chain[[merge_chains[1]]], # existing chain
-            as.vector(residual_variables[1,]) # new to add
-          )
-        )
-
-        # Set second merge chain to NULL
-        residual_chain[[merge_chains[2]]] <- NULL
-
-      }
-
-      # Remove residual variables from consideration
-      residual_variables <- matrix(residual_variables[-1,], ncol = 2)
-
-    }
-
-    # Find NULL lists
-    null_list <- unlist(lapply(residual_chain, is.null))
-
-    # Keep non-NULL chains
-    residual_chain <- residual_chain[!null_list]
-
-    # Ensure skew in the same direction
-    for(i in seq_along(residual_chain)){
-
-      # Handle skew
-      skew[residual_chain[[i]]] <- handle_skew_signs(
-        skews = skew[residual_chain[[i]]],
-        signs = signs[residual_chain[[i]]]
-      )
-
-    }
-
-  }
-
-  ## Check for categories
-  if(length(categorize_columns) != 0){
-
-    # Set skew
-    if(length(skew) == 1){
-      skew <- rep(skew, length(categorize_columns))
-    }else if(length(skew) != ncol(data)){
-      skew <- sample(skew, length(categorize_columns), replace = TRUE)
-    }
-
-    # Loop through columns
-    for(i in categorize_columns){
-
-      data[,i] <- categorize(
-        data = data[,i],
-        categories = variable_categories[i],
-        skew_value = skew[i]
-      )
-
-    }
-
-  }
-
-  ## Check for continuous
-  if(length(continuous_columns) != 0){
-
-    # Set skew
-    if(length(skew) == 1){
-      skew <- rep(skew, length(continuous_columns))
-    }else if(length(skew) != ncol(data)){
-      skew <- sample(skew, length(continuous_columns), replace = TRUE)
-    }
-
-    # Loop through columns
-    for(i in continuous_columns){
-
-      data[,i] <- skew_continuous( # function in `utils-latentFactoR`
-        skewness = skew[i],
-        data = data[,i]
-      )
-
-    }
-
-  }
-
-  # Add column names to data
-  colnames(data) <- paste0(
-    "V", formatC(
-      x = 1:total_variables,
-      digits = floor(log10(total_variables)),
-      flag = "0", format = "d"
-    )
-  )
-
-  # Update skews
-  parameters$skew <- skew
-
-  # Populate results
-  results <- list(
-    data = data,
-    population_correlation = population_correlation,
-    parameters = parameters,
-    correlated_residuals = as.data.frame(correlated_residuals),
-    original_results = lf_object
-  )
-
-  # Return results
-  return(results)
-
-}
-
 #%%%%%%%%%%%%%%%%
 # categorize ----
 #%%%%%%%%%%%%%%%%
@@ -1439,99 +949,66 @@ skew_single_variable <- function(data, skew_values){
 # https://doi.org/10.1177/0013164410389489
 #
 #' @noRd
-# Generates skewed data for continuous data
-# Updated 24.07.2024
-skew_continuous <- function(
-    skewness,
-    data = NULL,
-    sample_size = 1000000,
-    tolerance = 0.00001
-)
+# Generates skewed data for continuous data ----
+# Updated 13.03.2026
+skew_continuous <- function(skew, data = NULL, sample_size = 1e06, tolerance = 1e-05)
 {
-
-  # Check for zero skew (skip adding skew)
-  if(skewness == 0){
-    return(data)
-  }
 
   # Generate data
   if(is.null(data)){
-    data <- rnorm(sample_size)
+    data <- rnorm_ziggurat(sample_size)
   }
 
-  # Kurtosis
+  # Check for zero skew (add minimal skew)
+  if(skew == 0){
+    return(data)
+  }
+
+  # Obtain sign and absolute skew
+  skew_sign <- sign(skew)
+  absolute <- abs(skew)
+
+  # Compute arcsinh once
+  arcsinh_data <- asinh(data)
+
+  # Initialize kurtosis
   kurtosis <- 1
 
-  # Initialize increments
-  increments <- 0.01
+  # Optimize for result
+  objective <- function(kurtosis){
 
-  # Seek along a range of skews
-  skew_values <- seq(
-    -2, 2, increments
-  )
-
-  # Compute skews
-  skews <- unlist(lapply(skew_values, function(x){
-    # Skew data
-    skew_data <- sinh(
-      kurtosis * (asinh(data) + x)
+    # Optimize for skew
+    optimize(
+      f = function(x){
+        abs(absolute - psych::skew(sinh(kurtosis * (arcsinh_data + x))))
+      }, interval = c(0, absolute + 2), tol = tolerance
     )
-
-    # Observed skew in data
-    psych::skew(skew_data)
-  }))
-
-  # Compute minimum index
-  minimum <- which.min(abs(skewness - skews))
-
-  # Check for whether skewness is found
-  while(abs(skewness - skews[minimum]) > tolerance){
-
-    # Check for minimum value
-    if(minimum == 1){
-      kurtosis <- kurtosis - 0.1
-    }else if(minimum == length(skews)){
-      kurtosis <- kurtosis + 0.1
-    }else{
-
-      # Decrease increments
-      increments <- 0.01 * 0.1
-
-      # Seek along a range of skews
-      skew_values <- seq(
-        skew_values[minimum - 1],
-        skew_values[minimum + 1],
-        length.out = 100
-      )
-
-    }
-
-    # Compute skews
-    skews <- unlist(lapply(skew_values, function(x){
-      # Skew data
-      skew_data <- sinh(
-        kurtosis * (asinh(data) + x)
-      )
-
-      # Observed skew in data
-      psych::skew(skew_data)
-    }))
-
-    # Compute minimum index
-    minimum <- which.min(abs(skewness - skews))
 
   }
 
-  # Compute final skew data
-  skew_data <- sinh(
-    kurtosis * (asinh(data) + skew_values[minimum])
-  )
+  # Repeat until convergence
+  repeat{
 
-  # Re-scale
-  skew_data <- scale(skew_data)
+    # Get result
+    result <- silent_call(objective(kurtosis))
 
-  # Return skewed data
-  return(skew_data)
+    # Check for minimum too low
+    if(is.na(result$objective)){
+      return(data)
+    }
+
+    # Check for tolerance
+    if(result$objective < tolerance){
+      break
+    }
+
+    # Update kurtosis
+    kurtosis <- kurtosis + result$objective * 0.25 # learning rate
+
+  }
+
+  # Return result
+  return(skew_sign * scale(sinh(kurtosis * (arcsinh_data + result$minimum))))
 
 }
 
@@ -2038,6 +1515,26 @@ estimate_parameters <- function(
 
   # Return parameters
   return(sequences[which.min(sse),])
+
+}
+
+#' @noRd
+# General function to silently obtain output ----
+# Updated 01.07.2023
+silent_call <- function(...)
+{
+
+  # Make call
+  sink <- capture.output(
+    result <- suppressWarnings(
+      suppressMessages(
+        ...
+      )
+    )
+  )
+
+  # Return result
+  return(result)
 
 }
 

@@ -169,7 +169,7 @@
 #' @export
 #'
 # Add population error to simulated data
-# Updated 03.11.2025
+# Updated 12.07.2026
 add_population_error <- function(
     lf_object,
     cfa_method = c("minres", "ml"),
@@ -181,24 +181,6 @@ add_population_error <- function(
     leave_cross_loadings = FALSE
 )
 {
-
-  # Check for appropriate class
-  if(!is(lf_object, "lf_simulate")){
-
-    # Produce error
-    stop(
-      paste(
-        "`lf_object` input is not class \"lf_simulate\" from the `simulate_factors` function.",
-        "\n\nInput class(es) of current `lf_object`:",
-        paste0("\"", class(lf_object), "\"", collapse = ", "),
-        "\n\nUse `simulate_factors` to generate your data to input into this function"
-      )
-    )
-
-  }
-
-  # Obtain parameters from simulated data
-  parameters <- lf_object$parameters
 
   # Check for missing CFA method
   if(missing(cfa_method)){
@@ -220,8 +202,8 @@ add_population_error <- function(
     error_method <- "cudeck"
   }else{error_method <- tolower(match.arg(error_method))}
 
-  # Check for appropriate misfit
-  length_error(misfit, 1);
+  # Check inputs
+  parameters <- add_population_error_errors(lf_object, misfit)
 
   # Obtain loadings
   loadings <- parameters$loadings
@@ -251,7 +233,7 @@ add_population_error <- function(
     start_variables <- (end_variables + 1) - parameters$variables
 
     # Loop through loadings
-    for(i in 1:ncol(loadings)){
+    for(i in seq_len(ncol(loadings))){
 
       # Set cross-loadings to zero
       loadings[
@@ -435,13 +417,7 @@ add_population_error <- function(
         }
 
       }else if(
-        any(
-          eigen(
-            x = population_error$R_error,
-            symmetric = TRUE,
-            only.values = TRUE
-          )$values < .Machine$double.eps
-        )
+        any(matrix_eigenvalues(population_error$R_error) < .Machine$double.eps)
       ){
 
         # Increase positive definite stuck count
@@ -478,7 +454,9 @@ add_population_error <- function(
     error_correlation <- population_error$R_error
 
     # Add row and column names to population error correlation matrix
-    colnames(error_correlation) <- paste0("V", 1:ncol(error_correlation))
+    colnames(error_correlation) <- paste0(
+      "V", format_integer(seq_len(ncol(error_correlation)), digits(ncol(error_correlation)) - 1)
+    )
     row.names(error_correlation) <- colnames(error_correlation)
 
     # Specify the CFA model
@@ -616,13 +594,9 @@ add_population_error <- function(
   }
 
   ## Check for categories greater than categorical limit and not infinite
-  if(any(variable_categories > categorical_limit & !is.infinite(variable_categories))){
-
-    ## Make variables with categories greater than 7 (or categorical_limit) continuous
-    variable_categories[
-      variable_categories > categorical_limit & !is.infinite(variable_categories)
-    ] <- Inf
-
+  categories_check <- (variable_categories > categorical_limit) & (!is.infinite(variable_categories))
+  if(any(categories_check)){
+    variable_categories[categories_check] <- Inf
   }
 
   ## Find categories
@@ -633,7 +607,7 @@ add_population_error <- function(
 
     ## Set skew
     if(length(skew) != length(columns)){
-      skew <- sample(skew, length(columns), replace = TRUE)
+      skew <- shuffle_replace(skew, length(columns))
     }
 
     ## Loop through columns
@@ -651,11 +625,7 @@ add_population_error <- function(
 
   ## Add column names to data
   colnames(data) <- paste0(
-    "V", formatC(
-      x = 1:total_variables,
-      digits = floor(log10(total_variables)),
-      flag = "0", format = "d"
-    )
+    "V", format_integer(seq_len(total_variables), digits(total_variables) - 1)
   )
 
   ## Populate results
@@ -699,6 +669,35 @@ add_population_error <- function(
 
   # Return results
   return(results)
+
+}
+
+# Input checking ----
+#' @noRd
+# Updated 12.07.2026
+add_population_error_errors <- function(lf_object, misfit)
+{
+
+  # Check for appropriate class
+  if(!is(lf_object, "lf_simulate")){
+
+    # Produce error
+    stop(
+      paste(
+        "`lf_object` input is not class \"lf_simulate\" from the `simulate_factors` function.",
+        "\n\nInput class(es) of current `lf_object`:",
+        paste0("\"", class(lf_object), "\"", collapse = ", "),
+        "\n\nUse `simulate_factors` to generate your data to input into this function"
+      )
+    )
+
+  }
+
+  # Check for appropriate misfit
+  length_error(misfit, 1)
+
+  # Return checked input
+  return(lf_object$parameters)
 
 }
 
