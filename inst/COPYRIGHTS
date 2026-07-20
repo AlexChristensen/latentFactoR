@@ -1,0 +1,9 @@
+Files: src/xoshiro.c
+Copyright: 2019 David Blackman and Sebastiano Vigna (vigna@acm.org)
+License: CC0
+Comment: Dedicated to the public domain via CC0. No rights reserved. Modified by Alexander P. Christensen, 15 August 2023.
+
+Files: src/ziggurat.c
+Copyright: John Burkardt
+License: LGPL (>= 2)
+Comment: Original ziggurat implementation. Modified by Alexander P. Christensen, 30 July 2023.

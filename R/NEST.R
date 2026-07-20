@@ -262,7 +262,7 @@ NEST <- function(
 
       # Generate data
       random_data <- matrix(
-        rnorm(sample_size * factors_variables),
+        rnorm_ziggurat(sample_size * factors_variables),
         nrow = sample_size, ncol = factors_variables
       )
 

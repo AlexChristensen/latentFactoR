@@ -20,10 +20,10 @@ simulate_hierarchical_factors(
   higher_loadings_range = NULL,
   higher_cross_loadings,
   higher_cross_loadings_range = NULL,
-  higher_correlations,
+  higher_correlations = NULL,
   higher_correlations_range = NULL,
-  higher_disturbances = NULL,
-  higher_disturbances_range = NULL,
+  off_disturbances = NULL,
+  off_disturbances_range = NULL,
   sample_size,
   variable_categories = Inf,
   categorical_limit = 7,
@@ -67,24 +67,18 @@ Range of lower-order cross-loadings to randomly select from a random uniform dis
 
 \item{lower_correlations}{Numeric or matrix (length = 1 or \code{lower_factors} x \code{lower_factors}).
 Target correlation matrix between lower-order factors, supplied directly as an alternative to
-\code{higher_disturbances}. Can be a single value (applied to all off-diagonal correlations) or a full
-\code{lower_factors} x \code{lower_factors} correlation matrix. When supplied, \code{higher_disturbances}
-is \emph{implied} rather than set directly: it is solved for as the residual needed to reproduce this
-target correlation matrix given the higher-order loadings and correlations (\code{higher_loadings} and
-\code{higher_correlations}), and may end up with off-diagonal values (i.e., correlated disturbances
-between lower-order factors are permitted). The implied disturbances must still form a valid
-(positive semi-definite) covariance matrix; if the target correlation matrix is incompatible with the
-supplied higher-order structure (e.g., it implies negative unique variances), values are redrawn when
-\code{higher_loadings_range} and/or \code{higher_correlations_range} are used, or an error is raised
-when the higher-order structure is entirely fixed.
-Mutually exclusive with \code{higher_disturbances}/\code{higher_disturbances_range}: exactly one of
-\code{higher_disturbances}/\code{higher_disturbances_range} or
+\code{off_disturbances}. Can be a single value (applied to all off-diagonal correlations) or a full
+\code{lower_factors} x \code{lower_factors} correlation matrix. When supplied, \code{off_disturbances}
+(and, if \code{higher_correlations} is also omitted, \code{higher_correlations} too) is \emph{implied}
+rather than set directly (see Details).
+Mutually exclusive with \code{off_disturbances}/\code{off_disturbances_range}: exactly one of
+\code{off_disturbances}/\code{off_disturbances_range} or
 \code{lower_correlations}/\code{lower_correlations_range} must be supplied}
 
 \item{lower_correlations_range}{Numeric (length = 2).
 Range of lower-order correlations to randomly select (per pair of lower-order factors) from a random
 uniform distribution. Somewhat redundant with \code{lower_correlations} but more flexible.
-Mutually exclusive with \code{higher_disturbances}/\code{higher_disturbances_range}}
+Mutually exclusive with \code{off_disturbances}/\code{off_disturbances_range}}
 
 \item{higher_factors}{Numeric (length = 1).
 Number of higher-order (second-order) factors.
@@ -125,25 +119,32 @@ Can be a single value that will be used for all correlations between higher-orde
 Can also be a square matrix (\code{higher_factors} x \code{higher_factors}).
 Negative values are currently converted to their absolute value (only positive
 correlations between higher-order factors are supported).
-General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70)}
+General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70).
+Required when \code{off_disturbances}/\code{off_disturbances_range} is used. Optional when
+\code{lower_correlations}/\code{lower_correlations_range} is used instead, in which case omitting it
+(and \code{higher_correlations_range}) implies it instead of supplying it directly (see Details)}
 
 \item{higher_correlations_range}{Numeric (length = 2).
 Range of correlations between higher-order factors to randomly select from a random uniform distribution.
-General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70)}
+General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70).
+Required when \code{off_disturbances}/\code{off_disturbances_range} is used, unless
+\code{higher_correlations} is supplied instead. Optional when
+\code{lower_correlations}/\code{lower_correlations_range} is used (see \code{higher_correlations})}
 
-\item{higher_disturbances}{Numeric or matrix (length = 1, \code{lower_factors}, or \code{lower_factors} x \code{lower_factors}).
-Disturbance (residual) variance of each lower-order factor left unexplained by the higher-order factor(s).
-A single value or vector of length \code{lower_factors} is placed on the diagonal of an otherwise
-zero (uncorrelated disturbances) matrix. Can also be a full \code{lower_factors} x \code{lower_factors}
-covariance matrix to allow for correlated disturbances between lower-order factors.
-Diagonal values must be between 0 and 1 and the matrix must be positive semi-definite.
+\item{off_disturbances}{Numeric or matrix (length = 1 or \code{lower_factors} x \code{lower_factors}).
+\emph{Off-diagonal} (correlated) disturbances between lower-order factors' residuals, left unexplained
+by the higher-order factor(s); the diagonal is not settable here (see Details for why). A single value
+is applied uniformly (no jitter) to every off-diagonal element; a full
+\code{lower_factors} x \code{lower_factors} matrix is used exactly as supplied instead (its diagonal is
+ignored and reset to 1). Values must be between -1 and 1 and the resulting matrix (with unit diagonal)
+must be positive semi-definite.
 Mutually exclusive with \code{lower_correlations}/\code{lower_correlations_range}: exactly one of
-\code{higher_disturbances}/\code{higher_disturbances_range} or
+\code{off_disturbances}/\code{off_disturbances_range} or
 \code{lower_correlations}/\code{lower_correlations_range} must be supplied}
 
-\item{higher_disturbances_range}{Numeric (length = 2).
-Range of disturbance variances to randomly and independently select (per lower-order factor)
-from a random uniform distribution. Resulting disturbances are uncorrelated.
+\item{off_disturbances_range}{Numeric (length = 2).
+Range of off-diagonal (correlated) disturbances to randomly and independently select (per pair of
+lower-order factors) from a random uniform distribution.
 Mutually exclusive with \code{lower_correlations}/\code{lower_correlations_range}}
 
 \item{sample_size}{Numeric (length = 1).
@@ -205,8 +206,10 @@ same matrix as the top-level \code{lower_correlation})
 \code{loadings} (loading matrix of lower-order factors onto higher-order factors),
 \code{cross_loadings} (cross-loadings used for each higher-order factor),
 \code{correlations} (correlations between higher-order factors), and
-\code{disturbances} (disturbance (residual) covariance matrix of lower-order factors,
-as supplied directly, or implied when \code{lower_correlations} is used instead)
+\code{disturbances} (disturbance (residual) correlation matrix of lower-order factors;
+when \code{off_disturbances} is supplied directly, only its off-diagonal elements are
+meaningful, since its diagonal is always reset to 1; when implied instead, via
+\code{lower_correlations}, the diagonal reflects the residual variance actually solved for)
 
 \item \code{categories} --- Categories for each variable
 
@@ -222,12 +225,11 @@ as supplied directly, or implied when \code{lower_correlations} is used instead)
 Simulates data from a hierarchical (second-order) latent factor model based
 on many manipulable parameters. Variables load onto lower-order factors, and
 lower-order factors load onto higher-order factors. Parameters do not have
-default values and must each be set, with the exception of \code{higher_disturbances}
+default values and must each be set, with the exception of \code{off_disturbances}
 and \code{lower_correlations} (and their \code{_range} variants), which are mutually
 exclusive alternatives for specifying the same underlying structure (exactly one must
 be supplied). See examples to get started
-}
-\details{
+
 The population correlation matrix (variable-level) implied by the hierarchical factor model is:
 
 \deqn{\boldsymbol{\Sigma} = \boldsymbol{\Lambda}_L \boldsymbol{\Phi}_L \boldsymbol{\Lambda}_L' + \boldsymbol{\Theta}}{Sigma = Lambda_L * Phi_L * Lambda_L' + Theta}
@@ -244,10 +246,50 @@ of uniquenesses that ensures unit variance for each variable
 where \eqn{\boldsymbol{\Lambda}_H}{Lambda_H} is the higher-order loading matrix (lower-order factors x
 higher-order factors; \code{higher_loadings} and \code{higher_cross_loadings}), \eqn{\boldsymbol{\Phi}_H}{Phi_H}
 is the higher-order factor correlation matrix (\code{higher_correlations}), and \eqn{\boldsymbol{\Psi}}{Psi}
-is the disturbance (residual) covariance matrix of the lower-order factors (\code{higher_disturbances}) —
-i.e., the variance in each lower-order factor left unexplained by the higher-order factor(s). When
-\code{lower_correlations} is supplied instead of \code{higher_disturbances}, \eqn{\boldsymbol{\Phi}_L}{Phi_L}
-is fixed to the supplied target matrix and \eqn{\boldsymbol{\Psi}}{Psi} is solved for instead
+is the disturbance (residual) correlation matrix of the lower-order factors, with its \emph{off-diagonal}
+(correlated disturbance) elements set directly via \code{off_disturbances} — its diagonal is not
+controllable: whatever variance \eqn{\boldsymbol{\Phi}_H}{Phi_H} and \eqn{\boldsymbol{\Lambda}_H}{Lambda_H}
+leave unexplained in each lower-order factor is always rescaled back to unit variance, so only the
+correlation between disturbances (not their magnitude) can be set
+}
+\details{
+How \eqn{\boldsymbol{\Phi}_H}{Phi_H} and \eqn{\boldsymbol{\Psi}}{Psi} are obtained depends on which
+parameters are supplied. Exactly one of \code{off_disturbances}/\code{off_disturbances_range} or
+\code{lower_correlations}/\code{lower_correlations_range} must be supplied;
+\code{higher_correlations}/\code{higher_correlations_range} is required alongside the former, but
+optional alongside the latter:
+
+\tabular{ll}{
+  \strong{Supplied} \tab \strong{Implied} \cr
+  \code{higher_correlations} + \code{off_disturbances} \tab \code{lower_correlations} (i.e., \eqn{\boldsymbol{\Phi}_L}{Phi_L}) \cr
+  \code{higher_correlations} + \code{lower_correlations} \tab \code{off_disturbances} (i.e., \eqn{\boldsymbol{\Psi}}{Psi}) \cr
+  \code{lower_correlations} (alone) \tab \code{higher_correlations} and \code{off_disturbances} (i.e., \eqn{\boldsymbol{\Phi}_H}{Phi_H} and \eqn{\boldsymbol{\Psi}}{Psi}) \cr
+}
+
+When \eqn{\boldsymbol{\Psi}}{Psi} is implied, it is solved for as the residual needed to reproduce the
+target \code{lower_correlations} matrix given \eqn{\boldsymbol{\Phi}_H}{Phi_H} and
+\eqn{\boldsymbol{\Lambda}_H}{Lambda_H}, and may end up with a non-unit diagonal and/or off-diagonal
+values (i.e., correlated disturbances between lower-order factors are permitted); unlike a directly
+supplied \code{off_disturbances}, this implied \eqn{\boldsymbol{\Psi}}{Psi} keeps whatever diagonal
+falls out of the subtraction, since it is not passed back through the unit-variance rescaling that a
+supplied \code{off_disturbances} is. When \eqn{\boldsymbol{\Phi}_H}{Phi_H} is also
+implied (i.e., \code{higher_correlations} is omitted), it is obtained first, from the target
+\code{lower_correlations} matrix and \eqn{\boldsymbol{\Lambda}_H}{Lambda_H}, via a generalized-inverse
+(least-squares) regression:
+
+\deqn{\boldsymbol{\Phi}_H = (\boldsymbol{\Lambda}_H'\boldsymbol{\Lambda}_H)^{-1}\boldsymbol{\Lambda}_H' \boldsymbol{\Phi}_L \boldsymbol{\Lambda}_H(\boldsymbol{\Lambda}_H'\boldsymbol{\Lambda}_H)^{-1}}{Phi_H = solve(crossprod(Lambda_H)) \%*\% t(Lambda_H) \%*\% Phi_L \%*\% Lambda_H \%*\% solve(crossprod(Lambda_H))}
+
+This raw least-squares result is not guaranteed to be a valid correlation matrix (unit diagonal,
+\code{[-1, 1]} off-diagonals), so it is standardized with \code{\link[stats]{cov2cor}}, after which its
+diagonal is reset to 1 and off-diagonal elements are taken in absolute value (consistent with how a
+directly supplied \code{higher_correlations} is handled); \eqn{\boldsymbol{\Psi}}{Psi} is then solved
+for as described above
+
+In every case, \eqn{\boldsymbol{\Psi}}{Psi} (whether fixed or implied) must form a valid (positive
+semi-definite) covariance matrix; if a target correlation matrix or fixed higher-order structure is
+incompatible (e.g., it implies negative unique variances), values are redrawn when
+\code{higher_loadings_range}, \code{higher_correlations_range}, and/or \code{higher_cross_loadings_range}
+are used, or an error is raised when the higher-order structure is entirely fixed
 }
 \examples{
 # Generate hierarchical factor data
@@ -261,7 +303,7 @@ hierarchical <- simulate_hierarchical_factors(
   higher_loadings = 0.60, # higher-order loadings = 0.50 to 0.70
   higher_cross_loadings = 0.05, # higher-order cross-loadings N(0, 0.05)
   higher_correlations = 0.30, # correlation between higher-order factors = 0.30
-  higher_disturbances = 0.30, # disturbance variance for each lower-order factor = 0.30
+  off_disturbances = 0.10, # off-diagonal (correlated) disturbances = 0.10
   sample_size = 1000 # number of cases = 1000
 )
 
@@ -272,7 +314,7 @@ hierarchical_uneven <- simulate_hierarchical_factors(
   lower_loadings = 0.55, lower_cross_loadings = 0.05,
   higher_factors = 2, higher_variables = c(2, 4), # A = 2 factors, B = 4 factors
   higher_loadings = 0.60, higher_cross_loadings = 0.05,
-  higher_correlations = 0.30, higher_disturbances = 0.30,
+  higher_correlations = 0.30, off_disturbances = 0.10,
   sample_size = 1000
 )
 
@@ -284,7 +326,7 @@ hierarchical_loadings <- simulate_hierarchical_factors(
   higher_loadings_range = c(0.40, 0.80), # higher-order loadings = 0.40 to 0.80
   higher_cross_loadings = 0.05,
   higher_correlations = 0.30,
-  higher_disturbances_range = c(0.20, 0.40), # disturbances = 0.20 to 0.40
+  off_disturbances_range = c(0.00, 0.20), # off-diagonal disturbances = 0.00 to 0.20
   sample_size = 1000
 )
 
@@ -294,34 +336,33 @@ hierarchical_dichotomous <- simulate_hierarchical_factors(
   lower_loadings = 0.55, lower_cross_loadings = 0.05,
   higher_factors = 2, higher_loadings = 0.60,
   higher_cross_loadings = 0.05, higher_correlations = 0.30,
-  higher_disturbances = 0.30, sample_size = 1000,
+  off_disturbances = 0.10, sample_size = 1000,
   variable_categories = 2 # dichotomous data
 )
 
-# Supply a target lower-order correlation matrix directly instead of `higher_disturbances`;
+# Supply a target lower-order correlation matrix directly instead of `off_disturbances`;
 # the disturbances are implied (solved for) and may end up correlated
 hierarchical_lower_correlations <- simulate_hierarchical_factors(
   lower_factors = 4, variables = 6,
   lower_loadings = 0.55, lower_cross_loadings = 0.05,
+  lower_correlations = 0.40, # target correlation of 0.40 between all lower-order factors
   higher_factors = 2, higher_loadings = 0.60,
   higher_cross_loadings = 0.05, higher_correlations = 0.30,
+  sample_size = 1000
+)
+
+# Omit `higher_correlations` when `lower_correlations` is supplied: it is implied
+# (rather than the disturbances) from the target lower-order correlations and `higher_loadings`
+hierarchical_implied_correlations <- simulate_hierarchical_factors(
+  lower_factors = 4, variables = 6,
+  lower_loadings = 0.55, lower_cross_loadings = 0.05,
   lower_correlations = 0.40, # target correlation of 0.40 between all lower-order factors
+  higher_factors = 2, higher_loadings = 0.60,
+  higher_cross_loadings = 0.05,
   sample_size = 1000
 )
 
 }
-\references{
-Garrido, L. E., Abad, F. J., & Ponsoda, V. (2011). \cr
-Performance of Velicer’s minimum average partial factor retention method with categorical variables. \cr
-\emph{Educational and Psychological Measurement}, \emph{71}(3), 551-570.
-
-Golino, H., Shi, D., Christensen, A. P., Garrido, L. E., Nieto, M. D., Sadana, R., ... & Martinez-Molina, A. (2020).
-Investigating the performance of exploratory graph analysis and traditional techniques to identify the number of latent factors: A simulation and tutorial.
-\emph{Psychological Methods}, \emph{25}(3), 292-320.
-}
 \author{
-Alexander P. Christensen <alexpaulchristensen@gmail.com>,
-Maria Dolores Nieto Canaveras <mnietoca@nebrija.es>,
-Hudson Golino <hfg9s@virginia.edu>,
-Luis Eduardo Garrido <luisgarrido@pucmm.edu>
+Alexander P. Christensen <alexpaulchristensen@gmail.com>
 }

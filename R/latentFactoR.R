@@ -31,8 +31,8 @@
 #'
 #' @importFrom graphics abline
 #' @importFrom methods is
-#' @importFrom stats aov as.formula cor lm na.omit nlminb optim optimize predict qnorm rnorm runif sd wilcox.test
-#' @importFrom utils capture.output data packageDescription packageVersion
+#' @importFrom stats aov as.formula cor cov2cor lm na.omit nlminb optim optimize predict qnorm sd setNames wilcox.test
+#' @importFrom utils capture.output combn data packageDescription packageVersion
 #'
 "_PACKAGE"
 #> [1] "_PACKAGE"

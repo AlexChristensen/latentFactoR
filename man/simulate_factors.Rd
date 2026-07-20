@@ -126,8 +126,7 @@ A list containing the parameters used to generate the data:
 Simulates data from a latent factor model based on many
 manipulable parameters. Parameters do not have default values and
 must each be set. See examples to get started
-}
-\details{
+
 The population correlation matrix (variable-level) implied by the factor model is:
 
 \deqn{\boldsymbol{\Sigma} = \boldsymbol{\Lambda} \boldsymbol{\Phi} \boldsymbol{\Lambda}' + \boldsymbol{\Theta}}{Sigma = Lambda * Phi * Lambda' + Theta}

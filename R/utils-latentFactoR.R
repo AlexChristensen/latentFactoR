@@ -367,7 +367,7 @@ cudeck <- function(R, lambda, Phi, Psi,
   # Generate random error:
 
   m <- p + 1
-  U <- replicate(p, stats::runif(m, 1, 1))
+  U <- replicate(p, runif_xoshiro(m, min = 1, max = 1))
   A1 <- crossprod(U) # t(U) %*% U
   sq <- diag(1 / sqrt(diag(A1)))
   A2 <- sq %*% A1 %*% sq
@@ -672,7 +672,7 @@ CFA <- function(S, target, targetphi, targetpsi = diag(nrow(target)), method = "
   lower <- c(rep(-Inf, lambda_p), rep(-1, phi_p), lower_psi)
   upper <- c(rep(Inf, lambda_p), rep(1, phi_p), upper_psi)
 
-  x <- c(runif(lambda_p), rep(0, phi_p), init_psi)
+  x <- c(runif_xoshiro(lambda_p), rep(0, phi_p), init_psi)
 
   if(method == "minres") {
 
@@ -764,7 +764,7 @@ yuan <- function(R, lambda, Phi, Psi,
   # lambda_error <- lambda - 1e-04
   # Rerror <- lambda_error %*% Phi %*% t(lambda_error) + Psi; diag(Rerror) <- 1
   Rerror <- R
-  Rerror[lower.tri(R)] <- Rerror[lower.tri(R)] + stats::runif(0.5*p*(p-1), -1e-06, 1e-06)
+  Rerror[lower.tri(R)] <- Rerror[lower.tri(R)] + runif_xoshiro(0.5*p*(p-1), min = -1e-06, max = 1e-06)
   Rerror[upper.tri(R)] <- t(Rerror)[upper.tri(R)]
 
   # Create the FA model
@@ -1272,8 +1272,8 @@ GenData <- function(Supplied.Data, N.Factors, N, Max.Trials = 5, Initial.Multipl
 
   # Generate random normal data for shared and unique components, initialize factor loadings (steps 5, 6) --------
 
-  Shared.Comp <- matrix(rnorm(N * N.Factors, 0, 1), nrow = N, ncol = N.Factors)
-  Unique.Comp <- matrix(rnorm(N * k, 0, 1), nrow = N, ncol = k)
+  Shared.Comp <- matrix(rnorm_ziggurat(N * N.Factors), nrow = N, ncol = N.Factors)
+  Unique.Comp <- matrix(rnorm_ziggurat(N * k), nrow = N, ncol = k)
   Shared.Load <- matrix(0, nrow = k, ncol = N.Factors)
   Unique.Load <- matrix(0, nrow = k, ncol = 1)
 

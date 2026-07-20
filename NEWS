@@ -1,6 +1,6 @@
 Changes in version 0.0.8
 
-+ ADD: `simulate_hierarchical_factors` simulates data from a hierarchical (second-order) factor model, where variables load onto lower-order factors and lower-order factors load onto higher-order factors
++ ADD: `simulate_hierarchical_factors` simulates data from a hierarchical (second-order) factor model, where variables load onto lower-order factors and lower-order factors load onto higher-order factors; the lower-order factors' residual (disturbance) structure can be set directly via `off_disturbances`/`off_disturbances_range` (only their *off-diagonal*, correlated-disturbance elements are settable — the diagonal is always rescaled to unit variance, since any unexplained variance is normalized away regardless) or left to be implied instead by supplying a target `lower_correlations`/`lower_correlations_range` matrix
 
 + ADD: `print`/`summary` methods for `simulate_factors`/`simulate_hierarchical_factors` output, reporting loadings, correlations, disturbances, categories, and skew
 

@@ -1,5 +1,6 @@
 #' Simulates Latent Factor Data
 #'
+#' @description
 #' Simulates data from a latent factor model based on many
 #' manipulable parameters. Parameters do not have default values and
 #' must each be set. See examples to get started
@@ -527,7 +528,7 @@ simulate_factors_errors <- function(
     type_error(variables_range, "numeric") # object type error
     length_error(variables_range, 2) # object length error
     range_error(variables_range, c(3, Inf)) # object range error
-    variables <- round(runif(
+    variables <- round(runif_xoshiro(
       factors,
       min = min(variables_range),
       max = max(variables_range)
@@ -546,7 +547,7 @@ simulate_factors_errors <- function(
     type_error(loadings_range, "numeric") # object type error
     length_error(loadings_range, 2)  # object length error
     range_error(loadings_range, c(-1, 1)) # object range error
-    loadings <- runif(
+    loadings <- runif_xoshiro(
       total_variables,
       min = min(loadings_range),
       max = max(loadings_range)
@@ -558,7 +559,7 @@ simulate_factors_errors <- function(
     type_error(cross_loadings_range, "numeric") # object type error
     length_error(cross_loadings_range, 2) # object length error
     range_error(cross_loadings_range, c(-1, 1)) # object range error
-    cross_loadings <- runif(
+    cross_loadings <- runif_xoshiro(
       factors,
       min = min(cross_loadings_range),
       max = max(cross_loadings_range)
@@ -577,7 +578,7 @@ simulate_factors_errors <- function(
     # Population correlation matrix
     correlation_matrix[
       lower.tri(correlation_matrix)
-    ] <- runif(
+    ] <- runif_xoshiro(
       sum(lower.tri(correlation_matrix)),
       min = min(correlations_range),
       max = max(correlations_range)

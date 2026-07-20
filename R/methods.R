@@ -165,15 +165,10 @@ lf_simulate_describe <- function(x, detailed = FALSE)
       )
     }
 
-    cat(
-      "\nLower-order disturbance variances: ",
-      lf_simulate_format_range(diag(higher_parameters$disturbances)), "\n", sep = ""
-    )
-
     disturbance_offdiag <- higher_parameters$disturbances[lower.tri(higher_parameters$disturbances)]
     if(length(disturbance_offdiag) != 0){
       cat(
-        "Lower-order disturbance covariances: ",
+        "\nLower-order disturbance correlations: ",
         lf_simulate_format_range(disturbance_offdiag), "\n", sep = ""
       )
     }
@@ -183,7 +178,7 @@ lf_simulate_describe <- function(x, detailed = FALSE)
       cat("\nImplied lower-order factor correlation matrix:\n")
       print(round(lower_parameters$correlations, 3))
 
-      cat("\nLower-order disturbance (residual) covariance matrix:\n")
+      cat("\nLower-order disturbance (residual) correlation matrix:\n")
       print(round(higher_parameters$disturbances, 3))
 
     }

@@ -1,7 +1,7 @@
 Package: latentFactoR
 Title: Data Simulation Based on Latent Factors
 Version: 0.0.8
-Date: 2026-07-12
+Date: 2026-07-13
 Authors@R: c(
 	person("Alexander", "Christensen", email = "alexpaulchristensen@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-9798-7037")),
 	person("Luis", "Eduardo Garrido", email = "luisgarrido@pucmm.edu", role = "aut", comment = c(ORCID = "0000-0001-8932-6063")),
@@ -10,7 +10,10 @@ Authors@R: c(
 	person("Marcos", "Jimenez", role = "aut", email = "marcosjnezhquez@gmail.com"),
 	person("Francisco", "Abad", role = "ctb"),
 	person("Eduardo", "Garcia-Garzon", role = "ctb"),
-	person("Vithor", "Franco", role = "aut", email = "vithorfranco@gmail.com"))
+	person("Vithor", "Franco", role = "aut", email = "vithorfranco@gmail.com"),
+	person("David", "Blackman", role = "ctb", comment = "Original xoshiro.c implementation"),
+    person("Sebastiano", "Vigna", role = "ctb", comment = "Original xoshiro.c implementation"),
+    person("John", "Burkardt", role = c("cph", "ctb"), comment = "Original ziggurat.c implementation"))
 Maintainer: Alexander Christensen <alexpaulchristensen@gmail.com>
 Description: Generates data based on latent factor models. Data can be continuous, polytomous, dichotomous, or mixed. Skews, cross-loadings, wording effects, population errors, and local dependencies can be added. All parameters can be manipulated. Data categorization is based on Garrido, Abad, and Ponsoda (2011) <doi:10.1177/0013164410389489>.
 Depends: R (>= 3.6.0)
@@ -18,6 +21,7 @@ License: GPL (>= 3.0)
 Imports: BBmisc, car, EGAnet, fspe, googledrive, ineq,
 	     lavaan, Matrix, methods, mlr, mvtnorm, psych,
 	     rstudioapi, xgboost
-Suggests: ggplot2
+Suggests: ggplot2, scales
+Copyright: See inst/COPYRIGHTS for details
 Encoding: UTF-8
 Config/roxygen2/version: 8.0.0
