@@ -184,9 +184,6 @@ Returns a list containing:
 implied by the higher-order factor structure and disturbances (or, when \code{lower_correlations}
 is supplied, equal to that target matrix)}
 
-\item{continuous_data}{Simulated data before categories and skew were applied
-(i.e., the underlying continuous data)}
-
 \item{parameters}{
 A list containing the parameters used to generate the data:
 

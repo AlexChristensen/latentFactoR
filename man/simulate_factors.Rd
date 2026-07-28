@@ -94,9 +94,6 @@ Returns a list containing:
 
 \item{population_correlation}{Population correlation matrix}
 
-\item{continuous_data}{Simulated data before categories and skew were applied
-(i.e., the underlying continuous data)}
-
 \item{parameters}{
 A list containing the parameters used to generate the data:
 

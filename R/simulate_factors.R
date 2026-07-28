@@ -85,9 +85,6 @@
 #'
 #' \item{population_correlation}{Population correlation matrix}
 #'
-#' \item{continuous_data}{Simulated data before categories and skew were applied
-#' (i.e., the underlying continuous data)}
-#'
 #' \item{parameters}{
 #' A list containing the parameters used to generate the data:
 #'
@@ -393,9 +390,6 @@ simulate_factors <- function(
   # Set data dimensions
   dimensions <- dim(data)
 
-  # Store continuous data
-  continuous_data <- data
-
   # Check for categories greater than categorical limit and not infinite
   variable_categories <- mark_continuous_categories(variable_categories, categorical_limit)
 
@@ -504,7 +498,6 @@ simulate_factors <- function(
   results <- list(
     data = data,
     population_correlation = population_correlation,
-    continuous_data = continuous_data,
     parameters = parameters
   )
 
