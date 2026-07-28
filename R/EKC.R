@@ -114,7 +114,10 @@ EKC <- function(
   )
 
   # Identify last eigenvalue greater than reference
-  dimensions <- which(eigenvalues < reference)[1] - 1
+  # (when every eigenvalue exceeds its reference, all `variables`
+  # dimensions satisfy the criterion, rather than yielding NA)
+  first_below <- which(eigenvalues < reference)[1]
+  dimensions <- ifelse(is.na(first_below), variables, first_below - 1)
 
   # Set up results list
   results <- list(

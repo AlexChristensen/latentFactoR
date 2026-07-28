@@ -1644,62 +1644,6 @@ range_error <- function(input, expected_ranges){
 # SYSTEM FUNCTIONS ----
 #%%%%%%%%%%%%%%%%%%%%%%
 
-#' Error report
-#'
-#' @description Gives necessary information for user reporting error
-#'
-#' @param result Character.
-#' The error from the result
-#'
-#' @param SUB_FUN Character.
-#' Sub-routine the error occurred in
-#'
-#' @param FUN Character.
-#' Main function the error occurred in
-#'
-#' @return Error and message to send to GitHub
-#'
-#' @author Alexander Christensen <alexpaulchristensen@gmail.com>
-#'
-#' @noRd
-#'
-# Error Report
-# Updated 08.08.2022
-error.report <- function(result, SUB_FUN, FUN)
-{
-  # Let user know that an error has occurred
-  message(paste("\nAn error has occurred in the '", SUB_FUN, "' function of '", FUN, "':\n", sep =""))
-
-  # Give them the error to send to you
-  cat(paste(result))
-
-  # Tell them where to send it
-  message("\nPlease open a new issue on GitHub (bug report): https://github.com/hfgolino/EGAnet/issues/new/choose")
-
-  # Give them information to fill out the issue
-  OS <- as.character(Sys.info()["sysname"])
-  OSversion <- paste(as.character(Sys.info()[c("release", "version")]), collapse = " ")
-  Rversion <- paste(R.version$major, R.version$minor, sep = ".")
-  latentFactoRversion <- paste(unlist(packageVersion("latentFactoR")), collapse = ".")
-
-  # Let them know to provide this information
-  message(paste("\nBe sure to provide the following information:\n"))
-
-  # To reproduce
-  message(styletext("To Reproduce:", defaults = "bold"))
-  message(paste(" ", textsymbol("bullet"), " Function error occurred in: ", SUB_FUN, " function of ", FUN, sep = ""))
-
-  # R, SemNetCleaner, and SemNetDictionaries
-  message(styletext("\nR and latentFactoR versions:", defaults = "bold"))
-  message(paste(" ", textsymbol("bullet"), " R version: ", Rversion, sep = ""))
-  message(paste(" ", textsymbol("bullet"), " latentFactoR version: ", latentFactoRversion, sep = ""))
-
-  # Desktop
-  message(styletext("\nOperating System:", defaults = "bold"))
-  message(paste(" ", textsymbol("bullet"), " OS: ", OS, sep = ""))
-  message(paste(" ", textsymbol("bullet"), " Version: ", OSversion, sep = ""))
-}
-
 #' System check for OS and RSTUDIO
 #'
 #' @description Checks for whether text options are available

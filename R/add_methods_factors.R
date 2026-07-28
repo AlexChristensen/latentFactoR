@@ -214,8 +214,27 @@ add_method_factors <- function(
   check_eigenvalues <- TRUE
   check_communalities <- TRUE
 
+  # Initialize iteration counter (guards against an infinite loop when the
+  # supplied structure leaves no randomness to escape an inadmissible
+  # solution, e.g. `methods_loadings`/`methods_correlations` are fixed matrices)
+  iterations <- 0
+  max_iterations <- 1000
+
   # Run through loop
   while(isTRUE(check_eigenvalues) | isTRUE(check_communalities)){
+
+    # Increment iteration counter and check against maximum
+    iterations <- iterations + 1
+    if(iterations > max_iterations){
+      stop(
+        paste0(
+          "Could not find an admissible (positive semi-definite) solution after ",
+          max_iterations, " attempts. The supplied `methods_loadings` and/or ",
+          "`methods_correlations` may be jointly inadmissible. Try relaxing fixed ",
+          "matrices into ranges or adjusting values"
+        )
+      )
+    }
 
     # Populate methods loadings matrix
     if(!is(methods_loadings, "matrix")){
@@ -489,12 +508,14 @@ add_method_factors_errors <- function(
     # Check for number of variables in range
     if(any(proportion_negative_range > 1)){
 
-      # Target values
+      # Target values (positions within the range vector,
+      # not factor indices, so use a single representative
+      # variable count rather than indexing `parameters$variables`)
       target_negative <- which(proportion_negative_range > 1)
 
       # Ensure proportions
       proportion_negative_range[target_negative] <-
-        proportion_negative_range[target_negative] / parameters$variables[target_negative]
+        proportion_negative_range[target_negative] / mean(parameters$variables)
 
     }
 

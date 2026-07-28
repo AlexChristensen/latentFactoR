@@ -173,13 +173,19 @@ data_to_zipfs <- function(
       
       # Find max correlation value
       max_target <- which.max(abs(correlations[i,]))
-      
+
       # Find non-zero values
       non_zero <- which(data[,max_target] != 0)
-      
-      # Sample from non_zero values
-      index <- non_zero[sample(1:length(non_zero), 1)]
-      
+
+      # Sample from non_zero values (fall back to a uniformly random
+      # row when the most-correlated column is itself all-zero, since
+      # there is then no informative row to seed the repair from)
+      index <- if(length(non_zero) == 0){
+        sample(seq_len(nrow(data)), 1)
+      }else{
+        non_zero[sample(seq_len(length(non_zero)), 1)]
+      }
+
       # Assign 1 to target index
       data[index, i] <- 1
       

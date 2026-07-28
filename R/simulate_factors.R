@@ -36,10 +36,9 @@
 #' Range of loadings to randomly select from a random uniform distribution.
 #' General effect sizes range from small (0.40), moderate (0.55), to large (0.70)
 #'
-#' @param cross_loadings Numeric or matrix (length = 1, \code{factors}, or total number of variables x \code{factors}).
+#' @param cross_loadings Numeric (length = 1 or \code{factors}).
 #' Cross-loadings drawn from a random normal distribution with a mean of 0 and standard deviation of value input.
-#' Can be a single value or as many values as there are factors (corresponding to the factors).
-#' Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} x \code{variables})
+#' Can be a single value or as many values as there are factors (corresponding to the factors)
 #'
 #' @param cross_loadings_range Numeric (length = 2).
 #' Range of cross-loadings to randomly select from a random uniform distribution
@@ -47,7 +46,8 @@
 #' @param correlations Numeric (length = 1 or \code{factors} x \code{factors}).
 #' Can be a single value that will be used for all correlations between factors.
 #' Can also be a square matrix (\code{factors} x \code{factors}).
-#' General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70)
+#' General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70).
+#' Negative values are currently converted to their absolute value
 #'
 #' @param correlations_range Numeric (length = 2).
 #' Range of correlations to randomly select from a random uniform distribution.
@@ -223,8 +223,15 @@ simulate_factors <- function(
   range_error(correlations, c(-1, 1))
 
   # Ensure appropriate types
-  if(!is(loadings, "matrix")){type_error(loadings, "numeric")}
-  if(!is(cross_loadings, "matrix")){type_error(cross_loadings, "numeric")}
+  # (`cross_loadings` does not support a matrix input --
+  # unlike `loadings`/`correlations`, it is only ever used
+  # as a per-factor standard deviation, and only when `loadings`
+  # is not already a full matrix -- in that case `cross_loadings`
+  # is unused, so a matrix is harmlessly allowed through as well)
+  if(!is(loadings, "matrix")){
+    type_error(loadings, "numeric")
+    type_error(cross_loadings, "numeric")
+  }
   if(!is(correlations, "matrix")){type_error(correlations, "numeric")}
 
   # Set factor sequence
@@ -289,9 +296,13 @@ simulate_factors <- function(
 
         }else{
 
-          # Accept loadings from range (generated earlier)
+          # Draw fresh loadings from the range on every retry
+          # attempt (rather than reusing a single fixed draw),
+          # so retries can actually escape an inadmissible solution
           loading_matrix[start_variables[i]:end_variables[i], i] <-
-          loadings[start_variables[i]:end_variables[i]]
+          runif_xoshiro(
+            variables[i], min = min(loadings_range), max = max(loadings_range)
+          )
 
         }
 
@@ -329,7 +340,19 @@ simulate_factors <- function(
     }
 
     # Factor correlations
-    if(length(correlations) == 1){
+    if(!is.null(correlations_range)){
+
+      # Draw fresh correlations from the range on every retry
+      # attempt (rather than reusing a single fixed draw),
+      # so retries can actually escape an inadmissible solution
+      correlation_matrix <- matrix(data = 0, nrow = factors, ncol = factors)
+      correlation_matrix[lower.tri(correlation_matrix)] <- runif_xoshiro(
+        sum(lower.tri(correlation_matrix)),
+        min = min(correlations_range), max = max(correlations_range)
+      )
+      correlation_matrix <- correlation_matrix + t(correlation_matrix)
+
+    }else if(length(correlations) == 1){
 
       # Generate correlation matrix
       correlation_matrix <- matrix(data = correlations, nrow = factors, ncol = factors)
@@ -394,7 +417,10 @@ simulate_factors <- function(
     # Set skew
     if(length(skew_stored) == 1){
       skew <- rep(skew_stored, n_categorize)
-    }else if(length(skew_stored) != dimensions[2]){
+    }else if(length(skew_stored) == dimensions[2]){
+      # Full-length (per-variable) skew: select this subset's own values
+      skew <- skew_stored[categorize_columns]
+    }else{
       skew <- shuffle_replace(skew_stored, n_categorize)
     }
 
@@ -436,7 +462,10 @@ simulate_factors <- function(
     # Set skew
     if(length(skew_stored) == 1){
       skew <- rep(skew_stored, n_continuous)
-    }else if(length(skew_stored) != dimensions[2]){
+    }else if(length(skew_stored) == dimensions[2]){
+      # Full-length (per-variable) skew: select this subset's own values
+      skew <- skew_stored[continuous_columns]
+    }else{
       skew <- shuffle_replace(skew_stored, n_continuous)
     }
 
@@ -615,7 +644,7 @@ simulate_factors_errors <- function(
   length_error(variables, c(1, factors)); length_error(categorical_limit, 1)
 
   # Ensure appropriate ranges
-  range_error(variables, c(2, Inf)); range_error(skew, c(-2, 2))
+  range_error(variables, c(3, Inf)); range_error(skew, c(-2, 2))
   range_error(variable_categories, c(2, Inf))
 
   # Return checked input

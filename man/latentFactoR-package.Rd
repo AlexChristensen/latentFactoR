@@ -24,6 +24,14 @@ Golino, H., Shi, D., Christensen, A. P., Garrido, L. E., Nieto, M. D., Sadana, R
 Investigating the performance of exploratory graph analysis and traditional techniques to identify the number of latent factors: A simulation and tutorial.
 \emph{Psychological Methods}, \emph{25}(3), 292-320.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/AlexChristensen/latentFactoR}
+  \item Report bugs at \url{https://github.com/AlexChristensen/latentFactoR/issues}
+}
+
+}
 \author{
 Alexander P. Christensen <alexpaulchristensen@gmail.com>,
 Maria Dolores Nieto Canaveras <mnietoca@nebrija.es>,

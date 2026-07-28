@@ -16,10 +16,12 @@
 #' number of variables on each factor (necessary for some
 #' \code{wording_factor} arguments)
 #'
-#' @param estimator Character.
+#' @param estimator Character (length = 1).
 #' Estimator to be used in \code{\link[lavaan]{cfa}}.
-#' Default options are \code{"MLR"} for continuous data
-#' and \code{"WLSMV"} for categorical data
+#' Defaults to \code{"MLR"}.
+#' Set to \code{"WLSMV"} for categorical/ordinal data
+#' (the estimator is not automatically detected from
+#' the data and must be set explicitly)
 #'
 #' @param fit_measures Character.
 #' Fit measures to be computed using \code{\link[lavaan]{fitMeasures}}.
@@ -154,6 +156,9 @@ ESEM <- function(
     wording_factor <- tolower(match.arg(wording_factor))
   }
 
+  # Resolve estimator (defaults to "MLR" when not supplied)
+  estimator <- match.arg(estimator)
+
   # Ensure data is a matrix
   data <- as.matrix(data)
 
@@ -184,9 +189,8 @@ ESEM <- function(
 
     # Variable set up
     variable_syntax <- paste0(
-      "V", formatC(
-        1:total_variables, format = "d",
-        flag = "0", digits = 1
+      "V", format_integer(
+        1:total_variables, digits(total_variables) - 1
       ), sep = "", collapse = " + "
     )
 
@@ -339,10 +343,9 @@ ESEM <- function(
 
           # Variable set up
           variable_syntax <- paste0(
-            "1*V", formatC(
+            "1*V", format_integer(
               target_variables[which(variable_polarity[target_variables] == target_sign)],
-              format = "d",
-              flag = "0", digits = 1
+              digits(total_variables) - 1
             ), sep = "", collapse = " + "
           )
 
@@ -432,9 +435,8 @@ ESEM <- function(
 
         # Variable set up
         variable_syntax <- paste0(
-          "1*V", formatC(
-            start_variables[i]:end_variables[i], format = "d",
-            flag = "0", digits = 1
+          "1*V", format_integer(
+            start_variables[i]:end_variables[i], digits(total_variables) - 1
           ), sep = "", collapse = " + "
         )
 

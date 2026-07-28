@@ -3,16 +3,6 @@
 #%%%%%%%%%%%%%%%%%%%%%%%
 
 #' @noRd
-# Determine number of digits in a number ----
-# Updated 02.02.2023
-digits <- function(number)
-{
-  # Obtain the lowest value of log base 10 and add 1
-  floor(log10(number)) + 1
-
-}
-
-#' @noRd
 # Determine number of categories in data ----
 # Updated 02.02.2023
 data_categories <- function(data)

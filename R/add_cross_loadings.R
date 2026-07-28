@@ -265,6 +265,14 @@ add_cross_loadings_errors <- function(
   # Obtain parameters from simulated data
   parameters <- lf_object$parameters
 
+  # Cross-loadings require at least two factors to load onto
+  if(parameters$factors < 2){
+    stop(
+      "`add_cross_loadings` requires at least two factors in `lf_object` ",
+      "(a variable cannot cross-load when there is only one factor)."
+    )
+  }
+
   # Check for proportion cross-loadings range
   if(!is.null(proportion_cross_loadings_range)){
     type_error(proportion_cross_loadings_range, "numeric") # object type error
@@ -273,12 +281,14 @@ add_cross_loadings_errors <- function(
     # Check for number of variables in range
     if(any(proportion_cross_loadings_range >= 1)){
 
-      # Target values
+      # Target values (positions within the range vector,
+      # not factor indices, so use a single representative
+      # variable count rather than indexing `parameters$variables`)
       target_LD <- which(proportion_cross_loadings_range >= 1)
 
       # Ensure proportions
       proportion_cross_loadings_range[target_LD] <-
-        proportion_cross_loadings_range[target_LD] / parameters$variables[target_LD]
+        proportion_cross_loadings_range[target_LD] / mean(parameters$variables)
 
     }
 
@@ -344,6 +354,16 @@ add_cross_loadings_errors <- function(
   # Set magnitudes
   if(length(magnitude_cross_loadings) == 1){
     magnitude_cross_loadings <- rep(magnitude_cross_loadings, sum(integer_cross_loadings))
+  }else if(
+    length(magnitude_cross_loadings) == parameters$factors &&
+    parameters$factors != sum(integer_cross_loadings)
+  ){
+    # One magnitude per factor: repeat each factor's value across
+    # that factor's block of cross-loadings. Skipped when `factors`
+    # happens to equal `sum(integer_cross_loadings)`, in which case
+    # the vector is already the right length to be used directly,
+    # one magnitude per individual cross-loading (ambiguous otherwise)
+    magnitude_cross_loadings <- rep(magnitude_cross_loadings, times = integer_cross_loadings)
   }
 
   # Return checked input

@@ -1,5 +1,8 @@
 citHeader("To cite latentFactoR in publications use:")
 
+year <- sub("-.*", "", meta$Date)
+version <- paste("R package version", meta$Version)
+
 bibentry(
 	bibtype	= "manual",
 	key	= "latentFactoR",
@@ -12,11 +15,11 @@ bibentry(
 			    person("Abad,", "Francisco"),
 			    person("Garcia-Garzon,", "Eduardo"),
 			    person("Franco,", "Vithor R")),
-	year	= "2023",
-	note    = "R package version 0.0.6",
+	year	= year,
+	note    = version,
 
   textVersion  =
-  paste0("Christensen, A. P., Nieto Canaveras, M. D., Golino, H., Garrido, L. E., Jimenez, M., Abad, F., Garcia-Garzon, E., & Franco, V. R. (2023). ",
+  paste0("Christensen, A. P., Nieto Canaveras, M. D., Golino, H., Garrido, L. E., Jimenez, M., Abad, F., Garcia-Garzon, E., & Franco, V. R. (", year, "). ",
         "latentFactoR: Data simulation based on latent factors. ",
-	"R package version 0.0.6")
+	version)
 )

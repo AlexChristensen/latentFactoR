@@ -229,12 +229,14 @@ add_local_dependence_errors <- function(
     # Check for number of variables in range
     if(any(proportion_LD_range > 1)){
 
-      # Target values
+      # Target values (positions within the range vector,
+      # not factor indices, so use a single representative
+      # variable count rather than indexing `parameters$variables`)
       target_LD <- which(proportion_LD_range > 1)
 
       # Ensure proportions
       proportion_LD_range[target_LD] <-
-        proportion_LD_range[target_LD] / parameters$variables[target_LD]
+        proportion_LD_range[target_LD] / mean(parameters$variables)
 
     }
 
@@ -329,8 +331,25 @@ correlate_residuals <- function(
   # Initialize checks
   check_eigenvalues <- TRUE
 
+  # Initialize iteration counter (guards against an infinite loop when the
+  # supplied structure leaves no randomness to escape an inadmissible solution)
+  iterations <- 0
+  max_iterations <- 1000
+
   # Run through loop
   while(isTRUE(check_eigenvalues)){
+
+    # Increment iteration counter and check against maximum
+    iterations <- iterations + 1
+    if(iterations > max_iterations){
+      stop(
+        paste0(
+          "Could not find an admissible (positive semi-definite) solution after ",
+          max_iterations, " attempts. The supplied local dependence structure may ",
+          "be inadmissible. Try adjusting `proportion_LD`/`add_residuals` values"
+        )
+      )
+    }
 
     # Initialize correlated residual matrix
     correlated_residuals <- matrix(
@@ -359,6 +378,12 @@ correlate_residuals <- function(
         available_variables <- available_variables[
           sum_cross_loadings == 0
         ]
+
+        # Cross-loadings may have depleted the pool of available
+        # variables for this factor; each local dependence pair
+        # needs two distinct variables, so cap the number of pairs
+        # to what the (possibly reduced) pool can actually supply
+        variables_LD[f] <- min(variables_LD[f], floor(length(available_variables) / 2))
 
       }
 

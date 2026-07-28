@@ -100,7 +100,7 @@ NEST <- function(
   }
 
   # Obtain correlation matrix (if not already)
-  if(!isSymmetric(data)){
+  if(!is_symmetric(data)){
 
     # # Compute correlations
     # correlation <- EGAnet::auto.correlate(data, verbose = FALSE)
@@ -166,6 +166,7 @@ NEST <- function(
     # Set up model
     if(factors == 0){
       model <- diag(rep(1, dimensions[2]))
+      current_factor <- 0
     }else{
 
       # Copy correlation matrix
@@ -184,7 +185,7 @@ NEST <- function(
         current_factor <- factors
 
         # Loop through factors
-        while(eigens$values[current_factor] <= 0){
+        while(current_factor > 0 && eigens$values[current_factor] <= 0){
           current_factor <- current_factor - 1
         }
 
@@ -252,7 +253,10 @@ NEST <- function(
     }
 
     # Sum of factors and variables
-    factors_variables <- factors + dimensions[2]
+    # (uses `current_factor`, which can be smaller than `factors`
+    # when the residual matrix's eigenvalues force rank truncation,
+    # to stay conformable with `model`'s actual row count)
+    factors_variables <- current_factor + dimensions[2]
 
     # Get factor sequence
     factor_sequence <- seq_len(factors_1)

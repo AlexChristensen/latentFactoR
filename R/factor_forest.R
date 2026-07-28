@@ -97,7 +97,7 @@ factor_forest <- function(
   }
 
   # Obtain correlation matrix (if not already)
-  if(!isSymmetric(data)){
+  if(!is_symmetric(data)){
 
     # Compute correlations
     correlation <- EGAnet::auto.correlate(data, verbose = FALSE)
@@ -208,9 +208,22 @@ factor_forest <- function(
   ekc <- max(which(eigenvalues >= reference))
 
   # setting missing eigenvalues to -1000
+  # (the pretrained model expects a fixed 80-slot feature width;
+  # only pad when there are fewer than 80 real eigenvalues,
+  # otherwise truncate rather than overwrite real values)
 
-  eigval[(length(eigval)+1):80] <- -1000
-  fa_eigval[(length(fa_eigval)+1):80] <- -1000
+  if(length(eigval) < 80){
+    eigval[(length(eigval)+1):80] <- -1000
+  }else if(length(eigval) > 80){
+    eigval <- eigval[1:80]
+  }
+
+  if(length(fa_eigval) < 80){
+    fa_eigval[(length(fa_eigval)+1):80] <- -1000
+  }else if(length(fa_eigval) > 80){
+    fa_eigval <- fa_eigval[1:80]
+  }
+
   names(eigval) <- paste("eigval", 1:80, sep = "")
   names(fa_eigval) <- paste("fa_eigval", 1:80, sep = "")
 
@@ -241,7 +254,7 @@ factor_forest <- function(
       model_file <- suppressMessages(
         googledrive::drive_download(
           googledrive::as_id(drive_link),
-          path = paste(tempdir(), "factor_forest_model.Rdata", sep = "\\"),
+          path = file.path(tempdir(), "factor_forest_model.RData"),
           overwrite = TRUE
         )
       )
@@ -250,10 +263,8 @@ factor_forest <- function(
 
       # Create dummy space file list
       model_file <- list()
-      model_file$local_path <- paste(
-        tempdir(), "\\",
-        "factor_forest_model.RData",
-        sep = ""
+      model_file$local_path <- file.path(
+        tempdir(), "factor_forest_model.RData"
       )
 
     }

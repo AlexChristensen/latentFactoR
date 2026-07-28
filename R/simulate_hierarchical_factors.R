@@ -565,9 +565,13 @@ simulate_hierarchical_factors <- function(
 
         }else{
 
-          # Accept loadings from range (generated earlier)
+          # Draw fresh loadings from the range on every retry
+          # attempt (rather than reusing a single fixed draw),
+          # so retries can actually escape an inadmissible solution
           higher_loading_matrix[start_higher[i]:end_higher[i], i] <-
-            higher_loadings[start_higher[i]:end_higher[i]]
+            runif_xoshiro(
+              higher_variables[i], min = min(higher_loadings_range), max = max(higher_loadings_range)
+            )
 
         }
 
@@ -617,6 +621,18 @@ simulate_hierarchical_factors <- function(
         tcrossprod(higher_inverse, higher_loading_matrix) %*%
           lower_correlation_target %*% higher_loading_matrix %*% higher_inverse
       )
+
+    }else if(!is.null(higher_correlations_range)){
+
+      # Draw fresh correlations from the range on every retry
+      # attempt (rather than reusing a single fixed draw),
+      # so retries can actually escape an inadmissible solution
+      higher_correlation_matrix <- matrix(data = 0, nrow = higher_factors, ncol = higher_factors)
+      higher_correlation_matrix[lower.tri(higher_correlation_matrix)] <- runif_xoshiro(
+        sum(lower.tri(higher_correlation_matrix)),
+        min = min(higher_correlations_range), max = max(higher_correlations_range)
+      )
+      higher_correlation_matrix <- higher_correlation_matrix + t(higher_correlation_matrix)
 
     }else if(length(higher_correlations) == 1){
 
@@ -682,9 +698,13 @@ simulate_hierarchical_factors <- function(
 
         }else{
 
-          # Accept loadings from range (generated earlier)
+          # Draw fresh loadings from the range on every retry
+          # attempt (rather than reusing a single fixed draw),
+          # so retries can actually escape an inadmissible solution
           loading_matrix[start_variables[i]:end_variables[i], i] <-
-            lower_loadings[start_variables[i]:end_variables[i]]
+            runif_xoshiro(
+              variables[i], min = min(lower_loadings_range), max = max(lower_loadings_range)
+            )
 
         }
 
@@ -773,7 +793,10 @@ simulate_hierarchical_factors <- function(
     # Set skew
     if(length(skew_stored) == 1){
       skew <- rep(skew_stored, n_categorize)
-    }else if(length(skew_stored) != dimensions[2]){
+    }else if(length(skew_stored) == dimensions[2]){
+      # Full-length (per-variable) skew: select this subset's own values
+      skew <- skew_stored[categorize_columns]
+    }else{
       skew <- shuffle_replace(skew_stored, n_categorize)
     }
 
@@ -815,7 +838,10 @@ simulate_hierarchical_factors <- function(
     # Set skew
     if(length(skew_stored) == 1){
       skew <- rep(skew_stored, n_continuous)
-    }else if(length(skew_stored) != dimensions[2]){
+    }else if(length(skew_stored) == dimensions[2]){
+      # Full-length (per-variable) skew: select this subset's own values
+      skew <- skew_stored[continuous_columns]
+    }else{
       skew <- shuffle_replace(skew_stored, n_continuous)
     }
 

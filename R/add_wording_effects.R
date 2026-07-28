@@ -506,12 +506,14 @@ add_wording_effects_errors <- function(
     # Check for number of variables in range
     if(any(proportion_negative_range > 1)){
 
-      # Target values
+      # Target values (positions within the range vector,
+      # not factor indices, so use a single representative
+      # variable count rather than indexing `parameters$variables`)
       target_negative <- which(proportion_negative_range > 1)
 
       # Ensure proportions
       proportion_negative_range[target_negative] <-
-        proportion_negative_range[target_negative] / parameters$variables[target_negative]
+        proportion_negative_range[target_negative] / mean(parameters$variables)
 
     }
 
@@ -558,12 +560,14 @@ add_wording_effects_errors <- function(
     # Check for number of variables in range
     if(any(proportion_biased_variables_range > 1)){
 
-      # Target values
+      # Target values (positions within the range vector,
+      # not factor indices, so use a single representative
+      # variable count rather than indexing `parameters$variables`)
       target_variables <- which(proportion_biased_variables_range > 1)
 
       # Ensure proportions
       proportion_biased_variables_range[target_variables] <-
-        proportion_biased_variables_range[target_variables] / parameters$variables[target_variables]
+        proportion_biased_variables_range[target_variables] / mean(parameters$variables)
 
     }
 

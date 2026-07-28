@@ -106,7 +106,8 @@ obtain_zipfs_parameters <- function(data)
   # zipfs = 1 / (rank_order + beta)^alpha
   
   # Set alpha and beta sequence
-  alpha_sequence <- seq(1, 4, 0.50)
+  # (lower bound matches `data_to_zipfs`'s allowed range for `alpha`)
+  alpha_sequence <- seq(0.001, 4, 0.50)
   beta_sequence <- seq(0, 200, 10)
   
   # Try to solve for both parameters
@@ -124,9 +125,9 @@ obtain_zipfs_parameters <- function(data)
     0.10
   )
   
-  ## Ensure minimum equal zero
-  if(min(alpha_sequence) < 1){
-    alpha_sequence <- seq(1, max(alpha_sequence), 0.10)
+  ## Ensure minimum matches `data_to_zipfs`'s allowed range for `alpha`
+  if(min(alpha_sequence) < 0.001){
+    alpha_sequence <- seq(0.001, max(alpha_sequence), 0.10)
   }
   
   ## beta
@@ -156,9 +157,9 @@ obtain_zipfs_parameters <- function(data)
     0.01
   )
   
-  ## Ensure minimum equal zero
-  if(min(alpha_sequence) < 1){
-    alpha_sequence <- seq(1, max(alpha_sequence), 0.01)
+  ## Ensure minimum matches `data_to_zipfs`'s allowed range for `alpha`
+  if(min(alpha_sequence) < 0.001){
+    alpha_sequence <- seq(0.001, max(alpha_sequence), 0.01)
   }
   
   # Try to solve for both parameters
@@ -196,9 +197,9 @@ obtain_zipfs_parameters <- function(data)
     0.01
   )
   
-  ## Ensure minimum equal zero
-  if(min(alpha_sequence) < 1){
-    alpha_sequence <- seq(1, max(alpha_sequence), 0.01)
+  ## Ensure minimum matches `data_to_zipfs`'s allowed range for `alpha`
+  if(min(alpha_sequence) < 0.001){
+    alpha_sequence <- seq(0.001, max(alpha_sequence), 0.01)
   }
   
   ## beta

@@ -44,10 +44,9 @@ General effect sizes range from small (0.40), moderate (0.55), to large (0.70)}
 Range of loadings to randomly select from a random uniform distribution.
 General effect sizes range from small (0.40), moderate (0.55), to large (0.70)}
 
-\item{cross_loadings}{Numeric or matrix (length = 1, \code{factors}, or total number of variables x \code{factors}).
+\item{cross_loadings}{Numeric (length = 1 or \code{factors}).
 Cross-loadings drawn from a random normal distribution with a mean of 0 and standard deviation of value input.
-Can be a single value or as many values as there are factors (corresponding to the factors).
-Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} x \code{variables})}
+Can be a single value or as many values as there are factors (corresponding to the factors)}
 
 \item{cross_loadings_range}{Numeric (length = 2).
 Range of cross-loadings to randomly select from a random uniform distribution}
@@ -55,7 +54,8 @@ Range of cross-loadings to randomly select from a random uniform distribution}
 \item{correlations}{Numeric (length = 1 or \code{factors} x \code{factors}).
 Can be a single value that will be used for all correlations between factors.
 Can also be a square matrix (\code{factors} x \code{factors}).
-General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70)}
+General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70).
+Negative values are currently converted to their absolute value}
 
 \item{correlations_range}{Numeric (length = 2).
 Range of correlations to randomly select from a random uniform distribution.

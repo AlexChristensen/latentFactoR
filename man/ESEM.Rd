@@ -28,10 +28,12 @@ number of factors can be specified to allow varying
 number of variables on each factor (necessary for some
 \code{wording_factor} arguments)}
 
-\item{estimator}{Character.
+\item{estimator}{Character (length = 1).
 Estimator to be used in \code{\link[lavaan]{cfa}}.
-Default options are \code{"MLR"} for continuous data
-and \code{"WLSMV"} for categorical data}
+Defaults to \code{"MLR"}.
+Set to \code{"WLSMV"} for categorical/ordinal data
+(the estimator is not automatically detected from
+the data and must be set explicitly)}
 
 \item{fit_measures}{Character.
 Fit measures to be computed using \code{\link[lavaan]{fitMeasures}}.

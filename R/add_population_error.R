@@ -281,6 +281,11 @@ add_population_error <- function(
   # Ensure proper convergence
   while(!convergence){
 
+    # Reset positive definite so a new population error
+    # is drawn on every outer iteration (rather than reusing
+    # the first draw and never resampling)
+    positive_definite <- FALSE
+
     # Try to get positive definite matrix
     while(!positive_definite){
 
@@ -423,16 +428,22 @@ add_population_error <- function(
 
     # Sometimes the loadings can be in opposite directions
     # Check that...
-    # Get signs
+    # Sign indeterminacy is per-factor (a single factor's loadings
+    # can be estimated as a whole with reflected sign), so each
+    # factor (column) must be checked and flipped independently
     error_signs <- sign(error_loadings)
     loading_signs <- sign(loadings)
-    if(any(error_signs != loading_signs)){
+    for(factor_i in seq_len(ncol(loadings))){
 
-      # Get non-zero signs
-      non_zero <- error_signs != 0
+      if(any(error_signs[,factor_i] != loading_signs[,factor_i])){
 
-      # Flip signs
-      error_loadings[non_zero] <- -error_loadings[non_zero]
+        # Get non-zero signs
+        non_zero <- error_signs[,factor_i] != 0
+
+        # Flip signs
+        error_loadings[non_zero, factor_i] <- -error_loadings[non_zero, factor_i]
+
+      }
 
     }
 

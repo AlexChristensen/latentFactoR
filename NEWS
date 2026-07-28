@@ -20,6 +20,46 @@ Changes in version 0.0.8
 
 + FIX: documentation in `simulate_factors` was missing the `continuous_data` return value and the `cross_loadings`/`categorical_limit` parameters list, and had the loadings matrix dimensions reversed
 
++ FIX: `simulate_factors`/`simulate_hierarchical_factors` misassigned per-variable `skew` values to the wrong columns whenever a full-length `skew` vector was supplied on a model mixing categorical and continuous variables
+
++ FIX: `simulate_factors`/`simulate_hierarchical_factors` ignored `loadings_range`/`correlations_range` (and the hierarchical equivalents) after the first retry attempt, so the admissibility retry loop could never actually resample those parameters
+
++ FIX: `add_cross_loadings` could error with "missing value where TRUE/FALSE needed" when `magnitude_cross_loadings` was supplied with length equal to `factors` (a documented, valid length)
+
++ FIX: `add_cross_loadings` now errors informatively (instead of crashing) when called on data with only one factor, since cross-loadings require at least two factors
+
++ FIX: `add_local_dependence` could error with "NAs are not allowed in subscripted assignments" when composed after `add_cross_loadings` had already consumed most of a factor's available variables
+
++ FIX: `add_cross_loadings`/`add_local_dependence`/`add_method_factors`/`add_wording_effects` incorrectly indexed `parameters$variables` when converting a raw-count `_range` argument (e.g. `proportion_cross_loadings_range`) into a proportion, which could silently misconvert the range or crash outright for a single-factor model
+
++ FIX: `add_local_dependence`/`add_method_factors` admissibility retry loops had no maximum-iteration guard and could loop indefinitely
+
++ FIX: `add_population_error` reused the first random population-error draw on every retry iteration instead of resampling, making `convergence_iterations` ineffective
+
++ FIX: `add_population_error` applied its CFA sign-indeterminacy correction globally across the whole loadings matrix instead of per-factor, which could corrupt an otherwise correctly-signed factor's loadings in multi-factor models
+
++ FIX: `ESEM` did not resolve its `estimator` argument via `match.arg`, so the documented default (omitting `estimator`) failed; `estimator` now defaults to `"MLR"`
+
++ FIX: `ESEM` built lavaan variable names with a hardcoded zero-padding width that mismatched the actual data column names for models with fewer than 10 or 100+ total variables
+
++ FIX: `NEST`/`factor_forest`/`estimate_dimensions` used base `isSymmetric()` (which requires matching row and column names) to detect correlation-matrix input; an unnamed but valid correlation matrix was misclassified as raw data, silently discarding a user-supplied `sample_size`
+
++ FIX: `NEST` could error with a non-conformable matrix multiplication when its internal rank-reduction step truncated below the requested number of factors
+
++ FIX: `EKC` returned `NA` instead of the maximum number of dimensions when every eigenvalue exceeded its reference value
+
++ FIX: `obtain_zipfs_parameters` could not recover `alpha < 1` due to a hardcoded search floor, despite `alpha < 1` being a documented, valid input to `data_to_zipfs`
+
++ FIX: `data_to_zipfs`'s zero-sum-column repair silently failed when the most-correlated donor column was itself all-zero
+
++ FIX: `factor_forest`'s downloaded model cache path used a Windows-style backslash separator, breaking cache detection (forcing re-download every call) on Linux/macOS
+
++ FIX: `factor_forest`'s eigenvalue-padding step could run backward and overwrite real eigenvalues for datasets with 80 or more variables
+
++ FIX: `simulate_factors` enforced a minimum of 2 variables per factor in code while documenting (and enforcing via `variables_range`) a minimum of 3
+
++ INTERNAL: removed dead/unreachable code (`error.report`, a duplicated `digits()` definition, a non-functional `.onload` typo) and added `URL`/`BugReports` to `DESCRIPTION`; `inst/CITATION` now derives its version/year from `DESCRIPTION` instead of a hardcoded string
+
 
 Changes in version 0.0.7
 
