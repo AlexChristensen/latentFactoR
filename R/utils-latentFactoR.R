@@ -1017,149 +1017,250 @@ skew_continuous <- function(skew, data = NULL, sample_size = 1e06, tolerance = 1
 # https://doi.org/10.1177/0013164410389489
 #
 #' @noRd
-# Generates skew
-# Updated 09.08.2022
+# Skewness of the categorical distribution implied by `proportion`
+# (the cumulative share taken up by the lowest-value category),
+# `reduction_factor`, `categories`, and `sample_size` -- computed
+# analytically from the category counts instead of materializing a
+# `sample_size`-length vector and calling `psych::skew()` on it.
+# Mathematically identical to that (the type = 3 moment-skewness formula
+# only depends on the counts per value, not on realized data order), just
+# computed directly from the block-boundary indices, which are the same
+# ones the original vector-based version rounded to when assigning blocks
+# Updated 12.08.2026
+categorical_skew <- function(
+    categories, proportion, divided_proportion,
+    reduction_factor, sample_size
+)
+{
+
+  propinf <- 1 / sample_size
+  propsup <- proportion
+  E <- divided_proportion / reduction_factor
+  counts <- numeric(categories)
+  previous_index <- round(sample_size * propinf)
+
+  # Convert cumulative proportions to per-category counts
+  for(j in 1:categories){
+
+    current_index <- round(sample_size * propsup)
+
+    # The last category keeps its final index; earlier categories lose
+    # theirs to the next category's starting index (the two ranges share
+    # a boundary index, which the next category's assignment overwrites)
+    counts[j] <- if(j < categories){
+      current_index - previous_index
+    }else{
+      current_index - previous_index + 1
+    }
+
+    E <- E * reduction_factor
+    propinf <- propsup
+    propsup <- propinf + E
+    previous_index <- current_index
+
+  }
+
+  # Moments, equivalent to `psych::skew(x, type = 3)`
+  values <- seq_len(categories)
+  n <- sum(counts)
+  mean_value <- sum(counts * values) / n
+  deviations <- values - mean_value
+  variance <- sum(counts * deviations^2) / (n - 1)
+  third_moment <- sum(counts * deviations^3)
+
+  return(third_moment / (n * variance^1.5))
+
+}
+
+#' @noRd
+# Sum of the geometric allocation weights (ratio = `reduction_factor`)
+# used to split the categories after the first one
+# Updated 12.08.2026
+skew_allocation <- function(categories, reduction_factor)
+{
+
+  allocation <- 1
+  allocation_1 <- 1
+
+  if(categories > 2){
+    for(j in 1:(categories - 2)){
+      allocation_1 <- allocation_1 * reduction_factor
+      allocation <- allocation + allocation_1
+    }
+  }
+
+  return(allocation)
+
+}
+
+#' @noRd
+# Finds `proportion` (the share of the lowest-value category) whose
+# implied skewness matches `skewness`, for a fixed `reduction_factor`
+# and `sample_size`. `skew(proportion)` is *not* monotonic over the full
+# (0, 1) range -- it dips to an interior minimum before rising -- so this
+# locates that minimum first (`optimize()`) and searches only the
+# monotonic-increasing branch to its right. Bisecting from a fixed start
+# (e.g., 0.5) can fail to converge whenever that minimum sits between the
+# start and the true root, even when `skewness` is technically reachable.
+# Returns NULL when `skewness` is unreachable for this `reduction_factor`/
+# `sample_size` combination
+# Updated 12.08.2026
+skew_bisection <- function(
+    skewness, categories, reduction_factor, sample_size,
+    tolerance = 0.00001, maximum_iterations = 300
+)
+{
+
+  allocation <- skew_allocation(categories, reduction_factor)
+
+  skew_at <- function(proportion){
+    divided_proportion <- (1 - proportion) / allocation
+    categorical_skew(categories, proportion, divided_proportion, reduction_factor, sample_size)
+  }
+
+  floor <- optimize(skew_at, interval = c(0.00005, 0.99995))
+  ceiling_value <- skew_at(0.99995)
+
+  if(skewness < floor$objective - tolerance || skewness > ceiling_value + tolerance){
+    return(NULL)
+  }
+
+  limitsinf <- floor$minimum
+  limitsup <- 0.99995
+  proportion <- (limitsinf + limitsup) / 2
+  skew_actual <- skew_at(proportion)
+
+  iteration <- 0
+  while(abs(skew_actual - skewness) > tolerance){
+
+    iteration <- iteration + 1
+    if(iteration > maximum_iterations || (limitsup - limitsinf) < .Machine$double.eps * 4){
+      return(NULL)
+    }
+
+    if(skew_actual < skewness){
+      limitsinf <- proportion
+      proportion <- (proportion + limitsup) / 2
+    }else{
+      limitsup <- proportion
+      proportion <- (proportion + limitsinf) / 2
+    }
+
+    skew_actual <- skew_at(proportion)
+
+  }
+
+  return(list(
+    proportion = proportion, allocation = allocation,
+    reduction_factor = reduction_factor, sample_size = sample_size
+  ))
+
+}
+
+#' @noRd
+# Searches over `reduction_factor` and `sample_size` for a combination
+# that can reach `skewness` for `categories`. The default
+# `reduction_factor` at the smallest `sample_size` reaches the large
+# majority of targets directly; `sample_size` only needs to grow when the
+# target sits in a region where `skew(proportion)` is so steep that
+# adjacent representable proportions jump past it; `reduction_factor` only
+# needs to move off its default when `skewness` is outside the achievable
+# range entirely (e.g., skew near zero for categories >= 4, which the
+# default's shape cannot reach at any sample_size). When a search over
+# `reduction_factor` is needed, the value closest to the default is kept,
+# to minimize distortion from the "standard" shape
+# Updated 12.08.2026
+skew_search <- function(
+    skewness, categories, tolerance = 0.00001,
+    default_reduction_factor = 0.75,
+    reduction_factor_grid = seq(0.02, 0.98, by = 0.02),
+    sample_sizes = c(1e6, 1e8, 1e10, 1e12)
+)
+{
+
+  # Fast path: default reduction_factor, escalating resolution
+  for(sample_size in sample_sizes){
+    fit <- skew_bisection(skewness, categories, default_reduction_factor, sample_size, tolerance)
+    if(!is.null(fit)){
+      return(fit)
+    }
+  }
+
+  # Fallback: search reduction_factor too, preferring the smallest
+  # sample_size and the reduction_factor closest to the default
+  best <- NULL
+  for(sample_size in sample_sizes){
+    for(reduction_factor in reduction_factor_grid){
+      fit <- skew_bisection(skewness, categories, reduction_factor, sample_size, tolerance)
+      if(!is.null(fit)){
+        if(is.null(best) || abs(fit$reduction_factor - default_reduction_factor) <
+           abs(best$reduction_factor - default_reduction_factor)){
+          best <- fit
+        }
+      }
+    }
+    if(!is.null(best)){
+      break
+    }
+  }
+
+  return(best)
+
+}
+
+#' @noRd
+# Generates the `categories - 1` z-score breakpoints that split a
+# `categories`-category variable to match `skewness`, on the fly rather
+# than looked up from a precomputed table. Negative targets are generated
+# by solving for `abs(skewness)` and mirroring (negate + reverse category
+# order): this family (mass concentrated toward the lowest-value category,
+# geometrically decaying across the rest) cannot reach deep negative skew
+# for categories >= 3 directly, at any `reduction_factor` -- mirroring is
+# the only robust way to get there. Returns NULL (with a warning) if
+# `skewness` is not achievable for `categories`
+# Updated 12.08.2026
 skew_generator <- function(
     skewness, categories,
     reduction_factor = 0.75,
     sample_size = 1000000,
-    initial_proportion = 0.50,
     tolerance = 0.00001
 )
 {
 
-  # Initialize skew matrix
-  skew_matrix <- matrix(
-    0, nrow = categories, ncol = categories
+  fit <- skew_search(
+    skewness = abs(skewness), categories = categories, tolerance = tolerance,
+    default_reduction_factor = reduction_factor
   )
 
-  # Initialize cases
-  cases <- numeric(sample_size)
-
-  # Loop through categories
-  for(i in 2:categories){
-
-    # Initialize (largest category) proportion
-    proportion <- initial_proportion
-
-    # Current proportion for rest of categories
-    remaining_proportion <- 1 - proportion
-
-    # Initialize categories allocations
-    allocation <- 1
-    allocation_1 <- 1
-
-    # Loop through with reduction factor
-    if(i > 2){
-      for(j in 1:(i-2)){
-        allocation_1 <- allocation_1 * reduction_factor
-        allocation <- allocation + allocation_1
-      }
-    }
-
-    # Divide remaining proportion by allocations
-    divided_proportion <- remaining_proportion / allocation
-
-    # Undefined objects
-    propinf <- 1 / sample_size
-    propsup <- initial_proportion
-    E <- divided_proportion / reduction_factor
-
-    # Loop through
-    for(j in 1:i){
-      cases[round(sample_size * propinf):round(sample_size * propsup)] <- j
-      E <- E * reduction_factor
-      propinf <- propsup
-      propsup <- propinf + E
-    }
-
-    # Compute skewness
-    skew_actual <- psych::skew(cases)
-
-    # Limits
-    limitsup <- 1
-    limitsinf <- 0
-
-    # Ensure skew within tolerance
-    while(abs(skew_actual - skewness) > tolerance){
-
-      # Skew greater than
-      if(skew_actual < skewness){
-        limitinf <- proportion
-        proportion <- (proportion + limitsup) / 2
-      }else{
-        limitsup <- proportion
-        proportion <- (proportion + limitsinf) / 2
-      }
-
-      # Update
-      # Current proportion for rest of categories
-      remaining_proportion <- 1 - proportion
-
-      # Divide remaining proportion by allocations
-      divided_proportion <- remaining_proportion / allocation
-
-      # Undefined objects
-      propinf <- 1 / sample_size
-      propsup <- proportion
-      E <- divided_proportion / reduction_factor
-
-      # Loop through
-      for(j in 1:i){
-        cases[round(sample_size * propinf):round(sample_size * propsup)] <- j
-        E <- E * reduction_factor
-        propinf <- propsup
-        propsup <- propinf + E
-      }
-
-      # Compute skewness
-      skew_actual <- psych::skew(cases)
-
-    }
-
-    # Set E
-    E <- divided_proportion / reduction_factor
-    cumulative_probability <- proportion
-
-    # Update matrix
-    for(j in 1:i){
-
-      skew_matrix[i,j] <- cumulative_probability
-      E <- E * reduction_factor
-      cumulative_probability <- cumulative_probability + E
-
-    }
-
+  if(is.null(fit)){
+    warning("`skewness` is not achievable for this `categories`", call. = FALSE)
+    return(NULL)
   }
 
-  # Normal inverse
-  norm_inv_matrix <- qnorm(skew_matrix)
+  # Cumulative probabilities for categories 1..categories
+  E <- (1 - fit$proportion) / fit$allocation / fit$reduction_factor
+  cumulative_probability <- fit$proportion
+  cumulative <- numeric(categories)
 
-  # Set infinite values to zero
-  norm_inv_matrix[is.infinite(norm_inv_matrix)] <- 0
-
-  # Category probability
-  category_probability <- matrix(
-    0, nrow = categories, ncol = categories
-  )
-
-  # Fill first column
-  category_probability[,1] <- skew_matrix[,1]
-
-  # Loop through
-  for(i in 2:categories){
-    category_probability[,i] <- skew_matrix[,i] - skew_matrix[,i-1]
+  for(j in 1:categories){
+    cumulative[j] <- cumulative_probability
+    E <- E * fit$reduction_factor
+    cumulative_probability <- cumulative_probability + E
   }
 
-  # Make -1 = 0
-  category_probability[category_probability == -1] <- 0
+  # Only `categories - 1` breakpoints are needed to split `categories` groups
+  breakpoints <- qnorm(cumulative[1:(categories - 1)])
+  breakpoints[is.infinite(breakpoints)] <- 0
 
-  # Return skew
-  result <- list(
-    skew_matrix = norm_inv_matrix,
-    probability = category_probability
-  )
-  return(result)
+  if(skewness < 0){
+    breakpoints <- -rev(breakpoints)
+  }
+
+  return(list(
+    breakpoints = breakpoints,
+    reduction_factor = fit$reduction_factor,
+    sample_size = fit$sample_size
+  ))
 
 }
 

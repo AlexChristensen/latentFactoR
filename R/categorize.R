@@ -1,7 +1,7 @@
 #' Categorize Continuous Data
 #'
 #' Categorizes continuous data based on Garrido, Abad and Ponsoda (2011; see references).
-#' Categorical data with 2 to 6 categories can include skew between -2 to 2 in
+#' Categorical data with 2 to 6 categories can include skew between -10 to 10 in
 #' increments of 0.05
 #'
 #' @param data Numeric (length = n).
@@ -14,7 +14,7 @@
 #' 
 #' @param skew_value Numeric (length = 1).
 #' Value of skew.
-#' Ranges between -2 to 2 in increments of 0.05.
+#' Ranges between -10 to 10 in increments of 0.05.
 #' Skews not in this sequence will be converted to
 #' the nearest value in this sequence.
 #' Defaults to \code{0} or no skew
@@ -71,7 +71,7 @@ categorize <- function(data, categories, skew_value = 0)
 {
   
   # Possible skew values
-  possible_skews <- seq(-2, 2, 0.05)
+  possible_skews <- seq(-10, 10, 0.05)
   
   # Check if skew is in possible values
   if(!skew_value %in% possible_skews){

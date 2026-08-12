@@ -24,23 +24,27 @@ import(mlr)
 import(xgboost)
 importFrom(graphics,abline)
 importFrom(methods,is)
-importFrom(stats,aov)
-importFrom(stats,as.formula)
-importFrom(stats,cor)
-importFrom(stats,cov2cor)
-importFrom(stats,lm)
-importFrom(stats,na.omit)
-importFrom(stats,nlminb)
-importFrom(stats,optim)
-importFrom(stats,optimize)
-importFrom(stats,predict)
-importFrom(stats,qnorm)
-importFrom(stats,sd)
-importFrom(stats,setNames)
-importFrom(stats,wilcox.test)
-importFrom(utils,capture.output)
-importFrom(utils,combn)
-importFrom(utils,data)
-importFrom(utils,packageDescription)
-importFrom(utils,packageVersion)
+importFrom(stats,
+  aov,
+  as.formula,
+  cor,
+  cov2cor,
+  lm,
+  na.omit,
+  nlminb,
+  optim,
+  optimize,
+  predict,
+  qnorm,
+  sd,
+  setNames,
+  wilcox.test
+)
+importFrom(utils,
+  capture.output,
+  combn,
+  data,
+  packageDescription,
+  packageVersion
+)
 useDynLib(latentFactoR, .registration = TRUE)

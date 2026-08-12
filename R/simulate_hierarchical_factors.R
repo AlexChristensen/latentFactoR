@@ -201,10 +201,9 @@
 #' @param skew Numeric (length = 1 or categorical variables).
 #' Skew to be included in categorical variables. It is randomly sampled from provided values.
 #' Can be a single value or as many values as there are (total) variables.
-#' Current skew implementation is between -2 and 2 in increments of 0.05.
+#' Current skew implementation is between -10 and 10 in increments of 0.05.
 #' Skews that are not in this sequence will be converted to their nearest
-#' value in the sequence. Not recommended to use with \code{variables_range}.
-#' Future versions will incorporate finer skews
+#' value in the sequence. Not recommended to use with \code{variables_range}
 #'
 #' @param skew_range Numeric (length = 2).
 #' Randomly selects skews within in the range.
@@ -1120,8 +1119,8 @@ simulate_hierarchical_factors_errors <- function(
   if(!is.null(skew_range)){
     type_error(skew_range, "numeric") # object type error
     length_error(skew_range, 2) # object length error
-    range_error(skew_range, c(-2, 2)) # object range error
-    possible_skews <- seq(-2, 2, 0.05) # possible skews
+    range_error(skew_range, c(-10, 10)) # object range error
+    possible_skews <- seq(-10, 10, 0.05) # possible skews
     skew_range <- round(skew_range, 2) # get to hundredths digit
     min_range <- abs(min(skew_range) - possible_skews) # difference for minimum
     min_skew <- possible_skews[which.min(min_range)] # get minimum skew
@@ -1142,7 +1141,7 @@ simulate_hierarchical_factors_errors <- function(
   length_error(variables, c(1, lower_factors)); length_error(categorical_limit, 1)
 
   # Ensure appropriate ranges
-  range_error(variables, c(2, Inf)); range_error(skew, c(-2, 2))
+  range_error(variables, c(2, Inf)); range_error(skew, c(-10, 10))
   range_error(variable_categories, c(2, Inf))
 
   # Return checked input

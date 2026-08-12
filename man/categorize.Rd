@@ -17,7 +17,7 @@ Between 2 and 6 categories can be used with skew}
 
 \item{skew_value}{Numeric (length = 1).
 Value of skew.
-Ranges between -2 to 2 in increments of 0.05.
+Ranges between -10 to 10 in increments of 0.05.
 Skews not in this sequence will be converted to
 the nearest value in this sequence.
 Defaults to \code{0} or no skew}
@@ -27,7 +27,7 @@ Returns a numeric vector of the categorize data
 }
 \description{
 Categorizes continuous data based on Garrido, Abad and Ponsoda (2011; see references).
-Categorical data with 2 to 6 categories can include skew between -2 to 2 in
+Categorical data with 2 to 6 categories can include skew between -10 to 10 in
 increments of 0.05
 }
 \examples{

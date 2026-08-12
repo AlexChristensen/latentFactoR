@@ -163,10 +163,9 @@ Defaults to \code{7} meaning that 8 or more categories are considered continuous
 \item{skew}{Numeric (length = 1 or categorical variables).
 Skew to be included in categorical variables. It is randomly sampled from provided values.
 Can be a single value or as many values as there are (total) variables.
-Current skew implementation is between -2 and 2 in increments of 0.05.
+Current skew implementation is between -10 and 10 in increments of 0.05.
 Skews that are not in this sequence will be converted to their nearest
-value in the sequence. Not recommended to use with \code{variables_range}.
-Future versions will incorporate finer skews}
+value in the sequence. Not recommended to use with \code{variables_range}}
 
 \item{skew_range}{Numeric (length = 2).
 Randomly selects skews within in the range.
