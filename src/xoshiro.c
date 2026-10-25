@@ -23,6 +23,15 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 #include "nanotime.h"
 #include "xoshiro.h"
 
+// Process ID (used to make clock-based seeds unique across forked workers)
+#ifdef _WIN32
+#include <process.h>
+#define get_process_id _getpid
+#else
+#include <unistd.h>
+#define get_process_id getpid
+#endif
+
 /* This is xoshiro256++ 1.0, one of our all-purpose, rock-solid generators.
  It has excellent (sub-ns) speed, a state (256 bits) that is large
  enough for any parallel application, and it passes all tests we are
@@ -109,6 +118,41 @@ uint64_t splitmix64(uint64_t *x) {
     return z ^ (z >> 31);
 }
 
+// Number of clock-based seeds drawn by this process
+static uint64_t seed_counter = 0;
+
+/*
+
+ Seed for calls that do not supply one (seed = 0)
+
+ the clock alone is not unique: parallel workers (e.g., `mclapply`)
+ that call at the same moment read the same time in nanoseconds
+ and would then share an identical random stream
+
+ the clock, process ID, and a per-process counter are therefore
+ chained through splitmix64 (a bijection at each step) so that
+ different workers (process ID) and different calls within a worker
+ (counter) cannot share a seed, even when the clock values are equal
+
+ R is single-threaded, so the counter does not need to be atomic
+
+*/
+static uint64_t random_seed(void) {
+
+    // Clock time in nanoseconds
+    uint64_t x = get_time_ns();
+    uint64_t seed = splitmix64(&x);
+
+    // Mix in process ID
+    x = seed ^ (uint64_t) get_process_id();
+    seed = splitmix64(&x);
+
+    // Mix in call counter
+    x = seed ^ ++seed_counter;
+    return splitmix64(&x);
+
+}
+
 // Function to set single seed to get the 4 random seeds
 void seed_xoshiro256(xoshiro256_state* state, uint64_t seed) {
 
@@ -136,8 +180,8 @@ SEXP r_xoshiro_uniform(SEXP n, SEXP r_seed) {
   uint64_t seed_value = (uint64_t) REAL(r_seed)[0];
 
   // For random seed, use zero
-  if(seed_value == 0) { // Use clocktime in nanoseconds
-    seed_value = get_time_ns();
+  if(seed_value == 0) { // Use clock time, process ID, and call counter
+    seed_value = random_seed();
   }
 
   // Seed the random number generator
@@ -171,8 +215,8 @@ SEXP r_xoshiro_seeds(SEXP n, SEXP r_seed) {
     uint64_t seed_value = (uint64_t) REAL(r_seed)[0];
 
     // For random seed, use zero
-    if(seed_value == 0) { // Use clocktime in nanoseconds
-      seed_value = get_time_ns();
+    if(seed_value == 0) { // Use clock time, process ID, and call counter
+      seed_value = random_seed();
     }
 
     // Seed the random number generator
@@ -208,8 +252,8 @@ SEXP r_xoshiro_shuffle(SEXP r_vector, SEXP r_seed) {
     uint64_t seed_value = (uint64_t) REAL(r_seed)[0];
 
     // For random seed, use zero
-    if(seed_value == 0) { // Use clocktime in nanoseconds
-      seed_value = get_time_ns();
+    if(seed_value == 0) { // Use clock time, process ID, and call counter
+      seed_value = random_seed();
     }
 
     // Seed the random number generator
@@ -248,8 +292,8 @@ SEXP r_xoshiro_weighted_shuffle(SEXP r_vector, SEXP r_prob, SEXP r_seed) {
     uint64_t seed_value = (uint64_t) REAL(r_seed)[0];
 
     // For random seed, use zero
-    if(seed_value == 0) { // Use clocktime in nanoseconds
-        seed_value = get_time_ns();
+    if(seed_value == 0) { // Use clock time, process ID, and call counter
+        seed_value = random_seed();
     }
 
     // Seed the random number generator
@@ -328,8 +372,8 @@ SEXP r_xoshiro_shuffle_replace(SEXP r_vector, SEXP r_size, SEXP r_seed) {
   uint64_t seed_value = (uint64_t) REAL(r_seed)[0];
 
   // For random seed, use zero
-  if(seed_value == 0) { // Use clocktime in nanoseconds
-    seed_value = get_time_ns();
+  if(seed_value == 0) { // Use clock time, process ID, and call counter
+    seed_value = random_seed();
   }
 
   // Seed the random number generator

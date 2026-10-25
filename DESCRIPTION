@@ -26,4 +26,4 @@ Imports: BBmisc, car, EGAnet, fspe, googledrive, ineq,
 Suggests: ggplot2, scales
 Copyright: See inst/COPYRIGHTS for details
 Encoding: UTF-8
-Config/roxygen2/version: 8.1.0
+Config/roxygen2/version: 8.1.1
