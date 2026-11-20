@@ -85,7 +85,7 @@ two_factor <- simulate_factors(
   sample_size = 1000 # number of cases = 1000
 )
 
-\donttest{
+\dontrun{
 # Estimate dimensions
 estimate_dimensions(two_factor$data)}
 
