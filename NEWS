@@ -1,5 +1,12 @@
 Version 0.1.0
 
+o FIX: the normal random number generator (ziggurat) used the same low bits for
+  the strip index and the value and was seeded with the clock only (parallel
+  workers could share streams); it now uses independent bits and the same
+  seeding as the uniform generator (clock, process ID, and a counter). Uniform
+  draws are strictly between 0 and 1, integer seeds are accepted, and sampling
+  with replacement checks its size (shared with {psychNetwoRk})
+
 o CHANGE: the default `fit_value` for `metric = "srmr"` in
   `add_population_error` is 0.05 (0.08 often required more error than the true
   model can absorb with proper uniquenesses, particularly for `method = "hb"`)

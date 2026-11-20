@@ -23,7 +23,7 @@ highly skewed data. This function obtains the best fitting parameters
 to Zipf's distribution
 }
 \details{
-The best parameters are optimized by minimizing the aboslute
+The best parameters are optimized by minimizing the absolute
 difference between the original frequencies and the frequencies obtained
 by the \emph{beta} and \emph{alpha} parameters in the following
 formula (Piantadosi, 2014):

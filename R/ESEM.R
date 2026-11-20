@@ -82,7 +82,7 @@
 #'   variable_categories = 5 # 5-point Likert scale
 #' )
 #'
-#' \dontrun{
+#' \donttest{
 #' # Estimate ESEM model with no wording effects
 #' esem_no_wording_effects <- ESEM(
 #'   data = two_factor,

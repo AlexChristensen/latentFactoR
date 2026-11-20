@@ -55,7 +55,7 @@
 #'   sample_size = 1000 # number of cases = 1000
 #' )
 #'
-#' \dontrun{
+#' \donttest{
 #' # Perform NEST
 #' NEST(two_factor$data)}
 #'

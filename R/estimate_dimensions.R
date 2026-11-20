@@ -64,7 +64,7 @@
 #'   sample_size = 1000 # number of cases = 1000
 #' )
 #'
-#' \dontrun{
+#' \donttest{
 #' # Estimate dimensions
 #' estimate_dimensions(two_factor$data)}
 #'
