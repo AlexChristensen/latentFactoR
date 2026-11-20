@@ -13,7 +13,8 @@ add_wording_effects(
   proportion_biased_variables = 1,
   proportion_biased_variables_range = NULL,
   proportion_biased_person = 1,
-  proportion_biased_person_range = NULL
+  proportion_biased_person_range = NULL,
+  seed = NULL
 )
 }
 \arguments{
@@ -96,6 +97,11 @@ Defaults to \code{1} or all possible biased variables for all biased cases}
 Range to randomly draw bias from a uniform distribution. Allows for random
 person-specific bias to be obtained.
 Defaults to \code{NULL}}
+
+\item{seed}{Numeric (length = 1).
+Seed for reproducible results. The same \code{seed} gives the same results
+(and does not change the random number stream of the R session).
+Defaults to \code{NULL} (random seed)}
 }
 \value{
 Returns a list containing:

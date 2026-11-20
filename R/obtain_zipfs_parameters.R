@@ -260,7 +260,10 @@ obtain_zipfs_parameters <- function(data)
   
   # Return parameters
   return(
-    zapsmall(c(alpha = alpha, beta = beta, zipfs_sse = sse))
+    structure(
+      zapsmall(c(alpha = alpha, beta = beta, zipfs_sse = sse)),
+      class = "lf_zipfs_parameters"
+    )
   )
   
 }

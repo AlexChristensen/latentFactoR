@@ -4,7 +4,13 @@
 \alias{data_to_zipfs}
 \title{Transforms \code{\link[latentFactoR]{simulate_factors}} Data to Zipf's Distribution}
 \usage{
-data_to_zipfs(lf_object, beta = 2.7, alpha = 1, dichotomous = FALSE)
+data_to_zipfs(
+  lf_object,
+  beta = 2.7,
+  alpha = 1,
+  dichotomous = FALSE,
+  seed = NULL
+)
 }
 \arguments{
 \item{lf_object}{Data object from \code{\link[latentFactoR]{simulate_factors}}}
@@ -21,6 +27,11 @@ Defaults to \code{1}}
 Whether data should be dichotomized rather
 than frequencies (e.g., semantic network analysis).
 Defaults to \code{FALSE}}
+
+\item{seed}{Numeric (length = 1).
+Seed for reproducible results. The same \code{seed} gives the same results
+(and does not change the random number stream of the R session).
+Defaults to \code{NULL} (random seed)}
 }
 \value{
 Returns a list containing:

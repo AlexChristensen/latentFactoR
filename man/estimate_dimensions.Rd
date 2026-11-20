@@ -14,7 +14,8 @@ estimate_dimensions(
   NEST_args = list(iterations = 1000, maximum_iterations = 500, alpha = 0.05, convergence
     = 0.00001),
   PA_args = list(fm = "minres", fa = "both", cor = "cor", n.iter = 20, sim = FALSE, plot
-    = FALSE)
+    = FALSE),
+  seed = NULL
 )
 }
 \arguments{
@@ -51,6 +52,11 @@ Defaults are listed}
 List of arguments to be passed along to
 \code{\link[psych]{fa.parallel}}.
 Defaults are listed}
+
+\item{seed}{Numeric (length = 1).
+Seed for reproducible results. The same \code{seed} gives the same results
+(and does not change the random number stream of the R session).
+Defaults to \code{NULL} (random seed)}
 }
 \value{
 Returns a list containing:

@@ -35,6 +35,11 @@
 #' than frequencies (e.g., semantic network analysis).
 #' Defaults to \code{FALSE}
 #' 
+#' @param seed Numeric (length = 1).
+#' Seed for reproducible results. The same \code{seed} gives the same results
+#' (and does not change the random number stream of the R session).
+#' Defaults to \code{NULL} (random seed)
+#'
 #' @return Returns a list containing:
 #' 
 #' \item{data}{Simulated data that has been transform to follow Zipf's distribution}
@@ -111,25 +116,21 @@ data_to_zipfs <- function(
     lf_object,
     beta = 2.7,
     alpha = 1,
-    dichotomous = FALSE
+    dichotomous = FALSE,
+    seed = NULL
 )
 {
+
+  # Set seed (reproducible results)
+  seed_token <- lf_seed_start(seed)
+  on.exit(lf_seed_end(seed_token), add = TRUE)
+
   
   # Check for appropriate class
-  if(!is(lf_object, "lf_simulate")){
-    
-    # Produce error
-    stop(
-      paste(
-        "`lf_object` input is not class \"lf_simulate\" from the `simulate_factors` function.",
-        "\n\nInput class(es) of current `lf_object`:", 
-        paste0("\"", class(lf_object), "\"", collapse = ", "),
-        "\n\nUse `simulate_factors` to generate your data to input into this function"
-      )
-    )
-    
-  }
-  
+  check_lf_object(
+    lf_object, "data_to_zipfs", forbid = c("lf_we", "lf_pe", "lf_zipfs")
+  )
+
   # Obtain parameters from simulated data
   parameters <- lf_object$parameters
   
@@ -181,9 +182,9 @@ data_to_zipfs <- function(
       # row when the most-correlated column is itself all-zero, since
       # there is then no informative row to seed the repair from)
       index <- if(length(non_zero) == 0){
-        sample(seq_len(nrow(data)), 1)
+        shuffle(seq_len(nrow(data)), 1)
       }else{
-        non_zero[sample(seq_len(length(non_zero)), 1)]
+        shuffle(non_zero, 1)
       }
 
       # Assign 1 to target index

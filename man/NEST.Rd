@@ -10,7 +10,8 @@ NEST(
   iterations = 1000,
   maximum_iterations = 500,
   alpha = 0.05,
-  convergence = 0.00001
+  convergence = 0.00001,
+  seed = NULL
 )
 }
 \arguments{
@@ -39,6 +40,11 @@ Defaults to \code{0.05}}
 \item{convergence}{Numeric (length = 1).
 Value necessary to be less than or equal to
 when establishing convergence of eigenvalues}
+
+\item{seed}{Numeric (length = 1).
+Seed for reproducible results. The same \code{seed} gives the same results
+(and does not change the random number stream of the R session).
+Defaults to \code{NULL} (random seed)}
 }
 \value{
 Returns a list containing:

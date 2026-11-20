@@ -316,9 +316,17 @@ implied_hierarchical_values <- function(
       disturbance_admissible <- TRUE
     }
 
+    # Lower-order factor covariance implied by the higher-order structure
+    implied_lower_covariance <- loading_matrix %*%
+      tcrossprod(higher_correlation_matrix, loading_matrix)
+
+    # Disturbance correlations are scaled by the disturbance standard deviations
+    # (sqrt(1 - h^2)), as in `simulate_hierarchical_factors`
+    disturbance_sd <- sqrt(pmax(1 - diag(implied_lower_covariance), 0))
+    disturbance_matrix <- disturbance_matrix * tcrossprod(disturbance_sd)
+
     # Create lower-order factor correlations implied by the higher-order structure
-    lower_correlation <- loading_matrix %*%
-      tcrossprod(higher_correlation_matrix, loading_matrix) + disturbance_matrix
+    lower_correlation <- implied_lower_covariance + disturbance_matrix
 
     # Ensure diagonal of lower-order correlation matrix is 1
     diag(lower_correlation) <- 1

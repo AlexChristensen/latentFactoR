@@ -126,6 +126,9 @@ EKC <- function(
     reference = reference
   )
 
+  # Add class
+  class(results) <- "lf_ekc"
+
   # Return results
   return(results)
 

@@ -28,7 +28,8 @@ simulate_hierarchical_factors(
   variable_categories = Inf,
   categorical_limit = 7,
   skew = 0,
-  skew_range = NULL
+  skew_range = NULL,
+  seed = NULL
 )
 }
 \arguments{
@@ -148,8 +149,7 @@ lower-order factors) from a random uniform distribution.
 Mutually exclusive with \code{lower_correlations}/\code{lower_correlations_range}}
 
 \item{sample_size}{Numeric (length = 1).
-Number of cases to generate from a random multivariate normal distribution using
-\code{\link[mvtnorm]{rmvnorm}}}
+Number of cases to generate from a random multivariate normal distribution}
 
 \item{variable_categories}{Numeric (length = 1 or total variables (\code{lower_factors} x \code{variables})).
 Number of categories for each variable. \code{Inf} is used for continuous variables; otherwise,
@@ -171,6 +171,11 @@ value in the sequence. Not recommended to use with \code{variables_range}}
 Randomly selects skews within in the range.
 Somewhat redundant with \code{skew} but more flexible.
 Compatible with \code{variables_range}}
+
+\item{seed}{Numeric (length = 1).
+Seed for reproducible results. The same \code{seed} gives the same results
+(and does not change the random number stream of the R session).
+Defaults to \code{NULL} (random seed)}
 }
 \value{
 Returns a list containing:
@@ -202,10 +207,10 @@ same matrix as the top-level \code{lower_correlation})
 \code{loadings} (loading matrix of lower-order factors onto higher-order factors),
 \code{cross_loadings} (cross-loadings used for each higher-order factor),
 \code{correlations} (correlations between higher-order factors), and
-\code{disturbances} (disturbance (residual) correlation matrix of lower-order factors;
-when \code{off_disturbances} is supplied directly, only its off-diagonal elements are
-meaningful, since its diagonal is always reset to 1; when implied instead, via
-\code{lower_correlations}, the diagonal reflects the residual variance actually solved for)
+\code{disturbances} (disturbance (residual) covariance matrix of lower-order factors,
+\eqn{\boldsymbol{\Psi}}{Psi}: its diagonal holds the disturbance variances (\eqn{1 - h^2}) and its
+off-diagonal elements the disturbance covariances; use \code{\link[stats]{cov2cor}} for the
+disturbance correlations, which equal \code{off_disturbances} when it is supplied)
 
 \item \code{categories} --- Categories for each variable
 
@@ -243,9 +248,11 @@ where \eqn{\boldsymbol{\Lambda}_H}{Lambda_H} is the higher-order loading matrix 
 higher-order factors; \code{higher_loadings} and \code{higher_cross_loadings}), \eqn{\boldsymbol{\Phi}_H}{Phi_H}
 is the higher-order factor correlation matrix (\code{higher_correlations}), and \eqn{\boldsymbol{\Psi}}{Psi}
 is the disturbance (residual) correlation matrix of the lower-order factors, with its \emph{off-diagonal}
-(correlated disturbance) elements set directly via \code{off_disturbances} — its diagonal is not
-controllable: whatever variance \eqn{\boldsymbol{\Phi}_H}{Phi_H} and \eqn{\boldsymbol{\Lambda}_H}{Lambda_H}
-leave unexplained in each lower-order factor is always rescaled back to unit variance, so only the
+(correlated disturbance) elements set directly via \code{off_disturbances}, which are the
+\emph{correlations} between disturbances. The disturbance variances are not controllable: they are
+the variance that \eqn{\boldsymbol{\Phi}_H}{Phi_H} and \eqn{\boldsymbol{\Lambda}_H}{Lambda_H}
+leave unexplained in each lower-order factor (\eqn{1 - h^2}), so the disturbance covariances are
+\eqn{r_{ij}\sqrt{(1 - h^2_i)(1 - h^2_j)}}{r_ij * sqrt((1 - h2_i)(1 - h2_j))} and only the
 correlation between disturbances (not their magnitude) can be set
 }
 \details{
@@ -265,10 +272,9 @@ optional alongside the latter:
 When \eqn{\boldsymbol{\Psi}}{Psi} is implied, it is solved for as the residual needed to reproduce the
 target \code{lower_correlations} matrix given \eqn{\boldsymbol{\Phi}_H}{Phi_H} and
 \eqn{\boldsymbol{\Lambda}_H}{Lambda_H}, and may end up with a non-unit diagonal and/or off-diagonal
-values (i.e., correlated disturbances between lower-order factors are permitted); unlike a directly
-supplied \code{off_disturbances}, this implied \eqn{\boldsymbol{\Psi}}{Psi} keeps whatever diagonal
-falls out of the subtraction, since it is not passed back through the unit-variance rescaling that a
-supplied \code{off_disturbances} is. When \eqn{\boldsymbol{\Phi}_H}{Phi_H} is also
+values (i.e., correlated disturbances between lower-order factors are permitted); like the
+\eqn{\boldsymbol{\Psi}}{Psi} obtained from a supplied \code{off_disturbances}, its diagonal holds the
+disturbance variances (\eqn{1 - h^2}). When \eqn{\boldsymbol{\Phi}_H}{Phi_H} is also
 implied (i.e., \code{higher_correlations} is omitted), it is obtained first, from the target
 \code{lower_correlations} matrix and \eqn{\boldsymbol{\Lambda}_H}{Lambda_H}, via a generalized-inverse
 (least-squares) regression:

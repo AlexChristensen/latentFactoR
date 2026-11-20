@@ -26,9 +26,11 @@
 #' higher-order factors; \code{higher_loadings} and \code{higher_cross_loadings}), \eqn{\boldsymbol{\Phi}_H}{Phi_H}
 #' is the higher-order factor correlation matrix (\code{higher_correlations}), and \eqn{\boldsymbol{\Psi}}{Psi}
 #' is the disturbance (residual) correlation matrix of the lower-order factors, with its \emph{off-diagonal}
-#' (correlated disturbance) elements set directly via \code{off_disturbances} — its diagonal is not
-#' controllable: whatever variance \eqn{\boldsymbol{\Phi}_H}{Phi_H} and \eqn{\boldsymbol{\Lambda}_H}{Lambda_H}
-#' leave unexplained in each lower-order factor is always rescaled back to unit variance, so only the
+#' (correlated disturbance) elements set directly via \code{off_disturbances}, which are the
+#' \emph{correlations} between disturbances. The disturbance variances are not controllable: they are
+#' the variance that \eqn{\boldsymbol{\Phi}_H}{Phi_H} and \eqn{\boldsymbol{\Lambda}_H}{Lambda_H}
+#' leave unexplained in each lower-order factor (\eqn{1 - h^2}), so the disturbance covariances are
+#' \eqn{r_{ij}\sqrt{(1 - h^2_i)(1 - h^2_j)}}{r_ij * sqrt((1 - h2_i)(1 - h2_j))} and only the
 #' correlation between disturbances (not their magnitude) can be set
 #'
 #' @details
@@ -48,10 +50,9 @@
 #' When \eqn{\boldsymbol{\Psi}}{Psi} is implied, it is solved for as the residual needed to reproduce the
 #' target \code{lower_correlations} matrix given \eqn{\boldsymbol{\Phi}_H}{Phi_H} and
 #' \eqn{\boldsymbol{\Lambda}_H}{Lambda_H}, and may end up with a non-unit diagonal and/or off-diagonal
-#' values (i.e., correlated disturbances between lower-order factors are permitted); unlike a directly
-#' supplied \code{off_disturbances}, this implied \eqn{\boldsymbol{\Psi}}{Psi} keeps whatever diagonal
-#' falls out of the subtraction, since it is not passed back through the unit-variance rescaling that a
-#' supplied \code{off_disturbances} is. When \eqn{\boldsymbol{\Phi}_H}{Phi_H} is also
+#' values (i.e., correlated disturbances between lower-order factors are permitted); like the
+#' \eqn{\boldsymbol{\Psi}}{Psi} obtained from a supplied \code{off_disturbances}, its diagonal holds the
+#' disturbance variances (\eqn{1 - h^2}). When \eqn{\boldsymbol{\Phi}_H}{Phi_H} is also
 #' implied (i.e., \code{higher_correlations} is omitted), it is obtained first, from the target
 #' \code{lower_correlations} matrix and \eqn{\boldsymbol{\Lambda}_H}{Lambda_H}, via a generalized-inverse
 #' (least-squares) regression:
@@ -186,8 +187,7 @@
 #' Mutually exclusive with \code{lower_correlations}/\code{lower_correlations_range}
 #'
 #' @param sample_size Numeric (length = 1).
-#' Number of cases to generate from a random multivariate normal distribution using
-#' \code{\link[mvtnorm]{rmvnorm}}
+#' Number of cases to generate from a random multivariate normal distribution
 #'
 #' @param variable_categories Numeric (length = 1 or total variables (\code{lower_factors} x \code{variables})).
 #' Number of categories for each variable. \code{Inf} is used for continuous variables; otherwise,
@@ -209,6 +209,11 @@
 #' Randomly selects skews within in the range.
 #' Somewhat redundant with \code{skew} but more flexible.
 #' Compatible with \code{variables_range}
+#'
+#' @param seed Numeric (length = 1).
+#' Seed for reproducible results. The same \code{seed} gives the same results
+#' (and does not change the random number stream of the R session).
+#' Defaults to \code{NULL} (random seed)
 #'
 #' @return Returns a list containing:
 #'
@@ -239,10 +244,10 @@
 #' \code{loadings} (loading matrix of lower-order factors onto higher-order factors),
 #' \code{cross_loadings} (cross-loadings used for each higher-order factor),
 #' \code{correlations} (correlations between higher-order factors), and
-#' \code{disturbances} (disturbance (residual) correlation matrix of lower-order factors;
-#' when \code{off_disturbances} is supplied directly, only its off-diagonal elements are
-#' meaningful, since its diagonal is always reset to 1; when implied instead, via
-#' \code{lower_correlations}, the diagonal reflects the residual variance actually solved for)
+#' \code{disturbances} (disturbance (residual) covariance matrix of lower-order factors,
+#' \eqn{\boldsymbol{\Psi}}{Psi}: its diagonal holds the disturbance variances (\eqn{1 - h^2}) and its
+#' off-diagonal elements the disturbance covariances; use \code{\link[stats]{cov2cor}} for the
+#' disturbance correlations, which equal \code{off_disturbances} when it is supplied)
 #'
 #' \item \code{categories} --- Categories for each variable
 #'
@@ -344,9 +349,15 @@ simulate_hierarchical_factors <- function(
     off_disturbances = NULL, off_disturbances_range = NULL,
     sample_size, variable_categories = Inf,
     categorical_limit = 7,
-    skew = 0, skew_range = NULL
+    skew = 0, skew_range = NULL,
+    seed = NULL
 )
 {
+
+  # Set seed (reproducible results)
+  seed_token <- lf_seed_start(seed)
+  on.exit(lf_seed_end(seed_token), add = TRUE)
+
 
   # Check inputs
   inputs <- simulate_hierarchical_factors_errors(
@@ -420,6 +431,14 @@ simulate_hierarchical_factors <- function(
 
   # Verify generalizable lengths (lower-order level)
   if(length(lower_loadings) == 1){lower_loadings <- rep(lower_loadings, lower_factors)}
+  if(!is(lower_loadings, "matrix") && is.null(lower_loadings_range) && length(lower_loadings) != lower_factors){
+    stop(
+      paste0(
+        "Length of 'lower_loadings' (", length(lower_loadings), ") does not match expected length(s). ",
+        "Length must be: '1' or '", lower_factors, "', or a loading matrix"
+      ), call. = FALSE
+    )
+  }
   if(length(lower_cross_loadings) == 1){lower_cross_loadings <- rep(lower_cross_loadings, lower_factors)}
   if(length(variable_categories) == 1){variable_categories <- rep(variable_categories, total_variables)}
 
@@ -468,6 +487,14 @@ simulate_hierarchical_factors <- function(
 
   # Verify generalizable lengths (higher-order level)
   if(length(higher_loadings) == 1){higher_loadings <- rep(higher_loadings, higher_factors)}
+  if(!is(higher_loadings, "matrix") && is.null(higher_loadings_range) && length(higher_loadings) != higher_factors){
+    stop(
+      paste0(
+        "Length of 'higher_loadings' (", length(higher_loadings), ") does not match expected length(s). ",
+        "Length must be: '1' or '", higher_factors, "', or a loading matrix"
+      ), call. = FALSE
+    )
+  }
   if(length(higher_cross_loadings) == 1){higher_cross_loadings <- rep(higher_cross_loadings, higher_factors)}
 
   # `off_disturbances` and `lower_correlations` are mutually exclusive (enforced in
@@ -491,7 +518,8 @@ simulate_hierarchical_factors <- function(
 
     diag(off_disturbances) <- 1
 
-    if(any(matrix_eigenvalues(off_disturbances) < 0)){
+    # (draws from `off_disturbances_range` are redrawn on every retry below)
+    if(is.null(off_disturbances_range) && any(matrix_eigenvalues(off_disturbances) < 0)){
       stop("`off_disturbances` must be positive semi-definite (a valid correlation matrix)")
     }
 
@@ -541,6 +569,18 @@ simulate_hierarchical_factors <- function(
           "ranges or adjusting values"
         )
       )
+    }
+
+    # Draw fresh disturbances or target lower-order correlations from their
+    # ranges on every retry attempt (rather than reusing a single fixed draw)
+    if(!imply_disturbances && !is.null(off_disturbances_range)){
+      off_disturbances <- draw_correlation_matrix(lower_factors, off_disturbances_range)
+      diag(off_disturbances) <- 1
+      if(any(matrix_eigenvalues(off_disturbances) < 0)){next}
+    }
+    if(imply_disturbances && !is.null(lower_correlations_range)){
+      lower_correlation_target <- draw_correlation_matrix(lower_factors, lower_correlations_range)
+      diag(lower_correlation_target) <- 1
     }
 
     # Generate higher-order loadings matrix (lower-order factors onto higher-order factors)
@@ -663,11 +703,17 @@ simulate_hierarchical_factors <- function(
 
     }else{
 
-      disturbance_matrix <- off_disturbances
+      # `off_disturbances` are correlations between the disturbances; the
+      # disturbance variances are the lower-order variances not explained by
+      # the higher-order factors (1 - h^2), so the disturbance covariances are
+      # r_ij * sqrt((1 - h^2_i) * (1 - h^2_j)), which keeps the lower-order
+      # factors at unit variance
+      disturbance_sd <- sqrt(pmax(1 - diag(implied_lower_covariance), 0))
+      disturbance_matrix <- off_disturbances * tcrossprod(disturbance_sd)
 
     }
 
-    # Ensure disturbances form a valid (positive semi-definite) correlation matrix
+    # Ensure disturbances form a valid (positive semi-definite) covariance matrix
     check_disturbances <- any(matrix_eigenvalues(disturbance_matrix) < 0)
 
     # Add disturbances (residual/correlated covariance not explained by higher-order factors)
@@ -753,109 +799,14 @@ simulate_hierarchical_factors <- function(
 
   }
 
-  # Cholesky decomposition
-  cholesky <- chol(population_correlation)
-
-  # Generate data
-  data <- mvtnorm::rmvnorm(sample_size, sigma = diag(total_variables))
-
-  # Make data based on factor structure
-  data <- data %*% cholesky
-
-  # Set data dimensions
-  dimensions <- dim(data)
-
-  # Check for categories greater than categorical limit and not infinite
-  variable_categories <- mark_continuous_categories(variable_categories, categorical_limit)
-
-  # Set skew/categories
-  categorize_columns <- which(variable_categories <= categorical_limit)
-  continuous_columns <- setdiff(seq_len(dimensions[2]), categorize_columns)
-  n_continuous <- length(continuous_columns)
-  n_categorize <- length(categorize_columns)
-
-  # Store skew (bug fix for later use of `skew`)
-  skew_stored <- skew
-
-  # Initialize final skew
-  final_skew <- numeric(dimensions[2])
-
-  ## Check for categories
-  if(length(categorize_columns) != 0){
-
-    # Set skew
-    if(length(skew_stored) == 1){
-      skew <- rep(skew_stored, n_categorize)
-    }else if(length(skew_stored) == dimensions[2]){
-      # Full-length (per-variable) skew: select this subset's own values
-      skew <- skew_stored[categorize_columns]
-    }else{
-      skew <- shuffle_replace(skew_stored, n_categorize)
-    }
-
-    # Check for categories greater than 6
-    six_categories <- variable_categories[categorize_columns] > 6
-    if(any(six_categories)){
-
-      # Check for skew not equal to zero
-      if(any(skew[six_categories] != 0)){
-
-        # Set them equal to zero (overwrite all skews)
-        skew[six_categories] <- 0
-
-        # Send warning
-        warning("Variables with categories > 6 are not available to add skew. Skew for these variables were set to zero.")
-
-      }
-
-    }
-
-    # Loop through columns
-    for(i in seq_along(categorize_columns)){
-
-      data[,categorize_columns[i]] <- categorize(
-        data = data[,categorize_columns[i]],
-        categories = variable_categories[categorize_columns[i]],
-        skew_value = skew[i]
-      )
-
-    }
-
-    # Add to final skew
-    final_skew[categorize_columns] <- skew
-  }
-
-  ## Check for continuous
-  if(n_continuous != 0){
-
-    # Set skew
-    if(length(skew_stored) == 1){
-      skew <- rep(skew_stored, n_continuous)
-    }else if(length(skew_stored) == dimensions[2]){
-      # Full-length (per-variable) skew: select this subset's own values
-      skew <- skew_stored[continuous_columns]
-    }else{
-      skew <- shuffle_replace(skew_stored, n_continuous)
-    }
-
-    # Loop through columns
-    for(i in seq_len(n_continuous)){
-
-      data[,continuous_columns[i]] <- skew_continuous( # function in `utils-latentFactoR`
-        skew = skew[i], data = data[,continuous_columns[i]]
-      )
-
-    }
-
-    # Add to final skew
-    final_skew[continuous_columns] <- skew
-
-  }
-
-  # Add column names to data
-  colnames(data) <- paste0(
-    "V", format_integer(seq_len(total_variables), digits(total_variables) - 1)
+  # Generate data (categorize and skew variables)
+  generated <- generate_lf_data(
+    population_correlation, sample_size, variable_categories,
+    categorical_limit, skew
   )
+  data <- generated$data
+  variable_categories <- generated$categories
+  final_skew <- generated$skew
 
   # Populate parameters
   parameters <- list(
@@ -888,7 +839,7 @@ simulate_hierarchical_factors <- function(
   )
 
   # Add class
-  class(results) <- "lf_simulate"
+  class(results) <- c("lf_simulate", "lf_hierarchical")
 
   # Return results
   return(results)
@@ -990,6 +941,9 @@ simulate_hierarchical_factors_errors <- function(
       max = max(variables_range)
     ))
   }
+
+  # Check variables before they are used
+  type_error(variables, "numeric"); length_error(variables, c(1, lower_factors))
 
   # Determine total number of variables
   if(length(variables) == 1){
@@ -1120,13 +1074,10 @@ simulate_hierarchical_factors_errors <- function(
     type_error(skew_range, "numeric") # object type error
     length_error(skew_range, 2) # object length error
     range_error(skew_range, c(-10, 10)) # object range error
-    possible_skews <- seq(-10, 10, 0.05) # possible skews
-    skew_range <- round(skew_range, 2) # get to hundredths digit
-    min_range <- abs(min(skew_range) - possible_skews) # difference for minimum
-    min_skew <- possible_skews[which.min(min_range)] # get minimum skew
-    max_range <- abs(max(skew_range) - possible_skews) # difference for maximum
-    max_skew <- possible_skews[which.min(max_range)] # get maximum skew
-    skew <- seq(min_skew, max_skew, 0.05) # obtain skews
+    # Draw one skew per variable from the available skews in the range
+    # (a sequence is never applied in order, even when its length happens
+    # to equal the number of variables)
+    skew <- shuffle_replace(snap_skew_range(skew_range), total_variables)
   }
 
   # Ensure appropriate type and length for categories

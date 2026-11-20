@@ -18,7 +18,8 @@ simulate_factors(
   variable_categories = Inf,
   categorical_limit = 7,
   skew = 0,
-  skew_range = NULL
+  skew_range = NULL,
+  seed = NULL
 )
 }
 \arguments{
@@ -36,7 +37,8 @@ Minimum three variables per factor}
 
 \item{loadings}{Numeric or matrix (length = 1, \code{factors}, total number of variables (\code{factors} x \code{variables}), or total number of variables x \code{factors}).
 Loadings drawn from a random uniform distribution using +/- 0.10 of value input.
-Can be a single value or as many values as there are factors (corresponding to the factors).
+Can be a single value, as many values as there are factors (corresponding to the factors),
+or as many values as there are total variables (one dominant loading per variable).
 Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} x \code{variables})
 General effect sizes range from small (0.40), moderate (0.55), to large (0.70)}
 
@@ -46,7 +48,8 @@ General effect sizes range from small (0.40), moderate (0.55), to large (0.70)}
 
 \item{cross_loadings}{Numeric (length = 1 or \code{factors}).
 Cross-loadings drawn from a random normal distribution with a mean of 0 and standard deviation of value input.
-Can be a single value or as many values as there are factors (corresponding to the factors)}
+Can be a single value or as many values as there are factors; a factor's value is the standard
+deviation of the cross-loadings of that factor's variables (onto the other factors)}
 
 \item{cross_loadings_range}{Numeric (length = 2).
 Range of cross-loadings to randomly select from a random uniform distribution}
@@ -62,8 +65,7 @@ Range of correlations to randomly select from a random uniform distribution.
 General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70)}
 
 \item{sample_size}{Numeric (length = 1).
-Number of cases to generate from a random multivariate normal distribution using
-\code{\link[mvtnorm]{rmvnorm}}}
+Number of cases to generate from a random multivariate normal distribution}
 
 \item{variable_categories}{Numeric (length = 1 or total variables (\code{factors} x \code{variables})).
 Number of categories for each variable. \code{Inf} is used for continuous variables; otherwise,
@@ -82,9 +84,14 @@ Skews that are not in this sequence will be converted to their nearest
 value in the sequence. Not recommended to use with \code{variables_range}}
 
 \item{skew_range}{Numeric (length = 2).
-Randomly selects skews within in the range.
+Randomly selects one skew per variable within the range (in increments of 0.05).
 Somewhat redundant with \code{skew} but more flexible.
 Compatible with \code{variables_range}}
+
+\item{seed}{Numeric (length = 1).
+Seed for reproducible results. The same \code{seed} gives the same results
+(and does not change the random number stream of the R session).
+Defaults to \code{NULL} (random seed)}
 }
 \value{
 Returns a list containing:

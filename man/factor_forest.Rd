@@ -8,26 +8,26 @@ factor_forest(
   data,
   sample_size,
   maximum_factors = 8,
-  PA_correlation = c("cor", "poly", "tet")
+  PA_correlation = c("cor", "poly", "tet"),
+  seed = NULL
 )
 }
 \arguments{
 \item{data}{Matrix or data frame.
-Either a dataset with all numeric values
-(rows = cases, columns = variables) or
-a symmetric correlation matrix}
+A dataset with all numeric values (rows = cases, columns = variables).
+Correlation matrices are not supported because the comparison data
+approach requires the data}
 
 \item{sample_size}{Numeric (length = 1).
-If input into \code{data} is a correlation matrix,
-then specifying the sample size is required}
+Deprecated and ignored (the sample size is the number of rows of \code{data})}
 
 \item{maximum_factors}{Numeric (length = 1).
-Maximum number of factors to search over.
+Maximum number of factors to search over in the comparison data approach.
 Defaults to \code{8}}
 
 \item{PA_correlation}{Character (length = 1).
-Type of correlation used in \code{\link[psych]{fa.parallel}}.
-Must be set:
+Type of correlation used in parallel analysis.
+Defaults to \code{"cor"}:
 
 \itemize{
 
@@ -38,9 +38,14 @@ Must be set:
 \item \code{"tet"} --- Tetrachoric correlation
 
 }}
+
+\item{seed}{Numeric (length = 1).
+Seed for reproducible results. The same \code{seed} gives the same results
+(and does not change the random number stream of the R session).
+Defaults to \code{NULL} (random seed)}
 }
 \value{
-Returns a list containing:
+Returns a list (class \code{"lf_ff"}) containing:
 
 \item{dimensions}{Number of dimensions identified}
 
@@ -49,8 +54,26 @@ is most likely}
 }
 \description{
 Estimates the number of dimensions in data using the
-pre-trained Random Forest model from Goretzko and Buhner
+pre-trained XGBoost model from Goretzko and Buhner
 (2020, 2022). See examples to get started
+}
+\details{
+The model's 184 features are computed as in the authors' evaluation code:
+the sample size and number of variables, summary features of the
+correlation matrix and its eigenvalues, parallel analysis, the empirical
+Kaiser criterion, the comparison data approach, and the first 80
+eigenvalues of the correlation matrix and of the reduced correlation matrix.
+
+Parallel analysis follows \code{\link[psych]{fa.parallel}} with
+\code{fa = "fa"}: the one-factor minimum residual eigenvalues of the data
+are compared to the 95th percentile of those from 20 sets of random normal
+data with the same dimensions. Because the reference only depends on the
+sample size and number of variables, no correlations of resampled data are
+computed. The comparison data approach (Ruscio & Roche, 2012) uses an
+optimized implementation of the original algorithm.
+
+The pre-trained model is included with the package (an XGBoost booster
+saved in JSON format) and is loaded once per R session
 }
 \examples{
 # Generate factor data
@@ -63,7 +86,7 @@ two_factor <- simulate_factors(
   sample_size = 1000 # number of cases = 1000
 )
 
-\dontrun{
+\donttest{
 # Perform Factor Forest
 factor_forest(two_factor$data)}
 
@@ -78,6 +101,11 @@ One model to rule them all? Using machine learning
 algorithms to determine the number of factors
 in exploratory factor analysis.
 \emph{Psychological Methods}, \emph{25}(6), 776-786.
+
+Ruscio, J., & Roche, B. (2012).
+Determining the number of factors to retain in an exploratory factor
+analysis using comparison data of known factorial structure.
+\emph{Psychological Assessment}, \emph{24}(2), 282-292.
 }
 \author{
 # Authors of Factor Forest \cr

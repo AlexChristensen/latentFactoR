@@ -6,124 +6,190 @@
 \usage{
 add_population_error(
   lf_object,
-  cfa_method = c("minres", "ml"),
-  fit = c("cfi", "rmsea", "rmsr", "raw"),
-  misfit = c("close", "acceptable"),
-  error_method = c("cudeck", "yuan"),
+  method = c("cb", "tkl", "wb", "hb"),
+  metric = c("cfi", "tli", "rmsea", "srmr"),
+  fit_value = NULL,
   tolerance = 0.01,
-  convergence_iterations = 10,
-  leave_cross_loadings = FALSE
+  max_iterations = 10,
+  control = list(),
+  leave_cross_loadings = FALSE,
+  seed = NULL
 )
 }
 \arguments{
-\item{lf_object}{Data object from \code{\link[latentFactoR]{simulate_factors}}}
+\item{lf_object}{Data object from \code{\link[latentFactoR]{simulate_factors}}
+(or \code{\link[latentFactoR]{add_cross_loadings}},
+\code{\link[latentFactoR]{add_local_dependence}}, or
+\code{\link[latentFactoR]{add_method_factors}} applied to it)}
 
-\item{cfa_method}{Character (length = 1).
-Method to generate population error.
-Defaults to \code{"ml"}.
+\item{method}{Character (length = 1).
+Method used to generate the population error.
+There is no default; \code{method} must be specified.
 Available options:
 
 \itemize{
 
-\item \code{"minres"} --- Minimum residual
+\item \code{"cb"} --- Cudeck and Browne (1992). Error is a random direction
+that is orthogonal to the maximum likelihood score of every free parameter of
+the true model, so the true model remains the best-fitting model of the
+population correlation matrix with error (the true parameters are recovered
+exactly)
 
-\item \code{"ml"} --- Maximum likelihood
+\item \code{"tkl"} --- Tucker, Koopman, and Linn (1969). Error is
+the contribution of many random minor factors whose loadings decay
+geometrically. The proportion of variance attributed to the minor factors
+is optimized
+
+\item \code{"wb"} --- Wu and Browne (2015). The population correlation
+matrix with error is the inverse of a Wishart draw for the precision matrix
+(i.e., an inverted Wishart draw for the covariance matrix), where the
+Wishart is centered on the original population correlation matrix and the
+result is standardized to a correlation matrix. The dispersion of the
+distribution is optimized. Draws are not rescaled; draws with an
+error outside of -1 to 1 are treated as infeasible
+
+\item \code{"hb"} --- Hu and Bentler (1998). Underparameterized
+misspecification: a random subset of the loadings that are zero in the true
+model are non-zero in the population (omitted cross-loadings). The size of
+the omitted cross-loadings is optimized
 
 }}
 
-\item{fit}{Character (length = 1).
-Fit index to control population error.
-Defaults to \code{"rmsr"}.
+\item{metric}{Character (length = 1).
+Fit index used as the objective criterion. The true model is fit to the
+population correlation matrix with error (maximum likelihood)
+and the error is optimized so that \code{metric} equals \code{fit_value}.
+Defaults to the fit index that is consistent with \code{method}:
+\code{"CFI"} for \code{"cb"} and \code{"tkl"}, \code{"RMSEA"} for
+\code{"wb"} (the dispersion is approximately RMSEA\eqn{^2}), and
+\code{"SRMR"} for \code{"hb"} (error is defined through the size of
+omitted cross-loadings).
 Available options:
 
 \itemize{
 
-\item \code{"cfi"} --- Comparative fit index
+\item \code{"CFI"} --- Comparative fit index
 
-\item \code{"rmsea"} --- Root mean square error of approximation
+\item \code{"TLI"} --- Tucker-Lewis index
 
-\item \code{"rmsr"} --- Root mean square residuals
+\item \code{"RMSEA"} --- Root mean square error of approximation
 
-\item \code{"raw"} --- Direct application of error
-
-}}
-
-\item{misfit}{Character or numeric (length = 1).
-Magnitude of error to add.
-Defaults to \code{"close"}.
-Available options:
-
-\itemize{
-
-\item \code{"close"} --- Slight deviations from original population correlation matrix
-
-\item \code{"acceptable"} --- Moderate deviations from original population correlation matrix
-
-}
-
-While numbers can be used, they are \strong{not} recommended. They can be
-used to specify misfit but the level of misfit will vary depending
-on the factor structure}
-
-\item{error_method}{Character (length = 1).
-Method to control population error.
-Defaults to \code{"cudeck"}.
-Description of methods:
-
-\itemize{
-
-\item \code{"cudeck"} --- Description coming soon... see Cudeck & Browne, 1992
-for more details
-
-\item \code{"yuan"} --- Description coming soon...
+\item \code{"SRMR"} --- Standardized root mean square residual
+(computed over the lower triangle of the correlation matrices including
+the diagonal, following \pkg{lavaan})
 
 }}
+
+\item{fit_value}{Numeric (length = 1).
+Target value of \code{metric} for the true model fit to the population
+correlation matrix with error. Must be between 0 and 1 (exclusive).
+Defaults to the conventional cutoff for the \code{metric}:
+\code{0.95} for \code{"CFI"} and \code{"TLI"}, \code{0.06} for
+\code{"RMSEA"}, and \code{0.05} for \code{"SRMR"}}
 
 \item{tolerance}{Numeric (length = 1).
-Tolerance of SRMR difference between population error
-correlation matrix and the original population correlation
-matrix. Ensures that appropriate population error
-was added. Similarly, verifies that the MAE of the
-loadings are not greater than the specified amount,
-ensuring proper convergence.
+Maximum absolute difference between the target \code{fit_value} and the
+\code{metric} of the population correlation matrix with error that is
+accepted without a warning. Ensures that the appropriate amount of
+population error was added.
 Defaults to \code{0.01}}
 
-\item{convergence_iterations}{Numeric (length = 1).
-Number of iterations to reach parameter convergence
-within the specified `tolerance`.
+\item{max_iterations}{Numeric (length = 1).
+Maximum number of optimization attempts (random draws of the error)
+to reach the target \code{fit_value} within the specified
+\code{tolerance}.
 Defaults to \code{10}}
 
+\item{control}{List.
+Method-specific options. Options that do not apply to \code{method} are
+ignored. Available options:
+
+\itemize{
+
+\item \code{minor_factors} --- Number of minor factors for
+\code{method = "tkl"}. Defaults to \code{max(50, 2 * variables)}
+
+\item \code{decay} --- Geometric decay (\eqn{\epsilon}) of the minor factor
+loadings for \code{method = "tkl"}. Must be between 0 and 1.
+The loading of minor factor \eqn{k} is multiplied by
+\eqn{(1 - \epsilon)^{k - 1}}, so the variance it contributes is proportional
+to \eqn{(1 - \epsilon)^{2(k - 1)}}. Smaller values (e.g., \code{0.02}) spread the
+error over many minor factors (diffuse, unstructured noise) while larger
+values (e.g., \code{0.30}, the default) concentrate the error in a few
+minor factors (more structured error). Very large values (\code{> 0.60}) can
+make the target \code{fit_value} harder to reach within the error bounds
+(\eqn{[-1, 1]}).
+Defaults to \code{0.30}
+
+\item \code{omitted} --- Proportion of the zero loadings in the true model
+that are omitted cross-loadings for \code{method = "hb"}. At least one
+cross-loading is always omitted. Defaults to \code{0.10}
+
+}}
+
 \item{leave_cross_loadings}{Boolean.
-Should cross-loadings be kept?
+Should cross-loadings be kept in the true model?
 Defaults to \code{FALSE}.
 Convergence problems can arise if cross-loadings are kept,
 so setting them to zero is the default. Only set to \code{TRUE}
 with careful consideration of the structure. Make sure to perform
 additional checks that the data are adequate}
+
+\item{seed}{Numeric (length = 1).
+Seed for reproducible results. The same \code{seed} gives the same results
+(and does not change the random number stream of the R session).
+Defaults to \code{NULL} (random seed)}
 }
 \value{
 Returns a list containing:
 
-\item{data}{Simulated data from the specified factor model}
+\item{data}{Simulated data from the population correlation matrix with error
+(same dimensions, column names, categories, and skew as the input data)}
 
-\item{population_correlation}{Population correlation matrix with local dependence added}
+\item{population_correlation}{Population correlation matrix with error added}
+
+\item{original_correlation}{Population correlation matrix of the true model
+\emph{before} population error was added}
 
 \item{population_error}{
 A list containing the parameters used to generate population error:
 
 \itemize{
 
-\item \code{error_correlation} --- Correlation matrix with population
-error added (same as \code{population_correlation})
+\item \code{method} --- Method used to generate the population error
 
-\item \code{fit} --- Fit measure used to control population error
+\item \code{metric} --- Fit index used as the objective criterion
 
-\item \code{delta} --- Minimum of the objective function corresponding
-to the misfit value
+\item \code{fit_value} --- Target value of \code{metric}
 
-\item \code{misfit} --- Specified misfit value
+\item \code{achieved} --- Value of \code{metric} achieved by the true model
+fit to the population correlation matrix with error
 
-\item \code{loadings} --- Estiamted CFA loadings after error has been added
+\item \code{fit} --- Named vector of all fit indices (\code{CFI},
+\code{TLI}, \code{RMSEA}, and \code{SRMR}) achieved
+
+\item \code{delta} --- Minimum of the (maximum likelihood) discrepancy
+function corresponding to the achieved fit
+
+\item \code{error} --- Matrix of the error that was added to the
+original population correlation matrix
+
+\item \code{max_error} --- Largest absolute error that was added
+
+\item \code{R_difference} --- Largest absolute difference between the
+original population correlation matrix and the true model (maximum
+likelihood) fit to the population correlation matrix with error.
+Values near zero indicate that the error is orthogonal to the true model
+(expected for \code{method = "cb"} only)
+
+\item \code{loadings} --- Estimated loadings of the true model fit to the
+population correlation matrix with error (signs aligned to the original
+loadings)
+
+\item \code{factor_correlations} --- Estimated factor correlations of the
+true model fit to the population correlation matrix with error
+
+\item \code{iterations} --- Number of optimization attempts used
 
 }
 
@@ -132,8 +198,43 @@ to the misfit value
 \item{original_results}{Original \code{lf_object} input into function}
 }
 \description{
-Adds population error to simulated data from \code{\link[latentFactoR]{simulate_factors}}.
+Adds population (model) error to simulated factor model data.
+The population correlation matrix is perturbed so that the true factor model
+(known loading pattern, factor correlations, and residuals) no longer fits
+perfectly but instead fits at a specified value of a fit index (CFI, TLI,
+RMSEA, or SRMR). Data are then re-generated from the perturbed population
+correlation matrix.
 See examples to get started
+}
+\details{
+The error is generated with one of four methods (see \code{method}) and
+optimized so that the \code{metric} of the true factor model, fit to the
+population correlation matrix with error using maximum likelihood (i.e., the
+known model), equals \code{fit_value}. The fit indices are computed at the
+population level using the maximum likelihood discrepancy function between
+the population correlation matrix with error and the correlation matrix
+implied by the true model. The error added to any cell of the original
+population correlation matrix is limited to the range -1 to 1 and the
+population correlation matrix with error is always positive definite with a
+unit diagonal.
+
+The true model includes the non-zero loadings (cross-loadings are set to
+zero unless \code{leave_cross_loadings = TRUE}), the non-zero factor
+correlations, the uniquenesses, and any correlated residuals from
+\code{\link[latentFactoR]{add_local_dependence}}
+
+Because chi-square-based indices (CFI, TLI, and RMSEA) depend on sample
+size, the population-level fit is evaluated at the size of the human
+population (approximately 8.3 billion). At this size, the fit indices are
+within about \eqn{10^{-8}} of their large-sample limits
+
+Each optimization attempt uses new random draws of the error. Attempts
+continue (up to \code{max_iterations}) until \code{fit_value} is matched
+(to within \eqn{10^{-6}}) and the attempt closest to \code{fit_value} is
+returned. If \code{fit_value} cannot be reached within \code{tolerance}
+(e.g., because the target requires more error than can be added while
+remaining positive definite), a warning is given and the closest
+solution is used
 }
 \examples{
 # Generate factor data
@@ -146,36 +247,49 @@ two_factor <- simulate_factors(
   sample_size = 1000 # number of cases = 1000
 )
 
-# Add small population error using Cudeck method
-two_factor_Cudeck <- add_population_error(
-  lf_object = two_factor,
-  cfa_method = "minres",
-  fit = "rmsr", misfit = "close",
-  error_method = "cudeck"
+# Add population error (CFI = 0.95 using Cudeck and Browne)
+two_factor_cb <- add_population_error(lf_object = two_factor, method = "cb")
+\donttest{
+# Use Wu and Browne to target TLI = 0.90
+two_factor_wb <- add_population_error(
+  lf_object = two_factor, method = "wb",
+  metric = "TLI", fit_value = 0.90
 )
 
-# Add small population error using Yuan method
-two_factor_Yuan <- add_population_error(
-  lf_object = two_factor,
-  cfa_method = "minres",
-  fit = "rmsr", misfit = "close",
-  error_method = "yuan"
+# Target RMSEA = 0.04
+two_factor_rmsea <- add_population_error(
+  lf_object = two_factor, method = "cb", metric = "RMSEA",
+  fit_value = 0.04
 )
+
+# Use Hu and Bentler to target SRMR = 0.05
+two_factor_srmr <- add_population_error(
+  lf_object = two_factor, method = "hb", fit_value = 0.05
+)}
 
 }
 \references{
+\strong{Cudeck and Browne (\code{"cb"})} \cr
 Cudeck, R., & Browne, M.W. (1992).
 Constructing a covariance matrix that yields a specified minimizer and a specified minimum discrepancy function value.
-\emph{Psychometrika}, \emph{57}, 357–369.
+\emph{Psychometrika}, \emph{57}, 357--369.
+
+\strong{Tucker, Koopman, and Linn (\code{"tkl"})} \cr
+Tucker, L.R., Koopman, R.F., & Linn, R.L. (1969).
+Evaluation of factor analytic research procedures by means of simulated correlation matrices.
+\emph{Psychometrika}, \emph{34}, 421--459.
+
+\strong{Wu and Browne (\code{"wb"})} \cr
+Wu, H., & Browne, M.W. (2015).
+Quantifying adventitious error in a covariance structure as a random effect.
+\emph{Psychometrika}, \emph{80}, 571--600.
+
+\strong{Hu and Bentler (\code{"hb"}) and fit indices} \cr
+Hu, L., & Bentler, P.M. (1998).
+Fit indices in covariance structure modeling: Sensitivity to underparameterized model misspecification.
+\emph{Psychological Methods}, \emph{3}, 424--453.
 }
 \author{
-{\code{bifactor}} authors \cr
-Marcos Jimenez,
-Francisco J. Abad,
-Eduardo Garcia-Garzon,
-Vithor R. Franco,
-Luis Eduardo Garrido <luisgarrido@pucmm.edu>
-
 {\code{\link{latentFactoR}}} authors \cr
 Alexander P. Christensen <alexpaulchristensen@gmail.com>,
 Hudson Golino <hfg9s@virginia.edu>,

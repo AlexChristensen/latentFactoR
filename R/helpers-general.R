@@ -239,6 +239,114 @@ swiftelse <- function(condition, true, false)
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #' @noRd
+# Reproducible random number generation ----
+# Exported functions with a `seed` argument open a seed scope: while it is
+# active, every call to the C random number generators (without its own
+# seed) uses a deterministic seed derived from the scope's seed and a call
+# counter. All random numbers in the package come from the C generators; R's
+# random number generator is also set with `set.seed(seed)` so that
+# functions from other packages used within (e.g., `fspe::fspe` in
+# `estimate_dimensions`) are reproducible as well. Nested calls (e.g., `add_*`
+# functions that call `simulate_factors`) share the outer scope. When the
+# scope ends, R's random number generator state is restored, so a seeded call
+# does not change the user's random stream
+# Updated 20.11.2026
+lf_rng <- new.env(parent = emptyenv())
+
+#' @noRd
+# Start a seed scope (returns a token for `lf_seed_end`; NULL when no scope
+# was started)
+# Updated 20.11.2026
+lf_seed_start <- function(seed)
+{
+
+  # No seed or a scope is already active
+  if(is.null(seed) || isTRUE(lf_rng$active)){
+    return(NULL)
+  }
+
+  # Check seed
+  if(
+    !is.numeric(seed) || length(seed) != 1 || !is.finite(seed) ||
+    seed != round(seed) || abs(seed) > .Machine$integer.max
+  ){
+    stop("`seed` must be a single whole number (or NULL for a random seed)", call. = FALSE)
+  }
+
+  # Store user's random number generator state
+  global <- globalenv()
+  token <- list(
+    exists = exists(".Random.seed", envir = global, inherits = FALSE)
+  )
+  if(token$exists){
+    token$state <- get(".Random.seed", envir = global, inherits = FALSE)
+  }
+
+  # Start scope
+  lf_rng$active <- TRUE
+  lf_rng$base <- abs(seed) + 1
+  lf_rng$counter <- 0
+
+  # Set R's random number generator
+  set.seed(seed)
+
+  # Return token
+  return(token)
+
+}
+
+#' @noRd
+# End a seed scope (restores the user's random number generator state)
+# Updated 20.11.2026
+lf_seed_end <- function(token)
+{
+
+  # Check for scope
+  if(is.null(token)){
+    return(invisible(NULL))
+  }
+
+  # End scope
+  lf_rng$active <- FALSE
+
+  # Restore user's random number generator state
+  global <- globalenv()
+  if(isTRUE(token$exists)){
+    assign(".Random.seed", token$state, envir = global)
+  }else if(exists(".Random.seed", envir = global, inherits = FALSE)){
+    rm(".Random.seed", envir = global)
+  }
+
+  # Return invisibly
+  return(invisible(NULL))
+
+}
+
+#' @noRd
+# Seed for a call to the C random number generators
+# (0 = random seed from the clock, process ID, and a counter)
+# Updated 20.11.2026
+lf_call_seed <- function(seed)
+{
+
+  # Supplied seed
+  if(!is.null(seed)){
+    return(as.numeric(seed))
+  }
+
+  # No active scope
+  if(!isTRUE(lf_rng$active)){
+    return(0)
+  }
+
+  # Deterministic seed from the scope's seed and the call counter
+  # (non-zero and exactly representable as a double)
+  lf_rng$counter <- lf_rng$counter + 1
+  return(lf_rng$base * 2097152 + lf_rng$counter)
+
+}
+
+#' @noRd
 # Generate uniform data ----
 # Allows adjustment of range
 # Updated 26.10.2023
@@ -249,7 +357,7 @@ runif_xoshiro <- function(n, min = 0, max = 1, seed = NULL)
   values <- .Call(
     "r_xoshiro_uniform",
     as.integer(n),
-    swiftelse(is.null(seed), 0, seed),
+    lf_call_seed(seed),
     PACKAGE = "latentFactoR"
   )
 
@@ -276,7 +384,7 @@ shuffle <- function(x, size = length(x), seed = NULL)
     x[.Call(
       "r_xoshiro_shuffle",
       as.integer(seq_along(x)),
-      swiftelse(is.null(seed), 0, seed),
+      lf_call_seed(seed),
       PACKAGE = "latentFactoR"
     )][seq_len(size)]
   )
@@ -295,7 +403,7 @@ weighted_shuffle <- function(x, size = length(x), prob, seed = NULL)
     x[.Call(
       "r_xoshiro_weighted_shuffle",
       as.integer(seq_along(x)), prob,
-      swiftelse(is.null(seed), 0, seed),
+      lf_call_seed(seed),
       PACKAGE = "latentFactoR"
     )][seq_len(size)]
   )
@@ -309,11 +417,16 @@ weighted_shuffle <- function(x, size = length(x), prob, seed = NULL)
 shuffle_replace <- function(x, size = length(x), seed = NULL)
 {
 
+  # No draws (the C routine treats a size of zero as `length(x)`)
+  if(size == 0){
+    return(x[0])
+  }
+
   # Return call from C
   return(
     x[.Call(
       "r_xoshiro_shuffle_replace",
-      x, size, swiftelse(is.null(seed), 0, seed),
+      x, size, lf_call_seed(seed),
       PACKAGE = "latentFactoR"
     )]
   )
@@ -332,7 +445,7 @@ rnorm_ziggurat <- function(n, seed = NULL)
     .Call(
       "r_ziggurat",
       as.integer(n),
-      swiftelse(is.null(seed), 0, seed),
+      lf_call_seed(seed),
       PACKAGE = "latentFactoR"
     )
   )

@@ -28,7 +28,8 @@
 #'
 #' @param loadings Numeric or matrix (length = 1, \code{factors}, total number of variables (\code{factors} x \code{variables}), or total number of variables x \code{factors}).
 #' Loadings drawn from a random uniform distribution using +/- 0.10 of value input.
-#' Can be a single value or as many values as there are factors (corresponding to the factors).
+#' Can be a single value, as many values as there are factors (corresponding to the factors),
+#' or as many values as there are total variables (one dominant loading per variable).
 #' Can also be a loading matrix. Columns must match factors and rows must match total variables (\code{factors} x \code{variables})
 #' General effect sizes range from small (0.40), moderate (0.55), to large (0.70)
 #'
@@ -38,7 +39,8 @@
 #'
 #' @param cross_loadings Numeric (length = 1 or \code{factors}).
 #' Cross-loadings drawn from a random normal distribution with a mean of 0 and standard deviation of value input.
-#' Can be a single value or as many values as there are factors (corresponding to the factors)
+#' Can be a single value or as many values as there are factors; a factor's value is the standard
+#' deviation of the cross-loadings of that factor's variables (onto the other factors)
 #'
 #' @param cross_loadings_range Numeric (length = 2).
 #' Range of cross-loadings to randomly select from a random uniform distribution
@@ -54,8 +56,7 @@
 #' General effect sizes range from orthogonal (0.00), small (0.30), moderate (0.50), to large (0.70)
 #'
 #' @param sample_size Numeric (length = 1).
-#' Number of cases to generate from a random multivariate normal distribution using
-#' \code{\link[mvtnorm]{rmvnorm}}
+#' Number of cases to generate from a random multivariate normal distribution
 #'
 #' @param variable_categories Numeric (length = 1 or total variables (\code{factors} x \code{variables})).
 #' Number of categories for each variable. \code{Inf} is used for continuous variables; otherwise,
@@ -74,9 +75,14 @@
 #' value in the sequence. Not recommended to use with \code{variables_range}
 #'
 #' @param skew_range Numeric (length = 2).
-#' Randomly selects skews within in the range.
+#' Randomly selects one skew per variable within the range (in increments of 0.05).
 #' Somewhat redundant with \code{skew} but more flexible.
 #' Compatible with \code{variables_range}
+#'
+#' @param seed Numeric (length = 1).
+#' Seed for reproducible results. The same \code{seed} gives the same results
+#' (and does not change the random number stream of the R session).
+#' Defaults to \code{NULL} (random seed)
 #'
 #' @return Returns a list containing:
 #'
@@ -191,9 +197,15 @@ simulate_factors <- function(
     correlations, correlations_range = NULL,
     sample_size, variable_categories = Inf,
     categorical_limit = 7,
-    skew = 0, skew_range = NULL
+    skew = 0, skew_range = NULL,
+    seed = NULL
 )
 {
+
+  # Set seed (reproducible results)
+  seed_token <- lf_seed_start(seed)
+  on.exit(lf_seed_end(seed_token), add = TRUE)
+
 
   # Check inputs
   inputs <- simulate_factors_errors(
@@ -242,8 +254,35 @@ simulate_factors <- function(
   end_variables <- variable_sequence$end
 
   # Verify generalizable lengths
-  if(length(loadings) == 1){loadings <- rep(loadings, factors)}
+  # (dominant loadings: one value, one per factor, or one per variable;
+  # draws from `loadings_range` are made in the loop below)
+  if(!is(loadings, "matrix") && is.null(loadings_range)){
+
+    # Per-variable dominant loadings
+    if(length(loadings) == 1){
+      loadings <- rep(loadings, total_variables)
+    }else if(length(loadings) == factors && factors != total_variables){
+      loadings <- rep(loadings, times = variables)
+    }else if(length(loadings) != total_variables){
+      stop(
+        paste0(
+          "Length of 'loadings' (", length(loadings), ") does not match expected length(s). ",
+          "Length must be: '1', '", factors, "' (factors), or '", total_variables,
+          "' (total variables), or a loading matrix"
+        ), call. = FALSE
+      )
+    }
+
+  }
   if(length(cross_loadings) == 1){cross_loadings <- rep(cross_loadings, factors)}
+  if(!is(loadings, "matrix") && is.null(cross_loadings_range) && length(cross_loadings) != factors){
+    stop(
+      paste0(
+        "Length of 'cross_loadings' (", length(cross_loadings), ") does not match expected ",
+        "length(s). Length must be: '1' or '", factors, "' (factors)"
+      ), call. = FALSE
+    )
+  }
   if(length(variable_categories) == 1){
     variable_categories <- rep(variable_categories, total_variables)
   }
@@ -286,9 +325,10 @@ simulate_factors <- function(
         # Populate dominant loadings
         if(is.null(loadings_range)){
 
-          # Generate loadings from uniform distribution
-          loading_matrix[start_variables[i]:end_variables[i], i] <-
-          runif_xoshiro(variables[i], min = loadings[i] - 0.10, max = loadings[i] + 0.10)
+          # Generate loadings from uniform distribution (+/- 0.10 of each variable's value)
+          target_variables <- start_variables[i]:end_variables[i]
+          loading_matrix[target_variables, i] <- loadings[target_variables] +
+            runif_xoshiro(variables[i], min = -0.10, max = 0.10)
 
         }else{
 
@@ -377,109 +417,14 @@ simulate_factors <- function(
 
   }
 
-  # Cholesky decomposition
-  cholesky <- chol(population_correlation)
-
-  # Generate data
-  data <- mvtnorm::rmvnorm(sample_size, sigma = diag(total_variables))
-
-  # Make data based on factor structure
-  data <- data %*% cholesky
-
-  # Set data dimensions
-  dimensions <- dim(data)
-
-  # Check for categories greater than categorical limit and not infinite
-  variable_categories <- mark_continuous_categories(variable_categories, categorical_limit)
-
-  # Set skew/categories
-  categorize_columns <- which(variable_categories <= categorical_limit)
-  continuous_columns <- setdiff(seq_len(dimensions[2]), categorize_columns)
-  n_continuous <- length(continuous_columns)
-  n_categorize <- length(categorize_columns)
-
-  # Store skew (bug fix for later use of `skew`)
-  skew_stored <- skew
-
-  # Initialize final skew
-  final_skew <- numeric(dimensions[2])
-
-  ## Check for categories
-  if(length(categorize_columns) != 0){
-
-    # Set skew
-    if(length(skew_stored) == 1){
-      skew <- rep(skew_stored, n_categorize)
-    }else if(length(skew_stored) == dimensions[2]){
-      # Full-length (per-variable) skew: select this subset's own values
-      skew <- skew_stored[categorize_columns]
-    }else{
-      skew <- shuffle_replace(skew_stored, n_categorize)
-    }
-
-    # Check for categories greater than 6
-    six_categories <- variable_categories[categorize_columns] > 6
-    if(any(six_categories)){
-
-      # Check for skew not equal to zero
-      if(any(skew[six_categories] != 0)){
-
-        # Set them equal to zero (overwrite all skews)
-        skew[six_categories] <- 0
-
-        # Send warning
-        warning("Variables with categories > 6 are not available to add skew. Skew for these variables were set to zero.")
-
-      }
-
-    }
-
-    # Loop through columns
-    for(i in seq_along(categorize_columns)){
-
-      data[,categorize_columns[i]] <- categorize(
-        data = data[,categorize_columns[i]],
-        categories = variable_categories[categorize_columns[i]],
-        skew_value = skew[i]
-      )
-
-    }
-
-    # Add to final skew
-    final_skew[categorize_columns] <- skew
-  }
-
-  ## Check for continuous
-  if(n_continuous != 0){
-
-    # Set skew
-    if(length(skew_stored) == 1){
-      skew <- rep(skew_stored, n_continuous)
-    }else if(length(skew_stored) == dimensions[2]){
-      # Full-length (per-variable) skew: select this subset's own values
-      skew <- skew_stored[continuous_columns]
-    }else{
-      skew <- shuffle_replace(skew_stored, n_continuous)
-    }
-
-    # Loop through columns
-    for(i in seq_len(n_continuous)){
-
-      data[,continuous_columns[i]] <- skew_continuous( # function in `utils-latentFactoR`
-        skew = skew[i], data = data[,continuous_columns[i]]
-      )
-
-    }
-
-    # Add to final skew
-    final_skew[continuous_columns] <- skew
-
-  }
-
-  # Add column names to data
-  colnames(data) <- paste0(
-    "V", format_integer(seq_len(total_variables), digits(total_variables) - 1)
+  # Generate data (categorize and skew variables)
+  generated <- generate_lf_data(
+    population_correlation, sample_size, variable_categories,
+    categorical_limit, skew
   )
+  data <- generated$data
+  variable_categories <- generated$categories
+  final_skew <- generated$skew
 
   # Populate parameters
   parameters <- list(
@@ -556,6 +501,9 @@ simulate_factors_errors <- function(
     ))
   }
 
+  # Check variables before they are used
+  type_error(variables, "numeric"); length_error(variables, c(1, factors))
+
   # Determine total number of variables
   if(length(variables) == 1){
     total_variables <- factors * variables
@@ -615,13 +563,10 @@ simulate_factors_errors <- function(
     type_error(skew_range, "numeric") # object type error
     length_error(skew_range, 2) # object length error
     range_error(skew_range, c(-10, 10)) # object range error
-    possible_skews <- seq(-10, 10, 0.05) # possible skews
-    skew_range <- round(skew_range, 2) # get to hundredths digit
-    min_range <- abs(min(skew_range) - possible_skews) # difference for minimum
-    min_skew <- possible_skews[which.min(min_range)] # get minimum skew
-    max_range <- abs(max(skew_range) - possible_skews) # difference for maximum
-    max_skew <- possible_skews[which.min(max_range)] # get maximum skew
-    skew <- seq(min_skew, max_skew, 0.05) # obtain skews
+    # Draw one skew per variable from the available skews in the range
+    # (a sequence is never applied in order, even when its length happens
+    # to equal the number of variables)
+    skew <- shuffle_replace(snap_skew_range(skew_range), total_variables)
   }
 
   # Ensure appropriate type and length for categories

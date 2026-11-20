@@ -1,862 +1,3 @@
-#%%%%%%%%%%%%%%%%%%%%%%%%%%
-# add_population_error ----
-#%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-#' @noRd
-# Specify CFA model
-# Updated 01.10.2022
-model_CFA <- function(variables, loadings)
-{
-
-  # Initialize model
-  model <- ""
-
-  # Loop through factors
-  for(i in 1:ncol(loadings)){
-
-    # Append model
-    if(i != ncol(loadings)){
-      model <- paste0(
-        model,
-        "F", i, " =~ ",
-        paste0(
-          "V", which(loadings[,i] != 0),
-          collapse = " + "
-        ), " \n "
-      )
-    }else{
-      model <- paste0(
-        model,
-        "F", i, " =~ ",
-        paste0(
-          "V", which(loadings[,i] != 0),
-          collapse = " + "
-        )
-      )
-    }
-
-  }
-
-  # Return model
-  return(model)
-
-}
-
-#' @noRd
-# Standardized Root Mean Resdiual
-# Updated 24.11.2022
-srmr <- function(population, error)
-{
-
-  # Obtain lower triangles
-  lower_triangle <- lower.tri(population)
-
-  # Return SRMR
-  return(sqrt(mean((population[lower_triangle] - error[lower_triangle])^2)))
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Grid search for Cudeck function
-# Updated 17.09.2022
-grid_search <- function(delta, G) {
-
-  n <- 1000
-  x <- seq(-1e3, 1e3, length.out = n)
-  y <- vector(length = n)
-  for(i in 1:n) y[i] <- root_ml(x[i], delta, G)
-
-  index <- which.min(y)
-  x <- seq(x[index-1], x[index+1], length.out = n)
-  for(i in 1:n) y[i] <- root_ml(x[i], delta, G)
-
-  index <- which.min(y)
-  x <- seq(x[index-1], x[index+1], length.out = n)
-  for(i in 1:n) y[i] <- root_ml(x[i], delta, G)
-
-  return(x[which.min(y)])
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Maximum likelhood for grid search in Cudeck function
-# Updated 17.09.2022
-root_ml <- function(x, delta, G) {
-
-  I <- diag(nrow(G))
-  f <- x*sum(diag(G)) - log(det(I + x*G)) - delta
-
-  return(f^2)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Maximum likelhood for grid search in Cudeck function
-# Updated 17.09.2022
-groot_ml <- function(x, delta, G) {
-
-  I <- diag(nrow(G))
-  f <- x*sum(diag(G)) - log(det(I + x*G)) - delta
-  g <- sum(diag(G)) - sum(diag(solve(I + x*G) %*% G))
-  g <- 2*g*f
-
-  return(g)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Optimization function
-# Updated 17.09.2022
-opt <- function(x, delta, G) {
-
-  # x <- stats::runif(1, 0, 1)
-  # det(diag(nrow(G)) + x*G)
-  root <- optim(x, fn = root_ml, gr = groot_ml, method = "L-BFGS-B",
-                       lower = -Inf, upper = Inf, G = G, delta = delta)
-  k <- root$par
-
-  return(k)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Error catch for optimization function
-# Updated 17.09.2022
-opt_error <- function(x, delta, G) {
-
-  x <- tryCatch({opt(x, delta, G)}, error = return(x))
-  return(x)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Derivative function for Rhat methods
-# Updated 26.05.2024
-dxt <- function(X) {
-
-  # derivative wrt transpose (just a permutation matrix)
-
-  dimensions <- dim(X)
-
-  # p <- nrow(X)
-  # q <- ncol(X)
-  # pq <- p*q
-
-  pq <- dimensions[1] * dimensions[2]
-
-  # res <- array(0, dim = c(pq, pq))
-  res <- matrix(0, pq, pq)
-  # null <- matrix(0, p, q)
-  null <- matrix(0, dimensions[1], dimensions[2])
-
-  # for(i in 1:pq) {
-  for(i in seq_len(pq)){
-    temp <- null
-    temp[i] <- 1
-    # res[,i] <- c(t(temp))
-    res[,i] <- t(temp)
-  }
-
-  return(res)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# LRhat function for Cudeck method
-# Updated 26.05.2024
-gLRhat <- function(Lambda, Phi) {
-
-  # derivative of Lambda wrt Rhat
-
-  I <- diag(dim(Lambda)[1])
-
-  # pre-compute Lambda %*% Phi
-  LP <- Lambda %*% Phi
-
-  # p <- nrow(Lambda)
-  # g1 <- (Lambda %*% Phi) %x% diag(p)
-  g1 <- LP %x% I
-  # g21 <- diag(p) %x% (Lambda %*% Phi)
-  g21 <- I %x% LP
-  g2 <- g21 %*% dxt(Lambda)
-  g <- g1 + g2
-
-  # Ensure matrix
-  if(!is.matrix(g)){
-    g <- matrix(g, ncol = 1)
-  }
-
-  return(g)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# PRhat function for Cudeck method
-# Updated 26.05.2024
-gPRhat <- function(Lambda, Phi) {
-
-  g1 <- Lambda %x% Lambda
-  g2 <- g1 %*% dxt(Phi)
-  g <- g1 + g2
-  # g <- g[,which(lower.tri(Phi))]
-  return(g[, lower.tri(Phi), drop = FALSE])
-
-  # Ensure matrix
-  # if(!is.matrix(g)){
-  #   g <- matrix(g, ncol = 1)
-  # }
-  #
-  # return(g)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Rhat function for Cudeck method
-# Updated 26.05.2024
-guRhat <- function(p) {
-
-  gu <- matrix(0, p*p, p)
-
-  # for(i in 1:p) {
-  for(i in seq_len(p)){
-    # index <- (i-1) * p + i
-    gu[(i-1) * p + i, i] <- 1
-  }
-
-  return(gu)
-
-}
-
-#' @noRd
-# Rhat function for Cudeck method
-# Updated 07.10.2022
-# For Psi
-gURhat <- function(p) {
-
-  # pcov <- p*(p+1)*0.5
-
-  Psi <- diag(p)
-  # gPsi <- diag(p) %x% diag(p)
-  gPsi <- Psi %x% Psi
-  gPsi <- gPsi + dxt(Psi) %*% gPsi
-  gPsi <- gPsi[, lower.tri(Psi, diag = TRUE)]
-  gPsi[gPsi != 0] <- 1
-
-  return(gPsi)
-
-}
-
-#' @noRd
-# Adds population error using Cudeck method to generated data
-# Updated 26.05.2024
-cudeck <- function(R, lambda, Phi, Psi,
-                   fit = "rmsr", misfit = "close",
-                   method = "minres", efa = FALSE) {
-
-  # Method of Cudeck and Browne (1992):
-
-  p <- nrow(lambda)
-  q <- ncol(lambda)
-  uniquenesses <- diag(Psi)
-
-  # Pre-compute indices
-  lambda_idx <- lambda != 0
-  phi_idx <- Phi[lower.tri(Phi)] != 0
-  psi_idx <- Psi[lower.tri(Psi, diag = TRUE)] != 0
-
-  # Count the number of parameters
-  # nlambda <- sum(lambda != 0)
-  nlambda <- sum(lambda_idx)
-  # nphi <- sum(Phi[lower.tri(Phi)] != 0)
-  nphi <- sum(phi_idx)
-  # npsi <- sum(Psi[lower.tri(Psi, diag = TRUE)] != 0)
-  npsi <- sum(psi_idx)
-  npars <- nlambda + nphi + npsi
-  # df <- p*(p+1)/2 - npars # Degrees of freedom
-
-  # pre-compute df
-  pre_df <- p * (p + 1) / 2
-  df <- pre_df - npars
-
-  if(nlambda + nphi > p*q - 0.5*q*(q-1)) {
-    warning("The model is not identified. There exists infinite solutions for the model parameters.")
-  }
-
-  if(nlambda + nphi + npsi > pre_df) {
-    warning("The true model has negative degrees of freedom.")
-  }
-
-  # Create the matrix of derivatives wrt the correlation model:
-
-  if(efa) {
-
-    dS_dL <- gLRhat(lambda, Phi)
-    dS_dU <- gURhat(p)[, which(Psi[lower.tri(Psi, diag = TRUE)] != 0)]
-    gS <- cbind(dS_dL, dS_dU)
-
-  } else {
-
-    # dS_dL <- gLRhat(lambda, Phi)[, which(lambda != 0)]
-    dS_dL <- gLRhat(lambda, Phi)[, lambda_idx]
-    # dS_dP <- gPRhat(lambda, Phi)[, which(Phi[lower.tri(Phi)] != 0)]
-    dS_dP <- gPRhat(lambda, Phi)[, phi_idx]
-    # dS_dU <- gURhat(p)[, which(Psi[lower.tri(Psi, diag = TRUE)] != 0)]
-    dS_dU <- gURhat(p)[, psi_idx]
-    gS <- cbind(dS_dL, dS_dP, dS_dU)
-
-  }
-
-  if(method == "minres" || method == "ols") {
-
-    # Select the nonduplicated elements of the correlation matrix wrt each parameter
-    B <- -gS[lower.tri(R, diag = TRUE), ]
-
-  } else if(method == "ml") {
-
-    # K <- transition(p)
-    # MP_inv <- solve(t(K) %*% K) %*% t(K)
-    # D <- MP_inv %*% t(MP_inv)
-    # indexes <- vector(length = p)
-    # indexes[1] <- 1
-    # for(i in 2:p) {
-    #   increment <- i
-    #   indexes[i] <- indexes[i-1]+increment
-    # }
-    indexes <- cumsum(seq_len(p))
-    # D <- matrix(0, p*(p+1)/2, p*(p+1)/2)
-    # diag(D) <- 2
-    D <- diag(2, pre_df, pre_df)
-    diag(D)[indexes] <- 1
-    R_inv <- solve(R)
-    # vecs <- apply(gS, 2, FUN = function(x) -t(R_inv %*% matrix(x, p, p) %*% R_inv))
-    # B <- t(vecs[which(upper.tri(R, diag = TRUE)), ]) %*% D
-    # B <- t(B)
-    # B <- -apply(gS, 2, FUN = function(x) t((R_inv %*% matrix(x, p, p) %*% R_inv)[which(upper.tri(R, diag = TRUE))]) %*% D)
-
-    # Pre-compute upper triangle
-    upper_triangle <- upper.tri(R, diag = TRUE)
-
-    B <- -apply(
-      gS, 2,
-      FUN = function(x){
-          crossprod((R_inv %*% matrix(x, p, p) %*% R_inv)[upper_triangle], D)
-      }
-    )
-    # The error must be orthogonal to the derivative of each parameter wrt correlation model
-
-  }
-
-  # Generate random error:
-
-  m <- p + 1
-  U <- replicate(p, runif_xoshiro(m, min = 1, max = 1))
-  A1 <- crossprod(U) # t(U) %*% U
-  sq <- diag(1 / sqrt(diag(A1)))
-  A2 <- sq %*% A1 %*% sq
-  diag_u <- diag(sqrt(uniquenesses))
-  y <- diag_u %*% A2 %*% diag_u
-  y <- y[lower.tri(y, diag = TRUE)]
-  # y <- A2[lower.tri(A2, diag = TRUE)]
-  # v <- MASS::ginv(t(B) %*% B) %*% t(B) %*% y
-  # e <- y - B %*% v # equation 7 from Cudeck and Browne (1992)
-  # Q <- qr.Q(qr(B))
-  e <- y - tcrossprod(qr.Q(qr(B))) %*% y # y - Q %*% t(Q) %*% y
-
-  # Adjust the error to satisfy the desired amount of misfit:
-
-  if(method == "minres" || method == "ols") {
-
-    E <- matrix(0, p, p)
-    E[lower.tri(E, diag = TRUE)] <- e
-    E <- t(E) + E
-    # diag(E) <- diag(E)/2
-    diag(E) <- 0
-
-    if(fit == "rmsr") {
-      if(misfit == "close") {
-        r2 <- mean(1-uniquenesses)
-        misfit <- 0.05*r2
-      } else if(misfit == "acceptable") {
-        r2 <- mean(1-uniquenesses)
-        misfit <- 0.10*r2
-      }
-      delta <- misfit^2*0.5*p*(p-1)
-      # delta <- (1-misfit2)*(0.5*(sum(R_error^2) - p))
-    } else if(fit == "cfi") {
-      null_f <- 0.5*(sum(R^2) - p)
-      delta <- (1-misfit)*null_f
-    } else if(fit == "rmsea") {
-      delta <- misfit^2 * df
-    } else if(fit == "raw") {
-      delta <- misfit
-    }
-
-    k <- sqrt(2*delta/sum(E*E))
-    E <- k*E
-
-  } else if(method == "ml") {
-
-    E <- matrix(0, p, p)
-    E[upper.tri(R, diag = TRUE)] <- e
-    E <- t(E) + E
-    diag(E) <- 0
-
-    if(fit == "rmsr") {
-
-      # if(misfit == "close") {
-      #   r2 <- mean(1-uniquenesses)
-      #   misfit <- 0.05*r2
-      # } else if(misfit == "acceptable") {
-      #   r2 <- mean(1-uniquenesses)
-      #   misfit <- 0.10*r2
-      # }
-
-      # Switch out misfit with a value
-      misfit_value <- switch(
-        as.character(misfit),
-        "close" = 0.05,
-        "acceptable" = 0.10,
-        as.numeric(misfit)
-      )
-
-      # Compute misfit
-      misfit <- misfit_value * (mean(1 - uniquenesses))
-
-      delta <- "A given RMSR is compatible with multiple maximum likelihood discrepancy values and is not provided"
-    } else if(fit == "cfi") {
-      null_f <- -log(det(R))
-      delta <- (1-misfit)*null_f
-    } else if(fit == "rmsea") {
-      delta <- misfit^2 * df
-    } else if(fit == "raw") {
-      delta <- misfit
-    }
-
-    if(fit == "rmsr") {
-
-      k <- sqrt((0.5*p*(p-1))*2*misfit^2/sum(E*E))
-      E <- k*E
-
-    } else {
-
-      constant <- 1e-04 / sqrt(mean(E*E))
-      E <- constant*E # Fix this to avoid NAs
-      R_inv <- solve(R)
-      G <- R_inv %*% E
-      x <- suppressWarnings(grid_search(delta, G))
-      # x <- sqrt(2*delta/sum(G*G)) # Initial value suggested by Cudeck
-      k <- opt(x, delta, G)
-      # limits <- c(-1e05, 1e05)
-      # k <- GSS(delta, G, limits)
-      # k <- grad_descend(delta, G)
-      E <- k*E
-
-    }
-  }
-
-  R_error <- R + E
-
-  if(method == "ml" & fit == "rmsr") {
-    delta <- log(det(R)) - log(det(R_error)) + sum(R_error*solve(R)) - nrow(R)
-  }
-
-  # Check for positiveness:
-  minimum_eigval <- min(eigen(R_error, symmetric = TRUE, only.values = TRUE)$values)
-  positive <- TRUE
-  if(minimum_eigval <= 0) {
-    warning("The matrix was not positive-definite. The amount of misfit may be too big.")
-    positive <- FALSE
-  }
-
-  return(list(R_error = R_error, fit = fit, delta = delta, misfit = misfit, positive = positive))
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Minimum residual function for CFA in Yuan method
-# Updated 26.05.2024
-f_minres <- function(
-    x, S, ldetS, q,
-    indexes_lambda, lambda_p,
-    indexes_phi, phi_p,
-    indexes_psi
-)
-{
-
-  p <- nrow(S)
-  lambda_p <- length(indexes_lambda)
-  Lambda <- matrix(0, p, q)
-  Lambda[indexes_lambda] <- x[1:lambda_p]
-  phi_p <- length(indexes_phi)
-  Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
-  Phi <- t(Phi) + Phi
-  diag(Phi) <- 1
-  # Psi added 07.10.2022 -- Marcos
-  Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
-  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
-  Rhat <- Lambda %*% tcrossprod(Phi, Lambda) + Psi # Lambda %*% Phi %*% t(Lambda) + Psi
-  res <- S - Rhat
-  f <- 0.5*sum(res*res)
-
-  return(f)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Minimum residual function for CFA in Yuan method
-# Updated 26.05.2024
-g_minres <- function(
-    x, S, ldetS, q,
-    indexes_lambda, lambda_p,
-    indexes_phi, phi_p,
-    indexes_psi
-)
-{
-
-  p <- nrow(S)
-  lambda_p <- length(indexes_lambda)
-  Lambda <- matrix(0, p, q)
-  Lambda[indexes_lambda] <- x[1:lambda_p]
-  phi_p <- length(indexes_phi)
-  Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
-  Phi <- t(Phi) + Phi
-  diag(Phi) <- 1
-  # Psi added 07.10.2022 -- Marcos
-  Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
-  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
-  Rhat <- Lambda %*% tcrossprod(Phi, Lambda) + Psi # Lambda %*% Phi %*% t(Lambda) + Psi
-  res <- S - Rhat
-
-  # Change 07.10.2022 -- Marcos
-  g1 <- (res %*% Lambda %*% Phi)[indexes_lambda]
-  g2 <- (crossprod(Lambda, res) %*% Lambda)[indexes_phi] # (t(Lambda) %*% res %*% Lambda)[indexes_phi]
-  # g <- -2*c(g1, g2, 0.5*diag(res))
-  res2 <- res
-  res2[lower.tri(res2)] <- 2*res[lower.tri(res)]
-  g <- -2*c(g1, g2, 0.5*res2[indexes_psi])
-
-  return(g)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Maximum likelihood function for CFA in Yuan method
-# Updated 26.05.2024
-f_ml <- function(
-    x, S, ldetS, q,
-    indexes_lambda, lambda_p,
-    indexes_phi, phi_p,
-    indexes_psi
-)
-{
-
-  p <- nrow(S)
-  lambda_p <- length(indexes_lambda)
-  Lambda <- matrix(0, p, q)
-  Lambda[indexes_lambda] <- x[1:lambda_p]
-  phi_p <- length(indexes_phi)
-  Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
-  Phi <- t(Phi) + Phi
-  diag(Phi) <- 1
-  # Psi added 07.10.2022 -- Marcos
-  Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
-  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
-  Rhat <- Lambda %*% tcrossprod(Phi, Lambda) + Psi # Lambda %*% Phi %*% t(Lambda) + Psi
-  f <- log(det(Rhat)) - ldetS + sum(S*solve(Rhat)) - p
-
-  return(f)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# Maximum likelihood function for CFA in Yuan method
-# Updated 26.05.2024
-g_ml <- function(
-    x, S, ldetS, q,
-    indexes_lambda, lambda_p,
-    indexes_phi, phi_p,
-    indexes_psi
-)
-{
-
-  p <- nrow(S)
-  lambda_p <- length(indexes_lambda)
-  Lambda <- matrix(0, p, q)
-  Lambda[indexes_lambda] <- x[1:lambda_p]
-  phi_p <- length(indexes_phi)
-  Phi <- matrix(0, q, q)
-  Phi[indexes_phi] <- x[(lambda_p+1):(lambda_p + phi_p)]
-  Phi <- t(Phi) + Phi
-  diag(Phi) <- 1
-  Psi <- matrix(0, p, p)
-  Psi[indexes_psi] <- x[-(1:(lambda_p + phi_p))]
-  Psi[upper.tri(Psi)] <- t(Psi)[upper.tri(Psi)]
-
-  Rhat <- Lambda %*% tcrossprod(Phi, Lambda) + Psi # Lambda %*% Phi %*% t(Lambda) + Psi
-  Rhat_inv <- solve(Rhat)
-  Ri_res_Ri <- 2*Rhat_inv %*% (Rhat - S) %*% Rhat_inv
-  Ri_res_Ri2 <- Ri_res_Ri
-  Ri_res_Ri2[lower.tri(Ri_res_Ri2)] <- 2*Ri_res_Ri[lower.tri(Ri_res_Ri)]
-
-  # Joreskog (page 10; 1965) Testing a simple structure in factor analysis
-  # g <- c(c(Ri_res_Ri %*% Lambda %*% Phi)[indexes_lambda],
-  #        c(t(Lambda) %*% Ri_res_Ri %*% Lambda)[indexes_phi],
-  #        diag(Ri_res_Ri)*0.5)
-  g <- c(c(Ri_res_Ri %*% Lambda %*% Phi)[indexes_lambda],
-         c(crossprod(Lambda, Ri_res_Ri) %*% Lambda)[indexes_phi], # c(t(Lambda) %*% Ri_res_Ri %*% Lambda)[indexes_phi],
-         Ri_res_Ri2[indexes_psi]*0.5)
-
-  return(g)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 17.09.2022
-# CFA function
-# Updated 07.10.2022 -- Marcos
-CFA <- function(S, target, targetphi, targetpsi = diag(nrow(target)), method = "minres", W = NULL) {
-
-  p <- nrow(target)
-  q <- ncol(target)
-  indexes_lambda <- which(target != 0) # Which lambdas are estimated
-  indexes_phi <- which(targetphi != 0 & lower.tri(targetphi)) # Which phis are estimated
-  indexes_psi <- which(targetpsi != 0 & lower.tri(targetpsi, diag = TRUE)) # Which psies are estimated
-  lambda_p <- length(indexes_lambda) # Number of lambda parameters
-  phi_p <- length(indexes_phi) # Number of phi parameters
-  psi_p <- length(indexes_psi) # Number of psi parameters
-
-  init_diag_psi <- 1/diag(solve(S)) # Initial diagonal psi parameter values
-  init_psi <- rep(0, times = psi_p)
-  diag_indexes <- (p+1)*0:(p-1)+1 # Indexes for the diagonal of Psi
-  offdiag_indexes <- which(targetpsi != 0 & lower.tri(targetpsi)) # Indexes for the off-diagonal of Psi
-  cor_res_indexes <- which(indexes_psi %in% offdiag_indexes) # Indexes for correlated residuals
-  # Allocate init_diag_psi in the positions of the vector corresponding to the diagonal of Psi:
-  init_psi[-cor_res_indexes] <- init_diag_psi
-
-  lower_psi <- rep(0.005, psi_p) # Lower bounds for the uniquenessess
-  lower_psi[cor_res_indexes] <- -0.995 # Lower bounds for correlated residuals
-  upper_psi <- rep(0.995, psi_p) # Upper bounds for correlated residuals
-  lower <- c(rep(-Inf, lambda_p), rep(-1, phi_p), lower_psi)
-  upper <- c(rep(Inf, lambda_p), rep(1, phi_p), upper_psi)
-
-  x <- c(runif_xoshiro(lambda_p), rep(0, phi_p), init_psi)
-
-  if(method == "minres") {
-
-    ldetS <- NULL
-    f <- f_minres
-    g <- g_minres
-
-  } else if(method == "ml") {
-
-    ldetS <- log(det(S))
-    f <- f_ml
-    g <- g_ml
-
-  }
-
-  cfa <- nlminb(
-    start = x, objective = f, gradient = g,
-    lower = lower, upper = upper,
-    S = S, ldetS = ldetS, q = q,
-    indexes_lambda = indexes_lambda, lambda_p = lambda_p,
-    indexes_phi = indexes_phi, phi_p = phi_p,
-    indexes_psi = indexes_psi,
-    control = list(iter.max = 1e4, eval.max = 1e4)
-  )
-
-  # Arrange lambda parameter estimates:
-  lambda_hat <- matrix(0, p, q)
-  lambda_hat[indexes_lambda] <- cfa$par[1:lambda_p]
-
-  # Arrange phi parameter estimates:
-  phi_hat <- matrix(0, q, q)
-  phi_hat[indexes_phi] <- cfa$par[(lambda_p+1):(lambda_p + phi_p)]
-  phi_hat <- t(phi_hat) + phi_hat
-  diag(phi_hat) <- 1
-
-  # Arrange psi parameter estimates:
-  psi_hat <- matrix(0, p, p)
-  psi_hat[indexes_psi] <- cfa$par[-(1:(lambda_p + phi_p))]
-  psi_hat[upper.tri(psi_hat)] <- t(psi_hat)[upper.tri(psi_hat)]
-
-  # Model matrix:
-  S_hat <- lambda_hat %*% tcrossprod(phi_hat, lambda_hat) + psi_hat # lambda_hat %*% phi_hat %*% t(lambda_hat) + psi_hat
-  uniquenesses_hat <- diag(psi_hat)
-  diag(S_hat) <- 1 # Fix rounding errors from the optimization
-  residuals <- S - S_hat
-
-  # Degrees of freedom:
-  df <- p*(p+1)/2 - (lambda_p + phi_p + psi_p)
-
-  results <- list(f = cfa$objective, convergence = cfa$convergence,
-                  iterations = cfa$iterations, df = df,
-                  lambda = lambda_hat, phi = phi_hat,
-                  psi = psi_hat, uniquenesses = uniquenesses_hat,
-                  model = S_hat, residuals = residuals)
-
-  return(results)
-
-}
-
-#' @noRd
-# From {bifactor} version 0.1.0
-# Accessed on 26.05.2024
-# Adds population error using Yuan method to generated data
-# Updated 26.05.2024
-yuan <- function(R, lambda, Phi, Psi,
-                 fit = "rmsr", misfit = "close",
-                 method = "minres", W = NULL) {
-
-  p <- nrow(R)
-  q <- ncol(lambda)
-  uniquenesses <- diag(Psi)
-
-  # Count the number of parameters
-  nlambda <- sum(lambda != 0)
-  nphi <- sum(Phi[lower.tri(Phi)] != 0)
-  npsi <- sum(Psi[lower.tri(Psi, diag = TRUE)] != 0)
-  npars <- nlambda + nphi + npsi
-  df <- p*(p+1)/2 - npars # Degrees of freedom
-
-  if(nlambda + nphi > p*q - 0.5*q*(q-1)) {
-    warning("The population model is not identified. There exists infinite solutions for the model parameters.")
-  }
-
-  if(nlambda + nphi + npsi > p*(p+1)/2) {
-    warning("The population model has negative degrees of freedom.")
-  }
-
-  # Add an small error to the population parameters
-  # lambda_error <- lambda - 1e-04
-  # Rerror <- lambda_error %*% Phi %*% t(lambda_error) + Psi; diag(Rerror) <- 1
-  Rerror <- R
-  Rerror[lower.tri(R)] <- Rerror[lower.tri(R)] + runif_xoshiro(0.5*p*(p-1), min = -1e-06, max = 1e-06)
-  Rerror[upper.tri(R)] <- t(Rerror)[upper.tri(R)]
-
-  # Create the FA model
-  target <- ifelse(lambda != 0, 1, 0)
-  targetphi <- ifelse(Phi != 0, 1, 0)
-  targetpsi <- ifelse(Psi != 0, 1, 0)
-  cfa <- CFA(Rerror, target, targetphi, targetpsi, method = method, W = NULL)
-  Phat <- cfa$model
-
-  # Get the error matrix:
-  E <- Rerror - Phat
-  # Hopefully, the error is orthogonal to the derivative of each parameter wrt correlation model
-
-  # Adjust the error to satisfy the desired amount of misfit:
-
-  if(method == "minres" || method == "ols") {
-
-    if(fit == "rmsr") {
-      if(misfit == "close") {
-        r2 <- mean(1-uniquenesses)
-        misfit <- 0.05*r2
-      } else if(misfit == "acceptable") {
-        r2 <- mean(1-uniquenesses)
-        misfit <- 0.10*r2
-      }
-      delta <- misfit^2*0.5*p*(p-1)
-      # delta <- (1-misfit2)*(0.5*(sum(R_error^2) - p))
-    } else if(fit == "cfi") {
-      null_f <- 0.5*(sum(R^2) - p)
-      delta <- (1-misfit)*null_f
-    } else if(fit == "rmsea") {
-      delta <- misfit^2 * df
-    } else if(fit == "raw") {
-      delta <- misfit
-    }
-
-    k <- sqrt(2*delta/sum(E*E))
-    E <- k*E
-
-  } else if(method == "ml") {
-
-    if(fit == "rmsr") {
-      delta <- "A given RMSR is compatible with multiple maximum likelihood discrepancy values and is not provided"
-    } else if(fit == "cfi") {
-      null_f <- -log(det(R))
-      delta <- (1-misfit)*null_f
-    } else if(fit == "rmsea") {
-      delta <- misfit^2 * df
-    } else if(fit == "raw") {
-      delta <- misfit
-    }
-
-    if(fit == "rmsr") {
-
-      k <- sqrt((0.5*p*(p-1))*2*misfit^2/sum(E*E))
-      E <- k*E
-
-    } else {
-
-      constant <- 1e-04 / sqrt(mean(E*E))
-      E <- constant*E # Fix this to avoid NAs
-      R_inv <- solve(R)
-      G <- R_inv %*% E
-      x <- suppressWarnings(grid_search(delta, G))
-      # x <- sqrt(2*delta/sum(G*G)) # Initial value suggested by Cudeck
-      k <- opt(x, delta, G)
-      # limits <- c(-1e05, 1e05)
-      # k <- GSS(delta, G, limits)
-      # k <- grad_descend(delta, G)
-      E <- k*E
-
-    }
-  }
-
-  R_error <- Phat + E
-
-  if(method == "ml" & fit == "rmsr") {
-    delta <- log(det(R)) - log(det(R_error)) + sum(R_error*solve(R)) - nrow(R)
-  }
-
-  # Check for positiveness:
-  minimum_eigval <- min(eigen(R_error, symmetric = TRUE, only.values = TRUE)$values)
-  positive <- TRUE
-  if(minimum_eigval <= 0) {
-    warning("The matrix was not positive-definite. The amount of misfit may be too big.")
-    positive <- FALSE
-  }
-
-  return(list(R_error = R_error, fit = fit, delta = delta, misfit = misfit, positive = positive))
-
-}
-
 #%%%%%%%%%%%%%%%%
 # categorize ----
 #%%%%%%%%%%%%%%%%
@@ -1303,216 +444,251 @@ nearest_decimal <- function(vec)
 # factor_forest ----
 #%%%%%%%%%%%%%%%%%%%
 
-#' @noRd
-# EFA comparison
-# Updated 30.09.2022
-EFA.Comp.Data <- function(Data, F.Max, N.Pop = 10000, N.Samples = 500, Alpha = .30, Graph = F, Spearman = F, use)
-{
-  # Data = N (sample size) x k (number of variables) data matrix
-  # F.Max = largest number of factors to consider
-  # N.Pop = size of finite populations of comparison data (default = 10,000 cases)
-  # N.Samples = number of samples drawn from each population (default = 500)
-  # Alpha = alpha level when testing statistical significance of improvement with add'l factor (default = .30)
-  # Graph = whether to plot the fit of eigenvalues to those for comparison data (default = F)
-  # Spearman = whether to use Spearman rank-order correlations rather than Pearson correlations (default = F)
+# Comparison data approach (Ruscio & Roche, 2012)
+#
+# Optimized implementation of the original `EFA.Comp.Data()` (adapted from the
+# Non-hierarchical-PRISM project): same algorithm and defaults, but much faster
+# (random numbers are from the package's C random number generators so that
+# results are reproducible with `seed`):
+#   - Correlations of resampled data use BLAS (`crossprod`) rather than
+#     `cor(use = "pairwise.complete.obs")`. The comparison population is built
+#     by resampling observed non-missing values, so it never has missing values
+#   - Only eigenvalues are computed where eigenvectors are not needed
+#   - The shared + unique component matrix is computed once per iteration
+#     rather than once per variable
+#   - Imposing the observed distributions tracks the row permutation as an
+#     index vector instead of re-sorting the whole population per variable
+#   - Values that do not change across iterations are computed once
+# With `cor()` the generated populations are identical to the original; the
+# BLAS correlations differ from `cor()` at the ~1e-17 level
 
-  N <- dim(Data)[1]
-  k <- dim(Data)[2]
-  if (Spearman) Cor.Type <- "spearman" else Cor.Type <- "pearson"
-  cor.Data <- cor(Data, method = Cor.Type, use = use)
-  Eigs.Data <- eigen(cor.Data)$values
-  RMSR.Eigs <- matrix(0, nrow = N.Samples, ncol = F.Max)
-  Sig <- T
-  F.CD <- 1
-  while ((F.CD <= F.Max) & (Sig))
-  {
-    Pop <- GenData(Data, N.Factors = F.CD, N = N.Pop, Cor.Type = Cor.Type, use = use)
-    for (j in 1:N.Samples)
-    {
-      Samp <- Pop[sample(1:N.Pop, size = N, replace = T),]
-      cor.Samp <- cor(Samp, method = Cor.Type, use = use)
-      Eigs.Samp <- eigen(cor.Samp)$values
-      RMSR.Eigs[j,F.CD] <- sqrt(sum((Eigs.Samp - Eigs.Data) * (Eigs.Samp - Eigs.Data)) / k)
+#' @noRd
+# Correlation matrix of data that has no missing values
+# Updated 20.11.2026
+cd_cor <- function(x, cor_type)
+{
+
+  # Spearman needs the ranking done by `cor()`
+  if(cor_type == "spearman"){
+    return(cor(x, method = "spearman"))
+  }
+
+  # Pearson via BLAS
+  x <- x - rep(colMeans(x), each = nrow(x))
+  cross <- crossprod(x)
+  scale <- sqrt(diag(cross))
+
+  # Return correlations
+  return(cross / tcrossprod(scale))
+
+}
+
+#' @noRd
+# Principal axis factor analysis on a correlation matrix (loadings only)
+# Updated 20.11.2026
+cd_factor_analysis <- function(cor_matrix, n_factors, max_iter = 50, criterion = 0.001)
+{
+
+  # Initialize
+  k <- ncol(cor_matrix)
+  old_h2 <- rep(99, k)
+  change <- 1
+  iter <- 0
+
+  # Iterate communalities
+  while((change >= criterion) && (iter < max_iter)){
+
+    # Next iteration
+    iter <- iter + 1
+
+    # Eigendecomposition
+    eig <- eigen(cor_matrix, symmetric = TRUE)
+
+    # Loadings and communalities
+    loadings <- eig$vectors[, seq_len(n_factors), drop = FALSE] *
+      rep(sqrt(eig$values[seq_len(n_factors)]), each = k)
+    h2 <- rowSums(loadings * loadings)
+
+    # Update
+    change <- max(abs(old_h2 - h2))
+    old_h2 <- h2
+    diag(cor_matrix) <- h2
+
+  }
+
+  # Return loadings
+  return(loadings)
+
+}
+
+#' @noRd
+# Generate comparison population
+# Updated 20.11.2026
+cd_generate <- function(
+    n_factors, N, cor_type, target_cor, distribution_values,
+    max_trials = 5, initial_multiplier = 1
+)
+{
+
+  # Initialize
+  k <- ncol(target_cor)
+  best_rmsr <- 1
+  trials_without_improvement <- 0
+  lower <- lower.tri(target_cor)
+  n_lower <- sum(lower)
+
+  # Distribution for each variable (sorted bootstrap of observed values)
+  distributions <- matrix(0, nrow = N, ncol = k)
+  for(i in seq_len(k)){
+    distributions[, i] <- sort(
+      shuffle_replace(distribution_values[[i]], size = N)
+    )
+  }
+
+  # Shared and unique components
+  shared_comp <- matrix(rnorm_ziggurat(N * n_factors), nrow = N, ncol = n_factors)
+  unique_comp <- matrix(rnorm_ziggurat(N * k), nrow = N, ncol = k)
+
+  # Loadings -> data with the observed distributions imposed
+  # (rows are returned in the same order as the original implementation,
+  # which keeps the order of floating point summation identical)
+  build <- function(cor_matrix, standardize = FALSE){
+
+    # Shared loadings (bounded, positive first loading)
+    shared_load <- cd_factor_analysis(cor_matrix, n_factors)
+    shared_load[shared_load > 1] <- 1
+    shared_load[shared_load < -1] <- -1
+    if(shared_load[1, 1] < 0){
+      shared_load <- shared_load * -1
     }
-    if (F.CD > 1) Sig <- (wilcox.test(RMSR.Eigs[,F.CD], RMSR.Eigs[,(F.CD - 1)], "less")$p.value < Alpha)
-    if (Sig) F.CD <- F.CD + 1
+
+    # Unique loadings
+    h2 <- rowSums(shared_load * shared_load)
+    unique_load <- sqrt(ifelse(h2 < 1, 1 - h2, 0))
+
+    # Normally distributed data
+    normal <- tcrossprod(shared_comp, shared_load) +
+      unique_comp * rep(unique_load, each = N)
+    if(standardize){
+      normal <- scale(normal)
+    }
+
+    # Impose observed distributions: for each variable in turn, order the
+    # rows by that variable and assign its sorted distribution (only the
+    # row order is tracked)
+    order_rows <- seq_len(N)
+    imposed <- normal
+    for(i in seq_len(k)){
+      order_rows <- order_rows[sort.list(normal[order_rows, i])]
+      imposed[order_rows, i] <- distributions[, i]
+    }
+
+    # Return population (rows in the original implementation's order)
+    return(imposed[order_rows, , drop = FALSE])
+
   }
-  if (Graph)
-  {
-    if (Sig) x.max <- F.CD - 1
-    else x.max <- F.CD
-    ys <- apply(RMSR.Eigs[,1:x.max], 2, mean)
-    plot(x = 1:x.max, y = ys, ylim = c(0, max(ys)), xlab = "Factor", ylab = "RMSR Eigenvalue", type = "b",
-         main = "Fit to Comparison Data")
-    abline(v = F.CD - 1, lty = 3)
+
+  # Search for the intermediate correlation matrix
+  intermediate_cor <- target_cor
+  while(trials_without_improvement < max_trials){
+
+    # Population from current intermediate correlations
+    population <- build(intermediate_cor)
+
+    # Residual correlations
+    reproduced_cor <- cd_cor(population, cor_type)
+    residual_cor <- target_cor - reproduced_cor
+    rmsr <- sqrt(sum(residual_cor[lower]^2) / n_lower)
+
+    # Update
+    if(rmsr < best_rmsr){
+      best_rmsr <- rmsr
+      best_cor <- intermediate_cor
+      best_res <- residual_cor
+      intermediate_cor <- intermediate_cor + initial_multiplier * residual_cor
+      trials_without_improvement <- 0
+    }else{
+      trials_without_improvement <- trials_without_improvement + 1
+      intermediate_cor <- best_cor +
+        initial_multiplier * 0.5^trials_without_improvement * best_res
+    }
+
   }
-  return(F.CD - 1)
+
+  # Final population (standardized as in the original)
+  return(build(best_cor, standardize = TRUE))
+
 }
 
 #' @noRd
-# Data generation
-# Updated 30.09.2022
-GenData <- function(Supplied.Data, N.Factors, N, Max.Trials = 5, Initial.Multiplier = 1, Cor.Type, use){
-
-  k <- dim(Supplied.Data)[2]
-  Data <- matrix(0, nrow = N, ncol = k)            # Matrix to store the simulated data
-  Distributions <- matrix(0, nrow = N, ncol = k)   # Matrix to store each variable's score distribution
-  Iteration <- 0                                   # Iteration counter
-  Best.RMSR <- 1                                   # Lowest RMSR correlation
-  Trials.Without.Improvement <- 0                  # Trial counter
-
-  # Generate distribution for each variable (step 2) -------------------------------------------------------------
-
-  for (i in 1:k)
-    Distributions[,i] <- sort(sample(na.omit(Supplied.Data[,i]), size = N, replace = T))
-
-  # Calculate and store a copy of the target correlation matrix (step 3) -----------------------------------------
-
-  Target.Corr <- cor(Supplied.Data, method = Cor.Type, use = use)
-  Intermediate.Corr <- Target.Corr
-
-  # Generate random normal data for shared and unique components, initialize factor loadings (steps 5, 6) --------
-
-  Shared.Comp <- matrix(rnorm_ziggurat(N * N.Factors), nrow = N, ncol = N.Factors)
-  Unique.Comp <- matrix(rnorm_ziggurat(N * k), nrow = N, ncol = k)
-  Shared.Load <- matrix(0, nrow = k, ncol = N.Factors)
-  Unique.Load <- matrix(0, nrow = k, ncol = 1)
-
-  # Begin loop that ends when specified number of iterations pass without improvement in RMSR correlation --------
-
-  while (Trials.Without.Improvement < Max.Trials)
-  {
-    Iteration <- Iteration + 1
-
-    # Calculate factor loadings and apply to reproduce desired correlations (steps 7, 8) ---------------------------
-
-    Fact.Anal <- Factor.Analysis(Intermediate.Corr, Corr.Matrix = TRUE, N.Factors = N.Factors, Cor.Type = Cor.Type, use = use)
-    if (N.Factors == 1) Shared.Load[,1] <- Fact.Anal$loadings
-    else
-      for (i in 1:N.Factors)
-        Shared.Load[,i] <- Fact.Anal$loadings[,i]
-      Shared.Load[Shared.Load > 1] <- 1
-      Shared.Load[Shared.Load < -1] <- -1
-      if (Shared.Load[1,1] < 0) Shared.Load <- Shared.Load * -1
-      for (i in 1:k)
-        if (sum(Shared.Load[i,] * Shared.Load[i,]) < 1) Unique.Load[i,1] <-
-        (1 - sum(Shared.Load[i,] * Shared.Load[i,]))
-      else Unique.Load[i,1] <- 0
-      Unique.Load <- sqrt(Unique.Load)
-      for (i in 1:k)
-        Data[,i] <- (Shared.Comp %*% t(Shared.Load))[,i] + Unique.Comp[,i] * Unique.Load[i,1]
-
-      # Replace normal with nonnormal distributions (step 9) ---------------------------------------------------------
-
-      for (i in 1:k)
-      {
-        Data <- Data[sort.list(Data[,i]),]
-        Data[,i] <- Distributions[,i]
-      }
-
-      # Calculate RMSR correlation, compare to lowest value, take appropriate action (steps 10, 11, 12) --------------
-
-      Reproduced.Corr <- cor(Data, method = Cor.Type, use = use)
-      Residual.Corr <- Target.Corr - Reproduced.Corr
-      RMSR <- sqrt(sum(Residual.Corr[lower.tri(Residual.Corr)] * Residual.Corr[lower.tri(Residual.Corr)]) /
-                     (.5 * (k * k - k)))
-      if (RMSR < Best.RMSR)
-      {
-        Best.RMSR <- RMSR
-        Best.Corr <- Intermediate.Corr
-        Best.Res <- Residual.Corr
-        Intermediate.Corr <- Intermediate.Corr + Initial.Multiplier * Residual.Corr
-        Trials.Without.Improvement <- 0
-      }
-      else
-      {
-        Trials.Without.Improvement <- Trials.Without.Improvement + 1
-        Current.Multiplier <- Initial.Multiplier * .5 ^ Trials.Without.Improvement
-        Intermediate.Corr <- Best.Corr + Current.Multiplier * Best.Res
-      }
-  }
-
-  Fact.Anal <- Factor.Analysis(Best.Corr, Corr.Matrix = TRUE, N.Factors = N.Factors, Cor.Type = Cor.Type, use = use)
-  if (N.Factors == 1) Shared.Load[,1] <- Fact.Anal$loadings
-  else
-    for (i in 1:N.Factors)
-      Shared.Load[,i] <- Fact.Anal$loadings[,i]
-  Shared.Load[Shared.Load > 1] <- 1
-  Shared.Load[Shared.Load < -1] <- -1
-  if (Shared.Load[1,1] < 0) Shared.Load <- Shared.Load * -1
-  for (i in 1:k)
-    if (sum(Shared.Load[i,] * Shared.Load[i,]) < 1) Unique.Load[i,1] <-
-    (1 - sum(Shared.Load[i,] * Shared.Load[i,]))
-  else Unique.Load[i,1] <- 0
-  Unique.Load <- sqrt(Unique.Load)
-  for (i in 1:k)
-    Data[,i] <- (Shared.Comp %*% t(Shared.Load))[,i] + Unique.Comp[,i] * Unique.Load[i,1]
-  Data <- apply(Data, 2, scale) # standardizes each variable in the matrix
-  for (i in 1:k)
-  {
-    Data <- Data[sort.list(Data[,i]),]
-    Data[,i] <- Distributions[,i]
-  }
-
-  return(Data)
-}
-
-#' @noRd
-# Factor analysis
-# Updated 30.09.2022
-Factor.Analysis <- function(Data, Corr.Matrix = FALSE, Max.Iter = 50, N.Factors = 0, Cor.Type, use)
+# Comparison data approach (Ruscio & Roche, 2012)
+# Data = N x k data matrix; F.Max = largest number of factors considered;
+# N.Pop = population size; N.Samples = samples per population;
+# Alpha = significance level for adding a factor; Spearman = rank correlations;
+# use = handling of missing values for the observed correlations
+# Updated 20.11.2026
+EFA.Comp.Data <- function(
+    Data, F.Max = 8, N.Pop = 10000, N.Samples = 500, Alpha = 0.30,
+    Spearman = FALSE, use = "pairwise.complete.obs"
+)
 {
+
+  # Dimensions
   Data <- as.matrix(Data)
-  k <- dim(Data)[2]
-  if (N.Factors == 0)
-  {
-    N.Factors <- k
-    Determine <- T
-  }
-  else Determine <- F
-  if (!Corr.Matrix) Cor.Matrix <- cor(Data, method = Cor.Type, use = use)
-  else Cor.Matrix <- Data
-  Criterion <- .001
-  Old.H2 <- rep(99, k)
-  H2 <- rep(0, k)
-  Change <- 1
-  Iter <- 0
-  Factor.Loadings <- matrix(nrow = k, ncol = N.Factors)
-  while ((Change >= Criterion) & (Iter < Max.Iter))
-  {
-    Iter <- Iter + 1
-    Eig <- eigen(Cor.Matrix)
-    L <- sqrt(Eig$values[1:N.Factors])
-    for (i in 1:N.Factors)
-      Factor.Loadings[,i] <- Eig$vectors[,i] * L[i]
-    for (i in 1:k)
-      H2[i] <- sum(Factor.Loadings[i,] * Factor.Loadings[i,])
-    Change <- max(abs(Old.H2 - H2))
-    Old.H2 <- H2
-    diag(Cor.Matrix) <- H2
-  }
-  if (Determine) N.Factors <- sum(Eig$values > 1)
-  return(list(loadings = Factor.Loadings[,1:N.Factors], factors = N.Factors))
-}
+  N <- nrow(Data)
+  k <- ncol(Data)
+  cor_type <- swiftelse(isTRUE(Spearman), "spearman", "pearson")
 
-#' @noRd
-# {xgboost}: createDMatrixFromTask
-# Updated 30.09.2022
-createDMatrixFromTask = function(task, weights = NULL) {
+  # A k-factor solution on k variables is not identified, so cap the search
+  # at k - 1 factors (also avoids requesting more eigenvectors than exist)
+  F.Max <- max(1, min(F.Max, k - 1))
 
-  data = mlr::getTaskData(task, target.extra = TRUE)
-  data$data = BBmisc::convertDataFrameCols(data$data, ints.as.num = TRUE)
-  if (mlr::getTaskType(task) == "classif")  {
-    cl = mlr::getTaskClassLevels(task)
-    data$target =  match(as.character(data$target), cl) - 1
+  # Quantities that do not depend on the number of factors
+  target_cor <- cor(Data, method = cor_type, use = use)
+  eigs_data <- eigen(target_cor, symmetric = TRUE, only.values = TRUE)$values
+  distribution_values <- lapply(seq_len(k), function(i){na.omit(Data[, i])})
+
+  # Rows of the population (for resampling)
+  population_rows <- seq_len(N.Pop)
+
+  # Search over number of factors
+  rmsr_eigs <- matrix(0, nrow = N.Samples, ncol = F.Max)
+  significant <- TRUE
+  factors <- 1
+
+  while((factors <= F.Max) && significant){
+
+    # Comparison population
+    population <- cd_generate(
+      n_factors = factors, N = N.Pop, cor_type = cor_type,
+      target_cor = target_cor, distribution_values = distribution_values
+    )
+
+    # Fit of eigenvalues from samples of the population
+    for(j in seq_len(N.Samples)){
+      sample_cor <- cd_cor(
+        population[shuffle_replace(population_rows, size = N), , drop = FALSE],
+        cor_type
+      )
+      eigs_sample <- eigen(sample_cor, symmetric = TRUE, only.values = TRUE)$values
+      rmsr_eigs[j, factors] <- sqrt(sum((eigs_sample - eigs_data)^2) / k)
+    }
+
+    # Is the added factor a significant improvement?
+    if(factors > 1){
+      significant <- wilcox.test(
+        rmsr_eigs[, factors], rmsr_eigs[, factors - 1], "less"
+      )$p.value < Alpha
+    }
+    if(significant){
+      factors <- factors + 1
+    }
+
   }
 
-  if (!is.null(weights))
-    xgboost::xgb.DMatrix(data = data.matrix(data$data), label = data$target, weight = weights)
-  else if (!is.null(task$weights))
-    xgboost::xgb.DMatrix(data = data.matrix(data$data), label = data$target, weight = task$weights)
-  else
-    xgboost::xgb.DMatrix(data = data.matrix(data$data), label = data$target)
+  # Return number of factors
+  return(factors - 1)
+
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1712,11 +888,15 @@ range_error <- function(input, expected_ranges){
   expected_minimum <- min(expected_ranges)
 
   # Obtain maximum and minimum values
-  actual_maximum <- round(max(input), 3)
-  actual_minimum <- round(min(input), 3)
+  # (compared unrounded, with a small tolerance for floating point error;
+  # rounded only for the message)
+  actual_maximum <- max(input)
+  actual_minimum <- min(input)
+  tolerance <- 1e-12
 
   # Check for maximum of input in expected range
-  if(actual_maximum > expected_maximum){
+  if(actual_maximum > expected_maximum + tolerance){
+    actual_maximum <- signif(actual_maximum, 6)
     stop(
       paste(
         "Maximum of '", deparse(substitute(input)),
@@ -1727,8 +907,9 @@ range_error <- function(input, expected_ranges){
     )
   }
 
-  # Check for maximum of input in expected range
-  if(actual_minimum < expected_minimum){
+  # Check for minimum of input in expected range
+  if(actual_minimum < expected_minimum - tolerance){
+    actual_minimum <- signif(actual_minimum, 6)
     stop(
       paste(
         "Minimum of '", deparse(substitute(input)),

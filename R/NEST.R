@@ -29,6 +29,11 @@
 #' Value necessary to be less than or equal to
 #' when establishing convergence of eigenvalues
 #'
+#' @param seed Numeric (length = 1).
+#' Seed for reproducible results. The same \code{seed} gives the same results
+#' (and does not change the random number stream of the R session).
+#' Defaults to \code{NULL} (random seed)
+#'
 #' @return Returns a list containing:
 #'
 #' \item{dimensions}{Number of dimensions identified}
@@ -80,9 +85,15 @@ NEST <- function(
     iterations = 1000,
     maximum_iterations = 500,
     alpha = 0.05,
-    convergence = 0.00001
+    convergence = 0.00001,
+    seed = NULL
 )
 {
+
+  # Set seed (reproducible results)
+  seed_token <- lf_seed_start(seed)
+  on.exit(lf_seed_end(seed_token), add = TRUE)
+
 
   # Check for appropriate data
   object_error(data, c("matrix", "data.frame", "array"))
@@ -154,6 +165,9 @@ NEST <- function(
   # Factor Limit
   factor_limit <- floor(0.80 * dimensions[2])
 
+  # Initialize loadings (set when the loop stops)
+  loadings <- NULL
+
   # Loop through number of factors
   for(factors in 0:factor_limit){
 
@@ -168,6 +182,9 @@ NEST <- function(
       model <- diag(rep(1, dimensions[2]))
       current_factor <- 0
     }else{
+
+      # Initialize convergence
+      converged <- FALSE
 
       # Copy correlation matrix
       R <- correlation
@@ -222,6 +239,7 @@ NEST <- function(
 
         # Break if difference is less than convergence
         if(difference < convergence){
+          converged <- TRUE
           break
         }
 
@@ -234,7 +252,7 @@ NEST <- function(
       }
 
       # Check for whether maximum iterations were reached
-      if(i >= maximum_iterations){
+      if(!converged && i >= maximum_iterations){
         warning(
           paste(
             "Convergence not found with",
@@ -303,12 +321,7 @@ NEST <- function(
     if(anyNA(new_correlation)){
 
       # Obtain loadings
-      loadings <- matrix(
-        model[factor_sequence,],
-        nrow = dimensions[2],
-        ncol = factors,
-        byrow = TRUE
-      )
+      loadings <- nest_loadings(model, current_factor, factors, dimensions[2])
 
       # Send warning
       warning("Estimation stopped. Reporting last results. Interpret with caution.")
@@ -322,18 +335,19 @@ NEST <- function(
     if(rank[factors_1] > alpha * (iterations + 1)){
 
       # Obtain loadings
-      loadings <- matrix(
-        model[factor_sequence,],
-        nrow = dimensions[2],
-        ncol = factors,
-        byrow = TRUE
-      )
+      loadings <- nest_loadings(model, current_factor, factors, dimensions[2])
 
       # Break out of loop
       break
 
     }
 
+  }
+
+  # Loop finished without stopping: report the last model
+  if(is.null(loadings)){
+    loadings <- nest_loadings(model, current_factor, factors, dimensions[2])
+    factor_sequence <- seq_len(factors)
   }
 
   # Check for zero factors
@@ -359,7 +373,32 @@ NEST <- function(
     converged = converged
   )
 
+  # Add class
+  class(results) <- "lf_nest"
+
   # Return results list
   return(results)
+
+}
+
+#' @noRd
+# Loadings from the NEST model (rows are factors followed by uniquenesses)
+# Only the estimated factor rows are loadings; when the rank was truncated
+# (fewer estimated factors than `factors`), the remaining columns are zero
+# Updated 20.11.2026
+nest_loadings <- function(model, current_factor, factors, variables)
+{
+
+  # Initialize loadings
+  loadings <- matrix(0, nrow = variables, ncol = factors)
+
+  # Estimated factors
+  estimated <- seq_len(min(current_factor, factors))
+  if(length(estimated) > 0){
+    loadings[, estimated] <- t(model[estimated, , drop = FALSE])
+  }
+
+  # Return loadings
+  return(loadings)
 
 }

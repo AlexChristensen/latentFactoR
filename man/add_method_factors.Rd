@@ -12,7 +12,8 @@ add_method_factors(
   methods_loadings,
   methods_loadings_range = 0,
   methods_correlations,
-  methods_correlations_range = NULL
+  methods_correlations_range = NULL,
+  seed = NULL
 )
 }
 \arguments{
@@ -41,6 +42,11 @@ Defaults to \code{NULL}}
 \item{methods_correlations}{Numeric}
 
 \item{methods_correlations_range}{Numeric}
+
+\item{seed}{Numeric (length = 1).
+Seed for reproducible results. The same \code{seed} gives the same results
+(and does not change the random number stream of the R session).
+Defaults to \code{NULL} (random seed)}
 }
 \value{
 Returns a list containing:
@@ -49,6 +55,9 @@ Returns a list containing:
 
 \item{unbiased_data}{The corresponding unbiased data prior to replacing values
 to generate the (biased) \code{data}}
+
+\item{population_correlation}{Population correlation matrix with the
+methods factors}
 
 \item{parameters}{Bias-adjusted parameters of the \code{lf_object} input into function}
 

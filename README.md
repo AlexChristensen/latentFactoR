@@ -47,16 +47,15 @@ two_factor_LD <- add_local_dependence(
 ```
 
 ### Population Error
-Population error is when there is misfit between the population and sample model. This misfit is often characterized by small local dependencies between variables that are not enough to change the factor loadings but result in model misspecification (e.g., over- or underfactoring). Adding population error to simulated data can be achieved using the following code:
+Population error is when there is misfit between the population and sample model. This misfit is often characterized by small local dependencies between variables that are not enough to change the factor loadings but result in model misspecification (e.g., over- or underfactoring). The error is generated using one of four methods (Cudeck & Browne, 1992; Tucker, Koopman, & Linn, 1969; Wu & Browne, 2015; Hu & Bentler, 1998) and optimized so that the true factor model fits the population correlation matrix with error at a specified level of a fit index. Adding population error to simulated data can be achieved using the following code:
 
 ```
-# Add small population error using Cudeck method
-two_factor_Cudeck <- add_population_error(
+# Add population error so that the true model fits at CFI = 0.95
+two_factor_error <- add_population_error(
   lf_object = simulated, # object from `simulate_factors`
-  cfa_method = "minres", # minimum residual method for determining model fit
-  fit = "rmsr", # measure used to determine misfit
-  misfit = "close", # amount of misfit (can be "close", "acceptable", or a numeric value between 0 and 1)
-  error_method = "cudeck" # method to add misfit ("cudeck" and "yuan" are available; "cudeck" is recommend)
+  method = "cb", # method to generate error ("cb", "tkl", "wb", or "hb")
+  metric = "cfi", # fit index used to determine misfit ("cfi", "tli", "rmsea", or "srmr")
+  fit_value = 0.95 # target value of the fit index for the true model
 )
 ```
 

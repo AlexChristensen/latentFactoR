@@ -11,7 +11,8 @@ add_local_dependence(
   proportion_LD_range = NULL,
   add_residuals = NULL,
   add_residuals_range = NULL,
-  allow_multiple = FALSE
+  allow_multiple = FALSE,
+  seed = NULL
 )
 }
 \arguments{
@@ -61,6 +62,11 @@ Whether a variable should be allowed to be locally dependent with
 more than one other variable.
 Defaults to \code{FALSE}.
 Set to \code{TRUE} for more complex locally dependence patterns}
+
+\item{seed}{Numeric (length = 1).
+Seed for reproducible results. The same \code{seed} gives the same results
+(and does not change the random number stream of the R session).
+Defaults to \code{NULL} (random seed)}
 }
 \value{
 Returns a list containing:

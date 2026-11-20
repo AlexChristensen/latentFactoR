@@ -26,12 +26,9 @@
 #'
 #' @useDynLib latentFactoR, .registration = TRUE
 #'
-#' @import mlr
-#' @import xgboost
-#'
 #' @importFrom graphics abline
 #' @importFrom methods is
-#' @importFrom stats aov as.formula cor cov2cor lm na.omit nlminb optim optimize predict qnorm sd setNames wilcox.test
+#' @importFrom stats aov as.formula cor cov2cor lm na.omit nlminb optim optimize predict qchisq qnorm quantile rnorm sd setNames uniroot wilcox.test
 #' @importFrom utils capture.output combn data packageDescription packageVersion
 #'
 "_PACKAGE"

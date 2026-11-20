@@ -1,115 +1,215 @@
 #' Adds Population Error to \code{\link[latentFactoR]{simulate_factors}} Data
 #'
-#' Adds population error to simulated data from \code{\link[latentFactoR]{simulate_factors}}.
+#' Adds population (model) error to simulated factor model data.
+#' The population correlation matrix is perturbed so that the true factor model
+#' (known loading pattern, factor correlations, and residuals) no longer fits
+#' perfectly but instead fits at a specified value of a fit index (CFI, TLI,
+#' RMSEA, or SRMR). Data are then re-generated from the perturbed population
+#' correlation matrix.
 #' See examples to get started
 #'
+#' @details
+#' The error is generated with one of four methods (see \code{method}) and
+#' optimized so that the \code{metric} of the true factor model, fit to the
+#' population correlation matrix with error using maximum likelihood (i.e., the
+#' known model), equals \code{fit_value}. The fit indices are computed at the
+#' population level using the maximum likelihood discrepancy function between
+#' the population correlation matrix with error and the correlation matrix
+#' implied by the true model. The error added to any cell of the original
+#' population correlation matrix is limited to the range -1 to 1 and the
+#' population correlation matrix with error is always positive definite with a
+#' unit diagonal.
+#'
+#' The true model includes the non-zero loadings (cross-loadings are set to
+#' zero unless \code{leave_cross_loadings = TRUE}), the non-zero factor
+#' correlations, the uniquenesses, and any correlated residuals from
+#' \code{\link[latentFactoR]{add_local_dependence}}
+#'
+#' Because chi-square-based indices (CFI, TLI, and RMSEA) depend on sample
+#' size, the population-level fit is evaluated at the size of the human
+#' population (approximately 8.3 billion). At this size, the fit indices are
+#' within about \eqn{10^{-8}} of their large-sample limits
+#'
+#' Each optimization attempt uses new random draws of the error. Attempts
+#' continue (up to \code{max_iterations}) until \code{fit_value} is matched
+#' (to within \eqn{10^{-6}}) and the attempt closest to \code{fit_value} is
+#' returned. If \code{fit_value} cannot be reached within \code{tolerance}
+#' (e.g., because the target requires more error than can be added while
+#' remaining positive definite), a warning is given and the closest
+#' solution is used
+#'
 #' @param lf_object Data object from \code{\link[latentFactoR]{simulate_factors}}
+#' (or \code{\link[latentFactoR]{add_cross_loadings}},
+#' \code{\link[latentFactoR]{add_local_dependence}}, or
+#' \code{\link[latentFactoR]{add_method_factors}} applied to it)
 #'
-#' @param cfa_method Character (length = 1).
-#' Method to generate population error.
-#' Defaults to \code{"ml"}.
+#' @param method Character (length = 1).
+#' Method used to generate the population error.
+#' There is no default; \code{method} must be specified.
 #' Available options:
 #'
 #' \itemize{
 #'
-#' \item \code{"minres"} --- Minimum residual
+#' \item \code{"cb"} --- Cudeck and Browne (1992). Error is a random direction
+#' that is orthogonal to the maximum likelihood score of every free parameter of
+#' the true model, so the true model remains the best-fitting model of the
+#' population correlation matrix with error (the true parameters are recovered
+#' exactly)
 #'
-#' \item \code{"ml"} --- Maximum likelihood
+#' \item \code{"tkl"} --- Tucker, Koopman, and Linn (1969). Error is
+#' the contribution of many random minor factors whose loadings decay
+#' geometrically. The proportion of variance attributed to the minor factors
+#' is optimized
+#'
+#' \item \code{"wb"} --- Wu and Browne (2015). The population correlation
+#' matrix with error is the inverse of a Wishart draw for the precision matrix
+#' (i.e., an inverted Wishart draw for the covariance matrix), where the
+#' Wishart is centered on the original population correlation matrix and the
+#' result is standardized to a correlation matrix. The dispersion of the
+#' distribution is optimized. Draws are not rescaled; draws with an
+#' error outside of -1 to 1 are treated as infeasible
+#'
+#' \item \code{"hb"} --- Hu and Bentler (1998). Underparameterized
+#' misspecification: a random subset of the loadings that are zero in the true
+#' model are non-zero in the population (omitted cross-loadings). The size of
+#' the omitted cross-loadings is optimized
 #'
 #' }
 #'
-#' @param fit Character (length = 1).
-#' Fit index to control population error.
-#' Defaults to \code{"rmsr"}.
+#' @param metric Character (length = 1).
+#' Fit index used as the objective criterion. The true model is fit to the
+#' population correlation matrix with error (maximum likelihood)
+#' and the error is optimized so that \code{metric} equals \code{fit_value}.
+#' Defaults to the fit index that is consistent with \code{method}:
+#' \code{"CFI"} for \code{"cb"} and \code{"tkl"}, \code{"RMSEA"} for
+#' \code{"wb"} (the dispersion is approximately RMSEA\eqn{^2}), and
+#' \code{"SRMR"} for \code{"hb"} (error is defined through the size of
+#' omitted cross-loadings).
 #' Available options:
 #'
 #' \itemize{
 #'
-#' \item \code{"cfi"} --- Comparative fit index
+#' \item \code{"CFI"} --- Comparative fit index
 #'
-#' \item \code{"rmsea"} --- Root mean square error of approximation
+#' \item \code{"TLI"} --- Tucker-Lewis index
 #'
-#' \item \code{"rmsr"} --- Root mean square residuals
+#' \item \code{"RMSEA"} --- Root mean square error of approximation
 #'
-#' \item \code{"raw"} --- Direct application of error
-#'
-#' }
-#'
-#' @param misfit Character or numeric (length = 1).
-#' Magnitude of error to add.
-#' Defaults to \code{"close"}.
-#' Available options:
-#'
-#' \itemize{
-#'
-#' \item \code{"close"} --- Slight deviations from original population correlation matrix
-#'
-#' \item \code{"acceptable"} --- Moderate deviations from original population correlation matrix
+#' \item \code{"SRMR"} --- Standardized root mean square residual
+#' (computed over the lower triangle of the correlation matrices including
+#' the diagonal, following \pkg{lavaan})
 #'
 #' }
 #'
-#' While numbers can be used, they are \strong{not} recommended. They can be
-#' used to specify misfit but the level of misfit will vary depending
-#' on the factor structure
-#'
-#' @param error_method Character (length = 1).
-#' Method to control population error.
-#' Defaults to \code{"cudeck"}.
-#' Description of methods:
-#'
-#' \itemize{
-#'
-#' \item \code{"cudeck"} --- Description coming soon... see Cudeck & Browne, 1992
-#' for more details
-#'
-#' \item \code{"yuan"} --- Description coming soon...
-#'
-#' }
+#' @param fit_value Numeric (length = 1).
+#' Target value of \code{metric} for the true model fit to the population
+#' correlation matrix with error. Must be between 0 and 1 (exclusive).
+#' Defaults to the conventional cutoff for the \code{metric}:
+#' \code{0.95} for \code{"CFI"} and \code{"TLI"}, \code{0.06} for
+#' \code{"RMSEA"}, and \code{0.05} for \code{"SRMR"}
 #'
 #' @param tolerance Numeric (length = 1).
-#' Tolerance of SRMR difference between population error
-#' correlation matrix and the original population correlation
-#' matrix. Ensures that appropriate population error
-#' was added. Similarly, verifies that the MAE of the
-#' loadings are not greater than the specified amount,
-#' ensuring proper convergence.
+#' Maximum absolute difference between the target \code{fit_value} and the
+#' \code{metric} of the population correlation matrix with error that is
+#' accepted without a warning. Ensures that the appropriate amount of
+#' population error was added.
 #' Defaults to \code{0.01}
 #'
-#' @param convergence_iterations Numeric (length = 1).
-#' Number of iterations to reach parameter convergence
-#' within the specified `tolerance`.
+#' @param max_iterations Numeric (length = 1).
+#' Maximum number of optimization attempts (random draws of the error)
+#' to reach the target \code{fit_value} within the specified
+#' \code{tolerance}.
 #' Defaults to \code{10}
 #'
+#' @param control List.
+#' Method-specific options. Options that do not apply to \code{method} are
+#' ignored. Available options:
+#'
+#' \itemize{
+#'
+#' \item \code{minor_factors} --- Number of minor factors for
+#' \code{method = "tkl"}. Defaults to \code{max(50, 2 * variables)}
+#'
+#' \item \code{decay} --- Geometric decay (\eqn{\epsilon}) of the minor factor
+#' loadings for \code{method = "tkl"}. Must be between 0 and 1.
+#' The loading of minor factor \eqn{k} is multiplied by
+#' \eqn{(1 - \epsilon)^{k - 1}}, so the variance it contributes is proportional
+#' to \eqn{(1 - \epsilon)^{2(k - 1)}}. Smaller values (e.g., \code{0.02}) spread the
+#' error over many minor factors (diffuse, unstructured noise) while larger
+#' values (e.g., \code{0.30}, the default) concentrate the error in a few
+#' minor factors (more structured error). Very large values (\code{> 0.60}) can
+#' make the target \code{fit_value} harder to reach within the error bounds
+#' (\eqn{[-1, 1]}).
+#' Defaults to \code{0.30}
+#'
+#' \item \code{omitted} --- Proportion of the zero loadings in the true model
+#' that are omitted cross-loadings for \code{method = "hb"}. At least one
+#' cross-loading is always omitted. Defaults to \code{0.10}
+#'
+#' }
+#'
 #' @param leave_cross_loadings Boolean.
-#' Should cross-loadings be kept?
+#' Should cross-loadings be kept in the true model?
 #' Defaults to \code{FALSE}.
 #' Convergence problems can arise if cross-loadings are kept,
 #' so setting them to zero is the default. Only set to \code{TRUE}
 #' with careful consideration of the structure. Make sure to perform
 #' additional checks that the data are adequate
 #'
+#' @param seed Numeric (length = 1).
+#' Seed for reproducible results. The same \code{seed} gives the same results
+#' (and does not change the random number stream of the R session).
+#' Defaults to \code{NULL} (random seed)
+#'
 #' @return Returns a list containing:
 #'
-#' \item{data}{Simulated data from the specified factor model}
+#' \item{data}{Simulated data from the population correlation matrix with error
+#' (same dimensions, column names, categories, and skew as the input data)}
 #'
-#' \item{population_correlation}{Population correlation matrix with local dependence added}
+#' \item{population_correlation}{Population correlation matrix with error added}
+#'
+#' \item{original_correlation}{Population correlation matrix of the true model
+#' \emph{before} population error was added}
 #'
 #' \item{population_error}{
 #' A list containing the parameters used to generate population error:
 #'
 #' \itemize{
 #'
-#' \item \code{error_correlation} --- Correlation matrix with population
-#' error added (same as \code{population_correlation})
+#' \item \code{method} --- Method used to generate the population error
 #'
-#' \item \code{fit} --- Fit measure used to control population error
+#' \item \code{metric} --- Fit index used as the objective criterion
 #'
-#' \item \code{delta} --- Minimum of the objective function corresponding
-#' to the misfit value
+#' \item \code{fit_value} --- Target value of \code{metric}
 #'
-#' \item \code{misfit} --- Specified misfit value
+#' \item \code{achieved} --- Value of \code{metric} achieved by the true model
+#' fit to the population correlation matrix with error
 #'
-#' \item \code{loadings} --- Estiamted CFA loadings after error has been added
+#' \item \code{fit} --- Named vector of all fit indices (\code{CFI},
+#' \code{TLI}, \code{RMSEA}, and \code{SRMR}) achieved
+#'
+#' \item \code{delta} --- Minimum of the (maximum likelihood) discrepancy
+#' function corresponding to the achieved fit
+#'
+#' \item \code{error} --- Matrix of the error that was added to the
+#' original population correlation matrix
+#'
+#' \item \code{max_error} --- Largest absolute error that was added
+#'
+#' \item \code{R_difference} --- Largest absolute difference between the
+#' original population correlation matrix and the true model (maximum
+#' likelihood) fit to the population correlation matrix with error.
+#' Values near zero indicate that the error is orthogonal to the true model
+#' (expected for \code{method = "cb"} only)
+#'
+#' \item \code{loadings} --- Estimated loadings of the true model fit to the
+#' population correlation matrix with error (signs aligned to the original
+#' loadings)
+#'
+#' \item \code{factor_correlations} --- Estimated factor correlations of the
+#' true model fit to the population correlation matrix with error
+#'
+#' \item \code{iterations} --- Number of optimization attempts used
 #'
 #' }
 #'
@@ -128,30 +228,27 @@
 #'   sample_size = 1000 # number of cases = 1000
 #' )
 #'
-#' # Add small population error using Cudeck method
-#' two_factor_Cudeck <- add_population_error(
-#'   lf_object = two_factor,
-#'   cfa_method = "minres",
-#'   fit = "rmsr", misfit = "close",
-#'   error_method = "cudeck"
+#' # Add population error (CFI = 0.95 using Cudeck and Browne)
+#' two_factor_cb <- add_population_error(lf_object = two_factor, method = "cb")
+#' \donttest{
+#' # Use Wu and Browne to target TLI = 0.90
+#' two_factor_wb <- add_population_error(
+#'   lf_object = two_factor, method = "wb",
+#'   metric = "TLI", fit_value = 0.90
 #' )
 #'
-#' # Add small population error using Yuan method
-#' two_factor_Yuan <- add_population_error(
-#'   lf_object = two_factor,
-#'   cfa_method = "minres",
-#'   fit = "rmsr", misfit = "close",
-#'   error_method = "yuan"
+#' # Target RMSEA = 0.04
+#' two_factor_rmsea <- add_population_error(
+#'   lf_object = two_factor, method = "cb", metric = "RMSEA",
+#'   fit_value = 0.04
 #' )
+#'
+#' # Use Hu and Bentler to target SRMR = 0.05
+#' two_factor_srmr <- add_population_error(
+#'   lf_object = two_factor, method = "hb", fit_value = 0.05
+#' )}
 #'
 #' @author
-#' {\code{bifactor}} authors \cr
-#' Marcos Jimenez,
-#' Francisco J. Abad,
-#' Eduardo Garcia-Garzon,
-#' Vithor R. Franco,
-#' Luis Eduardo Garrido <luisgarrido@pucmm.edu>
-#'
 #' {\code{\link{latentFactoR}}} authors \cr
 #' Alexander P. Christensen <alexpaulchristensen@gmail.com>,
 #' Hudson Golino <hfg9s@virginia.edu>,
@@ -162,445 +259,262 @@
 #' Vithor R. Franco
 #'
 #' @references
+#' \strong{Cudeck and Browne (\code{"cb"})} \cr
 #' Cudeck, R., & Browne, M.W. (1992).
 #' Constructing a covariance matrix that yields a specified minimizer and a specified minimum discrepancy function value.
-#' \emph{Psychometrika}, \emph{57}, 357–369.
+#' \emph{Psychometrika}, \emph{57}, 357--369.
+#'
+#' \strong{Tucker, Koopman, and Linn (\code{"tkl"})} \cr
+#' Tucker, L.R., Koopman, R.F., & Linn, R.L. (1969).
+#' Evaluation of factor analytic research procedures by means of simulated correlation matrices.
+#' \emph{Psychometrika}, \emph{34}, 421--459.
+#'
+#' \strong{Wu and Browne (\code{"wb"})} \cr
+#' Wu, H., & Browne, M.W. (2015).
+#' Quantifying adventitious error in a covariance structure as a random effect.
+#' \emph{Psychometrika}, \emph{80}, 571--600.
+#'
+#' \strong{Hu and Bentler (\code{"hb"}) and fit indices} \cr
+#' Hu, L., & Bentler, P.M. (1998).
+#' Fit indices in covariance structure modeling: Sensitivity to underparameterized model misspecification.
+#' \emph{Psychological Methods}, \emph{3}, 424--453.
 #'
 #' @export
 #'
-# Add population error to simulated data
-# Updated 12.07.2026
+# Add population error to simulated data ----
+# Updated 20.11.2026
 add_population_error <- function(
     lf_object,
-    cfa_method = c("minres", "ml"),
-    fit = c("cfi", "rmsea", "rmsr", "raw"),
-    misfit = c("close", "acceptable"),
-    error_method = c("cudeck", "yuan"),
-    tolerance = 0.01,
-    convergence_iterations = 10,
-    leave_cross_loadings = FALSE
+    method = c("cb", "tkl", "wb", "hb"),
+    metric = c("cfi", "tli", "rmsea", "srmr"),
+    fit_value = NULL,
+    tolerance = 0.01, max_iterations = 10,
+    control = list(),
+    leave_cross_loadings = FALSE,
+    seed = NULL
 )
 {
 
-  # Check for missing CFA method
-  if(missing(cfa_method)){
-    cfa_method <- "ml"
-  }else{cfa_method <- tolower(match.arg(cfa_method))}
+  # Set seed (reproducible results)
+  seed_token <- lf_seed_start(seed)
+  on.exit(lf_seed_end(seed_token), add = TRUE)
 
-  # Check for missing fit
-  if(missing(fit)){
-    fit <- "rmsr"
-  }else{fit <- tolower(match.arg(fit))}
-
-  # Check for missing misfit
-  if(missing(misfit)){
-    misfit <- "close"
-  }
-
-  # Check for missing error method
-  if(missing(error_method)){
-    error_method <- "cudeck"
-  }else{error_method <- tolower(match.arg(error_method))}
 
   # Check inputs
-  parameters <- add_population_error_errors(lf_object, misfit)
+  inputs <- add_population_error_errors(
+    lf_object, method, metric, fit_value,
+    tolerance, max_iterations, control, leave_cross_loadings,
+    method_missing = missing(method), metric_missing = missing(metric)
+  )
+  method <- inputs$method
+  metric <- inputs$metric
+  target <- inputs$fit_value
+  control <- inputs$control
 
-  # Obtain loadings
-  loadings <- parameters$loadings
+  # Obtain true model
+  model <- true_model(lf_object, leave_cross_loadings)
+  parts <- factor_model_parts(model$loadings, model$phi, model$psi)
+  R <- model$R
+  nodes <- ncol(R)
 
-  # Determine error structure
-  if(is(lf_object, "lf_ld")){
+  # Check for identification (e.g., cross-loadings on every variable
+  # kept with `leave_cross_loadings = TRUE` allow rotation)
+  if(!model_identified(parts)){
+    stop(
+      paste(
+        "The true model is not identified (its parameters are not unique),",
+        "so its degrees of freedom and fit are not defined.",
+        "\n\nUse `leave_cross_loadings = FALSE` or a factor structure with",
+        "fewer free loadings"
+      ), call. = FALSE
+    )
+  }
 
-    # Obtain correlated residuals
-    errors <- lf_object$population_correlation -
-      lf_object$original_results$population_correlation
+  # Check for degrees of freedom
+  if(parts$df < 1){
+    stop(
+      paste(
+        "The true model has no degrees of freedom (the model is saturated or",
+        "not identified) so population error cannot be added.",
+        "\n\nUse a model with fewer parameters (e.g., more variables per factor)"
+      ), call. = FALSE
+    )
+  }
 
-  }else{
+  # Method-specific preparation
+  if(method == "cb"){
 
-    # Initialize correlated residuals
-    errors <- matrix(
-      0, nrow = ncol(lf_object$data),
-      ncol = ncol(lf_object$data)
+    # Space of errors that leave the true model as the minimizer
+    preparation <- CB_prepare(R, parts)
+
+    # Check for room for error
+    if(preparation$dimension < 1){
+      stop(
+        paste(
+          "There is no room for error orthogonal to the true model.",
+          "\n\nUse a model with more degrees of freedom"
+        ), call. = FALSE
+      )
+    }
+
+  }else if(method == "hb" && !any(model$loadings == 0)){
+
+    # No loadings to omit
+    stop(
+      paste(
+        "The true model has no zero loadings to omit (all loadings are free).",
+        "\n\nUse a different `method` or set `leave_cross_loadings = FALSE`",
+        "with a factor structure that has zero loadings"
+      ), call. = FALSE
     )
 
   }
 
-  # Check for whether cross-loadings should remain
-  if(!isTRUE(leave_cross_loadings)){
+  # Initialize best solution
+  best <- NULL
+  best_difference <- Inf
 
-    # Set sequence of variables for each factor
-    variable_sequence <- factor_variable_sequence(parameters$variables)
-    start_variables <- variable_sequence$start
-    end_variables <- variable_sequence$end
+  # Loop through attempts
+  for(iteration in seq_len(max_iterations)){
 
-    # Loop through loadings
-    for(i in seq_len(ncol(loadings))){
+    # Optimize error
+    solution <- switch(
+      method,
+      "cb" = CB_optimize(
+        metric, target, preparation, parts, tolerance = tolerance
+      ),
+      "tkl" = TKL_optimize(
+        metric, target, R, parts,
+        control$minor_factors, control$decay
+      ),
+      "wb" = WB_optimize(metric, target, R, parts),
+      "hb" = HB_optimize(
+        metric, target, model, R, parts, control$omitted
+      )
+    )
 
-      # Set cross-loadings to zero
-      loadings[
-        start_variables[i]:end_variables[i],
-        -i
-      ] <- 0
-
+    # Check for invalid fit
+    if(!isTRUE(solution$valid)){
+      next
     }
 
-  }else if(is(lf_object, "lf_cl")){
+    # Obtain difference from target
+    difference <- abs(solution[[metric]] - target)
 
-    # Decrease dominant loadings until communalities are below threshold
-    loadings <- decrease_loadings_for_communalities(
-      loadings, parameters$factor_correlations, threshold = 0.80
-    )
-
-  }
-
-  # Re-compute population correlation matrix
-  lf_object$population_correlation <- loadings %*%
-    parameters$factor_correlations %*%
-    t(loadings)
-
-  # Obtain uniquenesses and put them on the diagonal of errors
-  diag(errors) <- 1 - diag(lf_object$population_correlation)
-
-  # Reset diagonal of population correlation matrix
-  diag(lf_object$population_correlation) <- 1
-
-  # Initialize positive definite and convergence
-  positive_definite <- FALSE
-  convergence <- FALSE
-
-  # Initialize counts so it doesn't get stuck
-  pd_stuck_count <- 0
-  convergence_stuck_count <- 0
-
-  # Initialize maximum absolute residual vector
-  residual <- rep(NA, length = convergence_iterations)
-
-  # Initialize previous minimum
-  previous_minimum <- Inf
-
-  # Ensure proper convergence
-  while(!convergence){
-
-    # Reset positive definite so a new population error
-    # is drawn on every outer iteration (rather than reusing
-    # the first draw and never resampling)
-    positive_definite <- FALSE
-
-    # Try to get positive definite matrix
-    while(!positive_definite){
-
-      # Obtain population error
-      if(error_method == "cudeck"){
-
-        # Using Cudeck method
-        # From {bifactor} version 0.1.0
-        # See `utils-latentFactoR`
-        population_error <- try(
-          cudeck(
-            R = lf_object$population_correlation,
-            lambda = loadings,
-            Phi = parameters$factor_correlations,
-            Psi = errors, fit = fit,
-            misfit = misfit, method = cfa_method
-          ),
-          silent = TRUE
-        )
-
-      }else if(error_method == "yuan"){
-
-        # Using Yuan method
-        # From {bifactor} version 0.1.0
-        # See `utils-latentFactoR`
-        population_error <- try(
-          yuan(
-            R = lf_object$population_correlation,
-            lambda = loadings,
-            Phi = parameters$factor_correlations,
-            Psi = errors, fit = fit,
-            misfit = misfit, method = cfa_method
-          ),
-          silent = TRUE
-        )
-
-      }
-
-      # Check for error
-      if(is(population_error, "try-error")){
-
-        # Increase positive definite stuck count
-        pd_stuck_count <- pd_stuck_count + 1
-
-        # Check if a break is necessary
-        if(pd_stuck_count >= convergence_iterations){
-
-          # Stop and tell user to increase convergence iterations
-          stop(
-            paste(
-              "Convergence counter has exceeded its limit.",
-              "There were issues converging the model with proper",
-              "population error. \n\n",
-              "Population error could not converge with a positive",
-              "definite matrix. \n\n",
-              "Try increasing the number of iterations for convergence",
-              "using the `convergence_iterations` argument."
-            )
-          )
-
-        }
-
-      }else if(
-        any(matrix_eigenvalues(population_error$R_error) < .Machine$double.eps)
-      ){
-
-        # Increase positive definite stuck count
-        pd_stuck_count <- pd_stuck_count + 1
-
-        # Check if a break is necessary
-        if(pd_stuck_count >= convergence_iterations){
-
-          # Stop and tell user to increase convergence iterations
-          stop(
-            paste(
-              "Convergence counter has exceeded its limit.",
-              "There were issues converging the model with proper",
-              "population error. \n\n",
-              "Population error could not converge with a positive",
-              "definite matrix. \n\n",
-              "Try increasing the number of iterations for convergence",
-              "using the `convergence_iterations` argument."
-            )
-          )
-
-        }
-
-      }else{
-
-        # Set positive definite to be TRUE
-        positive_definite <- TRUE
-
-      }
-
-    }
-
-    # Obtain population error correlation matrix
-    error_correlation <- population_error$R_error
-
-    # Add row and column names to population error correlation matrix
-    colnames(error_correlation) <- paste0(
-      "V", format_integer(seq_len(ncol(error_correlation)), digits(ncol(error_correlation)) - 1)
-    )
-    row.names(error_correlation) <- colnames(error_correlation)
-
-    # Specify the CFA model
-    # (set 1 to estimate the parameter and 0 to fix it to zero)
-    target <- ifelse(loadings != 0, 1, 0) # For loadings
-    target_phi <- ifelse(parameters$factor_correlations != 0, 1, 0)  # For factor correlations
-    target_psi <- ifelse(errors != 0, 1, 0)  # For uniquenesses and errors
-
-    # Fit the CFA
-    cfa <- CFA(
-      S = error_correlation,
-      target = target,
-      targetphi = target_phi,
-      targetpsi = target_psi,
-      method = cfa_method
-    )
-
-    # Check SRMR
-    SRMR <- sqrt(mean(cfa$residuals[lower.tri(cfa$residuals)]^2))
-
-    # Obtain SRMR difference
-    SRMR_difference <- abs(SRMR - population_error$misfit)
-
-    # Compute the largest absolute residual
-    max_abs_res <- max(abs(cfa$residuals))
-
-    # Cutoff for the maximum absolute residual
-    max_res <- switch(
-      as.character(misfit),
-      "close" = 0.10,
-      "acceptable" = 0.15,
-      as.numeric(misfit) + 0.05
-    )
-
-    # Ensure same order of loadings
-    error_loadings <- cfa$lambda
-
-    # Sometimes the loadings can be in opposite directions
-    # Check that...
-    # Sign indeterminacy is per-factor (a single factor's loadings
-    # can be estimated as a whole with reflected sign), so each
-    # factor (column) must be checked and flipped independently
-    error_signs <- sign(error_loadings)
-    loading_signs <- sign(loadings)
-    for(factor_i in seq_len(ncol(loadings))){
-
-      if(any(error_signs[,factor_i] != loading_signs[,factor_i])){
-
-        # Get non-zero signs
-        non_zero <- error_signs[,factor_i] != 0
-
-        # Flip signs
-        error_loadings[non_zero, factor_i] <- -error_loadings[non_zero, factor_i]
-
-      }
-
-    }
-
-    # Obtain difference between error and population loadings
-    MAE <- mean(abs(error_loadings - loadings))
-
-    # Check for convergence
-    if(
-      SRMR_difference <= tolerance &
-      MAE <= tolerance &
-      max_abs_res < max_res
-    ){convergence <- TRUE}
-
-    # Increase convergence stuck count
-    convergence_stuck_count <- convergence_stuck_count + 1
-
-    # Add residual
-    residual[convergence_stuck_count] <- max_abs_res
-
-    # Check for minimum
-    if(min(residual, na.rm = TRUE) < previous_minimum){
-
-      # Update minimum
-      previous_minimum <- round(min(residual, na.rm = TRUE), 3)
+    # Check for improvement
+    if(difference < best_difference){
 
       # Store results
-      pe_stored <- population_error
-      loadings_stored <- error_loadings
-      SRMR_stored <- SRMR_difference
-      MAE_loadings <- MAE
+      best <- list(fit = solution, iterations = iteration)
+      best_difference <- difference
 
     }
 
-    # Check if a break is necessary
-    if(convergence_stuck_count >= convergence_iterations){
-
-      warning(
-        paste(
-          "Convergence counter has exceeded its limit.",
-          "There were issues converging the model with proper",
-          "population error. \n\n",
-          "Using the solution with the minimum maximum absolute residual =",
-          previous_minimum
-        )
-      )
-
-      # Restore stored values
-      population_error <- pe_stored
-      error_loadings <- loadings_stored
-      SRMR_difference <- SRMR_stored
-      MAE <- MAE_loadings
-
-      # Break out of loop
+    # Check for an exact solution (target is matched)
+    # (attempts continue past `tolerance` until the target is matched so that
+    # the achieved fit is as close to `fit_value` as the error allows)
+    if(best_difference <= 1e-06){
       break
-
     }
 
   }
 
-  # Re-estimate data
-  ## Cholesky decomposition
-  cholesky <- chol(population_error$R_error)
-
-  ## Obtain sample size and total variables
-  sample_size <- nrow(lf_object$data)
-  total_variables <- ncol(lf_object$data)
-
-  ## Generate data
-  data <- mvtnorm::rmvnorm(sample_size, sigma = diag(total_variables))
-
-  ## Make data based on factor structure
-  data <- data %*% cholesky
-
-  ## Set variable categories, limit, and skew
-  variable_categories <- parameters$categories
-  categorical_limit <- parameters$categorical_limit
-  skew <- parameters$skew
-
-  ## Ensure appropriate type and length for categories
-  type_error(variable_categories, "numeric")
-  length_error(variable_categories, c(1, total_variables))
-
-  ## Identify categories to variables
-  if(length(variable_categories) == 1){
-    variable_categories <- rep(variable_categories, total_variables)
+  # Check for no solution
+  if(is.null(best)){
+    stop(
+      paste(
+        "Population error could not be generated with a positive",
+        "definite matrix. \n\n",
+        "Try increasing the number of iterations using the",
+        "`max_iterations` argument."
+      ), call. = FALSE
+    )
   }
 
-  ## Check for categories greater than categorical limit and not infinite
-  variable_categories <- mark_continuous_categories(variable_categories, categorical_limit)
+  # Obtain population correlation matrix with error
+  R_population <- best$fit$R_population
+  dimnames(R_population) <- dimnames(R)
 
-  ## Find categories
-  if(any(variable_categories <= categorical_limit)){
+  # Check for convergence
+  if(best_difference > tolerance){
 
-    ## Target columns to categorize
-    columns <- which(variable_categories <= categorical_limit)
-
-    ## Set skew
-    if(length(skew) != length(columns)){
-      skew <- shuffle_replace(skew, length(columns))
-    }
-
-    ## Loop through columns
-    for(i in columns){
-
-      data[,i] <- categorize(
-        data = data[,i],
-        categories = variable_categories[i],
-        skew_value = skew[i]
-      )
-
-    }
+    warning(
+      paste0(
+        "Convergence counter has exceeded its limit. ",
+        "There were issues converging to the target ", metric, " = ", target,
+        " within `tolerance` = ", tolerance, ". \n\n",
+        "Using the solution with the closest ", metric, " = ",
+        round(best$fit[[metric]], 4), "."
+      ), call. = FALSE
+    )
 
   }
 
-  ## Add column names to data
-  colnames(data) <- paste0(
-    "V", format_integer(seq_len(total_variables), digits(total_variables) - 1)
+  # Obtain the true model fit to the population correlation matrix with error
+  # (from the optimization; the discrepancy is the minimum of the true model)
+  known <- best$fit$model
+
+  # Check for improper solutions
+  if(isTRUE(known$heywood)){
+    warning(
+      paste(
+        "The true model fit to the population correlation matrix with error",
+        "has negative uniquenesses (Heywood case). The amount of error may",
+        "be too large for this factor structure"
+      ), call. = FALSE
+    )
+  }
+
+  # Sign indeterminacy is per factor (a factor's loadings can be estimated as
+  # a whole with reflected sign) so align each factor to the original loadings
+  # (factor correlations are reflected accordingly)
+  signs <- sign(colSums(known$lambda * model$loadings))
+  signs[signs == 0] <- 1
+  estimated_loadings <- known$lambda %*% diag(signs, nrow = length(signs))
+  estimated_phi <- diag(signs, nrow = length(signs)) %*% known$phi %*%
+    diag(signs, nrow = length(signs))
+
+  # Add names
+  factor_names <- paste0("F", seq_len(ncol(model$loadings)))
+  dimnames(estimated_loadings) <- list(rownames(R), factor_names)
+  dimnames(estimated_phi) <- list(factor_names, factor_names)
+
+  # Obtain fit indices and discrepancy
+  fit_vector <- unlist(best$fit[c("CFI", "TLI", "RMSEA", "SRMR")])
+  names(fit_vector) <- c("CFI", "TLI", "RMSEA", "SRMR")
+
+  # Obtain error
+  error <- R_population - R
+
+  # Generate data
+  data <- simulate_error_data(
+    R_population, lf_object$parameters, nrow(lf_object$data)
   )
 
-  ## Populate results
+  # Populate results
   results <- list(
     data = data,
-    population_correlation = population_error$R_error,
-    original_correlation = lf_object$population_correlation
+    population_correlation = R_population,
+    original_correlation = R,
+    population_error = list(
+      method = method,
+      metric = metric,
+      fit_value = target,
+      achieved = unname(fit_vector[metric]),
+      fit = fit_vector,
+      delta = best$fit$discrepancy,
+      error = error,
+      max_error = max(abs(error)),
+      R_difference = max(abs(known$sigma - R)),
+      loadings = estimated_loadings,
+      factor_correlations = estimated_phi,
+      iterations = best$iterations
+    ),
+    original_results = lf_object
   )
-
-  # Add parameters from population error
-  error_parameters <- list(
-    error_correlation = population_error$R_error,
-    fit = population_error$fit,
-    delta = population_error$delta,
-    misfit = population_error$misfit,
-    loadings = error_loadings,
-    MAX_residual = max_abs_res,
-    SRMR_difference = SRMR_difference,
-    MAE_loadings = MAE
-  )
-
-  # Add population error parameters to results
-  results$population_error <- error_parameters
-
-  # Add original results
-  results$original_results <- lf_object
 
   # Add class
   class(results) <- c(class(lf_object), "lf_pe")
-
-  # Message to cite {bifactor}
-  message(
-    paste0(
-      "Please cite the {bifactor} package:\n\n",
-      "Jimenez, M., Abad, F. J., Garcia-Garzon, E., Garrido, L. E., Franco, V. R. (2022). ",
-      styletext("bifactor: Exploratory factor and bi-factor modeling with multiple general factors. ", defaults = "italics"),
-      "R package version 0.1.0. ",
-      "Retrieved from https://github.com/Marcosjnez/bifactor"
-    )
-  )
 
   # Return results
   return(results)
@@ -609,30 +523,161 @@ add_population_error <- function(
 
 # Input checking ----
 #' @noRd
-# Updated 12.07.2026
-add_population_error_errors <- function(lf_object, misfit)
+# Updated 20.11.2026
+add_population_error_errors <- function(
+    lf_object, method, metric, fit_value,
+    tolerance, max_iterations, control, leave_cross_loadings,
+    method_missing, metric_missing
+)
 {
 
   # Check for appropriate class
-  if(!is(lf_object, "lf_simulate")){
+  # (population error must be added last)
+  check_lf_object(
+    lf_object, "add_population_error",
+    forbid = c("lf_we", "lf_pe", "lf_zipfs"), flat = TRUE
+  )
 
-    # Produce error
+  # Check for population correlation matrix
+  if(is.null(lf_object$population_correlation)){
     stop(
-      paste(
-        "`lf_object` input is not class \"lf_simulate\" from the `simulate_factors` function.",
-        "\n\nInput class(es) of current `lf_object`:",
-        paste0("\"", class(lf_object), "\"", collapse = ", "),
-        "\n\nUse `simulate_factors` to generate your data to input into this function"
-      )
+      "`lf_object` does not contain a population correlation matrix",
+      call. = FALSE
     )
+  }
+
+  # Check for method (no default)
+  if(method_missing || is.null(method)){
+    stop(
+      paste0(
+        "`method` must be specified. ",
+        "\n\nUse `method = \"cb\"`, `method = \"tkl\"`, ",
+        "`method = \"wb\"`, or `method = \"hb\"`. ",
+        "See `?add_population_error` for details"
+      ), call. = FALSE
+    )
+  }
+  type_error(method, "character")
+  length_error(method, 1)
+  method <- tolower(method)
+
+  # Check for available methods
+  available_methods <- c("cb", "tkl", "wb", "hb")
+  if(!method %in% available_methods){
+    stop(
+      paste0(
+        "`method` = \"", method, "\" is not available.",
+        "\n\nUse ", paste0("`method = \"", available_methods, "\"`", collapse = ", ")
+      ), call. = FALSE
+    )
+  }
+
+  # Set default metric (consistent with the method) and check for metric
+  if(metric_missing){
+    metric <- switch(
+      method,
+      "cb" = "CFI", "tkl" = "CFI", "wb" = "RMSEA", "hb" = "SRMR"
+    )
+  }else{
+
+    # Check for appropriate metric
+    type_error(metric, "character")
+    length_error(metric, 1)
+    metric <- toupper(metric)
+
+    # Check for available metrics
+    available_metrics <- c("CFI", "TLI", "RMSEA", "SRMR")
+    if(!metric %in% available_metrics){
+      stop(
+        paste0(
+          "`metric` = \"", metric, "\" is not available.",
+          "\n\nUse ", paste0("`metric = \"", tolower(available_metrics), "\"`", collapse = ", ")
+        ), call. = FALSE
+      )
+    }
 
   }
 
-  # Check for appropriate misfit
-  length_error(misfit, 1)
+  # Set default fit_value (conventional cutoffs)
+  if(is.null(fit_value)){
+    fit_value <- switch(
+      metric,
+      "CFI" = 0.95,
+      "TLI" = 0.95,
+      "RMSEA" = 0.06,
+      "SRMR" = 0.05
+    )
+  }
 
-  # Return checked input
-  return(lf_object$parameters)
+  # Check for appropriate fit_value
+  type_error(fit_value, "numeric")
+  length_error(fit_value, 1)
+
+  # Check for range
+  if(!is.finite(fit_value) || fit_value <= 0 || fit_value >= 1){
+    stop(
+      paste0(
+        "`fit_value` = ", fit_value, " is not a valid ", metric, ".",
+        "\n\nNumeric `fit_value` must be between 0 and 1 (exclusive)"
+      ), call. = FALSE
+    )
+  }
+
+  # Check tolerance and maximum iterations
+  type_error(tolerance, "numeric")
+  length_error(tolerance, 1)
+  range_error(tolerance, c(0, 1))
+  type_error(max_iterations, "numeric")
+  length_error(max_iterations, 1)
+  range_error(max_iterations, c(1, Inf))
+
+  # Check leave cross-loadings
+  type_error(leave_cross_loadings, "logical")
+  length_error(leave_cross_loadings, 1)
+
+  # Check control
+  if(!is.list(control)){
+    stop("`control` must be a list. See `?add_population_error` for options")
+  }
+
+  # Set control defaults
+  control_defaults <- list(
+    minor_factors = max(50, 2 * ncol(lf_object$data)),
+    decay = 0.30, omitted = 0.10
+  )
+
+  # Check for unknown options
+  unknown <- setdiff(names(control), names(control_defaults))
+  if(length(unknown) > 0 || (length(control) > 0 && is.null(names(control)))){
+    stop(
+      paste0(
+        "`control` option(s) not available: ",
+        paste0("\"", unknown, "\"", collapse = ", "),
+        "\n\nUse ", paste0("\"", names(control_defaults), "\"", collapse = ", ")
+      )
+    )
+  }
+
+  # Update defaults
+  control_defaults[names(control)] <- control
+  control <- control_defaults
+
+  # Check control options
+  for(option in names(control)){
+    type_error(control[[option]], "numeric")
+    length_error(control[[option]], 1)
+  }
+  range_error(control$minor_factors, c(1, Inf))
+  range_error(control$decay, c(0, 1))
+  range_error(control$omitted, c(0, 1))
+
+  # Return inputs
+  return(
+    list(
+      method = method, metric = metric,
+      fit_value = fit_value, control = control
+    )
+  )
 
 }
 
@@ -642,8 +687,6 @@ add_population_error_errors <- function(lf_object, misfit)
 #   loadings = 0.55, cross_loadings = 0.05,
 #   correlations = 0.30, sample_size = 1000
 # )
-# lf_object = two_factor; cfa_method = "minres";
-# fit = "cfi"; misfit = "acceptable"; error_method = "cudeck";
-# tolerance = 0.01; convergence_iterations = 10;
+# lf_object = two_factor; method = "cb"; metric = "CFI"; fit_value = NULL
+# tolerance = 0.01; max_iterations = 10; control = list()
 # leave_cross_loadings = FALSE
-

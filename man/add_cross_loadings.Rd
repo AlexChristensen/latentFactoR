@@ -10,7 +10,8 @@ add_cross_loadings(
   proportion_cross_loadings_range = NULL,
   magnitude_cross_loadings,
   magnitude_cross_loadings_range = NULL,
-  leave_cross_loadings = FALSE
+  leave_cross_loadings = FALSE,
+  seed = NULL
 )
 }
 \arguments{
@@ -41,6 +42,11 @@ Convergence problems can arise if cross-loadings are kept,
 so setting them to zero is the default. Only set to \code{TRUE}
 with careful consideration of the structure. Make sure to perform
 additional checks that the data are adequate}
+
+\item{seed}{Numeric (length = 1).
+Seed for reproducible results. The same \code{seed} gives the same results
+(and does not change the random number stream of the R session).
+Defaults to \code{NULL} (random seed)}
 }
 \value{
 Returns a list containing the same parameters as the original

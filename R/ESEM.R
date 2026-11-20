@@ -125,6 +125,9 @@ ESEM <- function(
 )
 {
 
+  # Initialize parameters (only available for {latentFactoR} objects)
+  parameters <- NULL
+
   # Check for {latentFactoR} class
   if(is(data, "lf_simulate")){
 
@@ -220,7 +223,7 @@ ESEM <- function(
     if(is.null(variable_polarity)){
 
       # Check for parameters ({latentFactoR} class)
-      if(exists("parameters")){
+      if(!is.null(parameters)){
 
         # Obtain loadings
         loadings <- parameters$loadings
@@ -327,6 +330,10 @@ ESEM <- function(
       end_variables <- cumsum(variables)
       start_variables <- (end_variables + 1) - variables
 
+      # Initialize CTCM1 model and factors with target-sign variables
+      ctcm1_model <- ""
+      ctcm1_factors <- integer(0)
+
       # Set up lavaan model
       for(i in 1:factors){
 
@@ -349,13 +356,10 @@ ESEM <- function(
             ), sep = "", collapse = " + "
           )
 
-        }
-
-        # Combine set up
-        if(i == 1){
-          ctcm1_model <- paste(factor_syntax, variable_syntax, "\n")
-        }else{
+          # Combine set up (only factors with target-sign variables)
           ctcm1_model <- paste(ctcm1_model, factor_syntax, variable_syntax, "\n")
+          ctcm1_factors <- c(ctcm1_factors, i)
+
         }
 
       }
@@ -368,7 +372,7 @@ ESEM <- function(
       )
 
       # Make factors orthogonal
-      for(i in 1:factors){
+      for(i in ctcm1_factors){
 
         # Make factor orthogonal
         orthogonal_correlations <- paste0(
@@ -503,9 +507,11 @@ ESEM <- function(
 
     # Return results
     return(
-      list(
-        model = "Model could not converge.",
-        fit = NA
+      structure(
+        list(
+          model = "Model could not converge.",
+          fit = NA
+        ), class = "lf_esem"
       )
     )
 
@@ -568,9 +574,11 @@ ESEM <- function(
 
   # Return results
   return(
-    list(
-      model = esem_mod,
-      fit = final_fit
+    structure(
+      list(
+        model = esem_mod,
+        fit = final_fit
+      ), class = "lf_esem"
     )
   )
 

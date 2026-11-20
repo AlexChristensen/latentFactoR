@@ -1,7 +1,7 @@
 Package: latentFactoR
 Title: Data Simulation Based on Latent Factors
-Version: 0.0.9
-Date: 2026-09-07
+Version: 0.1.0
+Date: 2026-11-20
 Authors@R: c(
 	person("Alexander", "Christensen", email = "alexpaulchristensen@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-9798-7037")),
 	person("Luis", "Eduardo Garrido", email = "luisgarrido@pucmm.edu", role = "aut", comment = c(ORCID = "0000-0001-8932-6063")),
@@ -20,8 +20,8 @@ URL: https://github.com/AlexChristensen/latentFactoR
 BugReports: https://github.com/AlexChristensen/latentFactoR/issues
 Depends: R (>= 3.6.0)
 License: GPL (>= 3.0)
-Imports: BBmisc, car, EGAnet, fspe, googledrive, ineq,
-	     lavaan, Matrix, methods, mlr, mvtnorm, psych,
+Imports: car, EGAnet, fspe, ineq,
+	     lavaan, Matrix, methods, psych,
 	     rstudioapi, xgboost
 Suggests: ggplot2, scales
 Copyright: See inst/COPYRIGHTS for details

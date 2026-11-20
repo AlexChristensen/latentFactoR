@@ -1,146 +1,407 @@
-Changes in version 0.0.9
+Version 0.1.0
+
+o CHANGE: the default `fit_value` for `metric = "srmr"` in
+  `add_population_error` is 0.05 (0.08 often required more error than the true
+  model can absorb with proper uniquenesses, particularly for `method = "hb"`)
+
+o CHANGE: `factor_forest` is much faster and no longer downloads its model: the
+  pre-trained XGBoost model (Goretzko & Buhner, 2020) is included with the
+  package (`inst/extdata/tunedxgb.json`) and loaded once per session; parallel
+  analysis uses random normal reference data (as `psych::fa.parallel(fa =
+  "fa")`) without computing correlations of resampled data; the comparison data
+  approach (`EFA.Comp.Data`) uses an optimized implementation of the same
+  algorithm (adapted from the Non-hierarchical-PRISM project)
+
+o FIX: `factor_forest` computed the empirical Kaiser criterion feature
+  differently from the model's training code (`which(eigenvalues <=
+  reference)[1] - 1`)
+
+o CHANGE (BREAKING): `factor_forest` requires data (correlation matrices are no
+  longer accepted because the comparison data feature is computed from the data;
+  previously it was silently computed on the correlation matrix); `sample_size`
+  is deprecated and ignored. `estimate_dimensions` skips Factor Forest with a
+  warning for correlation matrix input
+
+o INTERNAL: removed the {mlr}, {BBmisc}, and {googledrive} dependencies (only
+  used to load and predict with the downloaded Factor Forest model)
+
+o CHANGE: `add_population_error` optimization is 6-35x faster with the same
+  accuracy (achieved fit within 1e-6 of the target, typically ~1e-10): Fisher
+  scoring in the true-model refit no longer iterates on rounding error, refits
+  are warm-started (and confirmed from the true parameters), the target is found
+  by searching upward from no error (smallest error that reaches the target)
+  instead of a 20-point grid, and the Cudeck-Browne error is scaled in closed
+  form
+
+o CHANGE: `add_population_error` checks that the true model is identified (e.g.,
+  `leave_cross_loadings = TRUE` with cross-loadings on every variable is
+  rejected because its degrees of freedom are not defined), warns about Heywood
+  cases, accepts `add_method_factors` output (method factors are part of the
+  true model), and derives correlated residuals from the population correlation
+  matrix so that repeated `add_local_dependence` calls are kept
+
+o NEW: `print`/`summary` methods describe the original simulated data and then
+  each modification in order (cross-loadings, local dependence, method factors,
+  wording effects, population error, Zipf's); `estimate_dimensions` output
+  prints a table of dimensions; `EKC`, `NEST`, `factor_forest`, `ESEM`, and
+  `obtain_zipfs_parameters` outputs have classes (`lf_ekc`, `lf_nest`, `lf_ff`,
+  `lf_esem`, `lf_zipfs_parameters`) with `print`/`summary` methods (returned
+  elements are unchanged)
+
+o CHANGE: `simulate_hierarchical_factors` output has class `c("lf_simulate",
+  "lf_hierarchical")`; `add_*` functions reject hierarchical input with an
+  informative error
+
+o CHANGE: `add_cross_loadings`, `add_method_factors`, and `add_wording_effects`
+  re-simulate data from the factor model, so they now reject input with local
+  dependence (`add_local_dependence` output) instead of silently dropping the
+  correlated residuals; apply local dependence after these functions (and
+  population error last)
+
+o FIX: `add_method_factors` applied per-variable skew to the wrong variables
+  with mixed categorical/continuous data and did not return
+  `population_correlation`
+
+o FIX: `add_local_dependence` could pair a variable with itself or repeat a pair
+  in reverse order (`allow_multiple = TRUE`), merged only two of several
+  connected residual chains when aligning skew, and could misalign per-factor
+  `add_residuals` when the number of pairs was reduced
+
+o FIX: `add_wording_effects` (`method = "difficulty"`) indexed past the loadings
+  when all loadings were negative
+
+o FIX: `NEST` reported uniqueness rows as loadings when fewer factors than
+  requested were estimated, could fail when the loop never stopped, and warned
+  about convergence when it had converged on the last iteration
+
+o FIX: `estimate_dimensions` returned an unnamed parallel analysis result on
+  error, could pick up `pa_nfact`/`pa_ncomp` from the global environment,
+  errored when Factor Forest returned `NA`, and did not merge user `FSPE_args`
+  with the defaults
+
+o FIX: `ESEM` (`wording_factor = "CTCM1_each"`) reused the previous factor's
+  syntax for factors without target-sign variables, and could pick up
+  `parameters` from the global environment
+
+o FIX: `factor_forest` passed all of `PA_correlation`'s choices to
+  `psych::fa.parallel` (now `match.arg`);
+  `simulate_factors`/`simulate_hierarchical_factors` gave "object
+  'total_variables' not found" for a `variables` of the wrong length;
+  `simulate_hierarchical_factors` now redraws
+  `off_disturbances_range`/`lower_correlations_range` on every retry
+
+o INTERNAL: shared helpers in `helpers-simulation.R` (`generate_lf_data`,
+  `check_lf_object`, `variable_names`, `resolve_proportion`,
+  `flip_dominant_loadings`, `dominant_signs`, `draw_correlation_matrix`,
+  `snap_skew_range`) replace code that was duplicated across the simulation
+  functions
+
+o INTERNAL: removed {testthat} (validation is run outside of the package)
+
+o CHANGE (BREAKING): `add_population_error` now uses the population error
+  methods of {psychNetwoRk}, adapted to factor models. The error is generated
+  with `method = "cb"` (Cudeck & Browne, 1992), `"tkl"` (Tucker, Koopman, &
+  Linn, 1969), `"wb"` (Wu & Browne, 2015), or `"hb"` (Hu & Bentler, 1998;
+  omitted cross-loadings) and optimized so that a fit index (`metric` = CFI,
+  TLI, RMSEA, or SRMR) of the true factor model fit to the population
+  correlation matrix with error (maximum likelihood, evaluated at the size of
+  the human population) equals `fit_value`. The arguments `cfa_method`, `fit`,
+  `misfit`, `error_method`, and `convergence_iterations` were replaced by
+  `method`, `metric`, `fit_value`, `max_iterations`, and `control`. The
+  `population_error` element of the output now contains `method`, `metric`,
+  `fit_value`, `achieved`, `fit`, `delta`, `error`, `max_error`, `R_difference`,
+  `loadings`, `factor_correlations`, and `iterations`
+
+o FIX: the previous population error implementation compared SRMR against the
+  target regardless of `fit` (e.g., CFI = 0.95 was checked against an SRMR of
+  0.95). The achieved fit now equals the requested fit to within 1e-6 (when
+  reachable), is reported in `population_error$achieved`, and is verified
+  against {lavaan}
+
+o FIX: `add_population_error` no longer drops correlated residuals added by
+  `add_local_dependence` from the true model, and applies the skew of continuous
+  variables and per-variable categorical skew like `simulate_factors`
+
+o CHANGE: `print` and `summary` methods work with the output of
+  `add_population_error` and report the population error
+
+o INTERNAL: removed the {bifactor}-derived `cudeck`, `yuan`, and `CFA` functions
+  (and their helpers) and the {bifactor} citation message; population error
+  functions now live in `error_optimizations.R`
+
+o NEW: `seed` argument for reproducible results in `simulate_factors`,
+  `simulate_hierarchical_factors`, `add_cross_loadings`, `add_local_dependence`,
+  `add_method_factors`, `add_wording_effects`, `add_population_error`,
+  `data_to_zipfs`, `NEST`, `factor_forest`, and `estimate_dimensions`; the same
+  seed gives the same results and a seeded call does not change the R session's
+  random number stream (previously results could not be reproduced because the C
+  random number generators were seeded from the clock)
+
+o INTERNAL: all random numbers are generated with the package's C random number
+  generators (xoshiro256++ and ziggurat), including data generation (previously
+  `mvtnorm::rmvnorm`), the comparison data approach in `factor_forest`, and
+  `data_to_zipfs` (previously R's `rnorm`/`sample`); {mvtnorm} is no longer a
+  dependency
+
+o FIX (behavior change): `simulate_hierarchical_factors` added a supplied
+  `off_disturbances`/`off_disturbances_range` value r to the lower-order factor
+  covariances directly, so the disturbance correlation was r / (1 - h^2) rather
+  than r; the disturbance covariances are now r * sqrt((1 - h^2_i)(1 - h^2_j)),
+  so `off_disturbances` are the disturbance correlations (as documented) and the
+  lower-order factors have unit variance without rescaling.
+  `parameters$higher$disturbances` is the disturbance covariance matrix (its
+  diagonal holds the disturbance variances); `print`/`summary` report
+  disturbance correlations
+
+o CHANGE: `simulate_factors` accepts per-variable `loadings` (a vector as long
+  as the total number of variables), as documented; other lengths now give an
+  error instead of being silently truncated (also for
+  `lower_loadings`/`higher_loadings` in `simulate_hierarchical_factors`)
+
+o FIX: `skew_range` draws one skew per variable (previously, if the sequence of
+  skews in the range had as many values as there are variables, they were
+  applied in order rather than sampled)
+
+o FIX: `range_error` (input checks) rounded inputs to three decimals before
+  comparing, so values slightly outside the allowed range (e.g., 1.0004 for a
+  correlation) were accepted
+
+o INTERNAL: `factor_forest` checks that its features match the order the model
+  was trained on
+
+Version 0.0.9
+
+o CHANGE: skew range supported by `categorize`, `simulate_factors`, and
+  `simulate_hierarchical_factors` expanded from -2/2 to -10/10 (in increments of
+  0.05); `skew_tables` regenerated over the new range
+
+o INTERNAL: `skew_generator` rewritten to compute skewness analytically from
+  category counts instead of materializing a `sample_size`-length vector and
+  calling `psych::skew()` on it (mathematically equivalent, since the
+  moment-skewness formula only depends on counts per value); it also now
+  searches adaptively over `reduction_factor` and `sample_size` when the
+  defaults can't reach a target skew directly, closing gaps (e.g., skew near
+  zero for `categories >= 4`) that were previously unreachable regardless of
+  tolerance. Together, this cut full skew-table generation time from tens of
+  minutes to about a second
+
+o FIX: `skew_generator`'s bisection search had a typo (`limitinf` instead of
+  `limitsinf`) that left the lower search bound frozen at zero, which combined
+  with `skew(proportion)` not being monotonic across its full domain, could
+  prevent convergence even for reachable targets
+
+Version 0.0.8
+
+o NEW: `simulate_hierarchical_factors` simulates data from a hierarchical
+  (second-order) factor model, where variables load onto lower-order factors and
+  lower-order factors load onto higher-order factors; the lower-order factors'
+  residual (disturbance) structure can be set directly via
+  `off_disturbances`/`off_disturbances_range` (only their *off-diagonal*,
+  correlated-disturbance elements are settable — the diagonal is always rescaled
+  to unit variance, since any unexplained variance is normalized away
+  regardless) or left to be implied instead by supplying a target
+  `lower_correlations`/`lower_correlations_range` matrix
+
+o NEW: `print`/`summary` methods for
+  `simulate_factors`/`simulate_hierarchical_factors` output, reporting loadings,
+  correlations, disturbances, categories, and skew
+
+o FIX: `simulate_factors` could loop indefinitely when supplied
+  `loadings`/`correlations` were jointly inadmissible; now errors after 1000
+  attempts with an informative message
+
+o INTERNAL: consolidated `@import`/`@importFrom` roxygen tags into a single
+  package-level block in `latentFactoR.R`
+
+o INTERNAL: cleaned up and optimized code in `simulate_factors`
+
+o INTERNAL: random number generation moved to C
+
+o INTERNAL: cleaned up and optimized code in `add_cross_loadings`,
+  `add_local_dependence`, `add_method_factors`, `add_population_error`, and
+  `add_wording_effects` to match `simulate_factors` (uses C-based random number
+  generation)
+
+o FIX: `add_cross_loadings` could error with "missing value where TRUE/FALSE
+  needed" when a factor was randomly assigned zero cross-loadings (e.g., via
+  `proportion_cross_loadings_range`)
+
+o FIX: `proportion_negative_range` in `add_method_factors` was documented but
+  not implemented; it now works as documented
+
+o FIX: documentation in `simulate_factors` was missing the `continuous_data`
+  return value and the `cross_loadings`/`categorical_limit` parameters list, and
+  had the loadings matrix dimensions reversed
+
+o FIX: `simulate_factors`/`simulate_hierarchical_factors` misassigned
+  per-variable `skew` values to the wrong columns whenever a full-length `skew`
+  vector was supplied on a model mixing categorical and continuous variables
+
+o FIX: `simulate_factors`/`simulate_hierarchical_factors` ignored
+  `loadings_range`/`correlations_range` (and the hierarchical equivalents) after
+  the first retry attempt, so the admissibility retry loop could never actually
+  resample those parameters
+
+o FIX: `add_cross_loadings` could error with "missing value where TRUE/FALSE
+  needed" when `magnitude_cross_loadings` was supplied with length equal to
+  `factors` (a documented, valid length)
+
+o FIX: `add_cross_loadings` now errors informatively (instead of crashing) when
+  called on data with only one factor, since cross-loadings require at least two
+  factors
+
+o FIX: `add_local_dependence` could error with "NAs are not allowed in
+  subscripted assignments" when composed after `add_cross_loadings` had already
+  consumed most of a factor's available variables
+
+o FIX: `add_cross_loadings`, `add_local_dependence`, `add_method_factors`, and
+  `add_wording_effects` incorrectly indexed `parameters$variables` when
+  converting a raw-count `_range` argument (e.g.
+  `proportion_cross_loadings_range`) into a proportion, which could silently
+  misconvert the range or crash outright for a single-factor model
+
+o FIX: `add_local_dependence`/`add_method_factors` admissibility retry loops had
+  no maximum-iteration guard and could loop indefinitely
 
-+ UPDATE: skew range supported by `categorize`, `simulate_factors`, and `simulate_hierarchical_factors` expanded from -2/2 to -10/10 (in increments of 0.05); `skew_tables` regenerated over the new range
+o FIX: `add_population_error` reused the first random population-error draw on
+  every retry iteration instead of resampling, making `convergence_iterations`
+  ineffective
 
-+ INTERNAL: `skew_generator` rewritten to compute skewness analytically from category counts instead of materializing a `sample_size`-length vector and calling `psych::skew()` on it (mathematically equivalent, since the moment-skewness formula only depends on counts per value); it also now searches adaptively over `reduction_factor` and `sample_size` when the defaults can't reach a target skew directly, closing gaps (e.g., skew near zero for `categories >= 4`) that were previously unreachable regardless of tolerance. Together, this cut full skew-table generation time from tens of minutes to about a second
+o FIX: `add_population_error` applied its CFA sign-indeterminacy correction
+  globally across the whole loadings matrix instead of per-factor, which could
+  corrupt an otherwise correctly-signed factor's loadings in multi-factor models
 
-+ FIX: `skew_generator`'s bisection search had a typo (`limitinf` instead of `limitsinf`) that left the lower search bound frozen at zero, which combined with `skew(proportion)` not being monotonic across its full domain, could prevent convergence even for reachable targets
+o FIX: `ESEM` did not resolve its `estimator` argument via `match.arg`, so the
+  documented default (omitting `estimator`) failed; `estimator` now defaults to
+  `"MLR"`
 
+o FIX: `ESEM` built lavaan variable names with a hardcoded zero-padding width
+  that mismatched the actual data column names for models with fewer than 10 or
+  100+ total variables
 
-Changes in version 0.0.8
+o FIX: `NEST`/`factor_forest`/`estimate_dimensions` used base `isSymmetric()`
+  (which requires matching row and column names) to detect correlation-matrix
+  input; an unnamed but valid correlation matrix was misclassified as raw data,
+  silently discarding a user-supplied `sample_size`
 
-+ ADD: `simulate_hierarchical_factors` simulates data from a hierarchical (second-order) factor model, where variables load onto lower-order factors and lower-order factors load onto higher-order factors; the lower-order factors' residual (disturbance) structure can be set directly via `off_disturbances`/`off_disturbances_range` (only their *off-diagonal*, correlated-disturbance elements are settable — the diagonal is always rescaled to unit variance, since any unexplained variance is normalized away regardless) or left to be implied instead by supplying a target `lower_correlations`/`lower_correlations_range` matrix
+o FIX: `NEST` could error with a non-conformable matrix multiplication when its
+  internal rank-reduction step truncated below the requested number of factors
 
-+ ADD: `print`/`summary` methods for `simulate_factors`/`simulate_hierarchical_factors` output, reporting loadings, correlations, disturbances, categories, and skew
+o FIX: `EKC` returned `NA` instead of the maximum number of dimensions when
+  every eigenvalue exceeded its reference value
 
-+ FIX: `simulate_factors` could loop indefinitely when supplied `loadings`/`correlations` were jointly inadmissible; now errors after 1000 attempts with an informative message
+o FIX: `obtain_zipfs_parameters` could not recover `alpha < 1` due to a
+  hardcoded search floor, despite `alpha < 1` being a documented, valid input to
+  `data_to_zipfs`
 
-+ INTERNAL: consolidated `@import`/`@importFrom` roxygen tags into a single package-level block in `latentFactoR.R`
+o FIX: `data_to_zipfs`'s zero-sum-column repair silently failed when the
+  most-correlated donor column was itself all-zero
 
-+ INTERNAL: cleaned up and optimized code in `simulate_factors`
+o FIX: `factor_forest`'s downloaded model cache path used a Windows-style
+  backslash separator, breaking cache detection (forcing re-download every call)
+  on Linux/macOS
 
-+ INTERNAL: random number generation moved to C
+o FIX: `factor_forest`'s eigenvalue-padding step could run backward and
+  overwrite real eigenvalues for datasets with 80 or more variables
 
-+ INTERNAL: cleaned up and optimized code in `add_cross_loadings`, `add_local_dependence`, `add_method_factors`, `add_population_error`, and `add_wording_effects` to match `simulate_factors` (uses C-based random number generation)
+o FIX: `simulate_factors` enforced a minimum of 2 variables per factor in code
+  while documenting (and enforcing via `variables_range`) a minimum of 3
 
-+ FIX: `add_cross_loadings` could error with "missing value where TRUE/FALSE needed" when a factor was randomly assigned zero cross-loadings (e.g., via `proportion_cross_loadings_range`)
+o INTERNAL: removed dead/unreachable code (`error.report`, a duplicated
+  `digits()` definition, a non-functional `.onload` typo) and added
+  `URL`/`BugReports` to `DESCRIPTION`; `inst/CITATION` now derives its
+  version/year from `DESCRIPTION` instead of a hardcoded string
 
-+ FIX: `proportion_negative_range` in `add_method_factors` was documented but not implemented; it now works as documented
+Version 0.0.7
 
-+ FIX: documentation in `simulate_factors` was missing the `continuous_data` return value and the `cross_loadings`/`categorical_limit` parameters list, and had the loadings matrix dimensions reversed
+o FIX: error check for positive definite in `add_population_error`
 
-+ FIX: `simulate_factors`/`simulate_hierarchical_factors` misassigned per-variable `skew` values to the wrong columns whenever a full-length `skew` vector was supplied on a model mixing categorical and continuous variables
+o FIX: correction when adding negative skew for continuous data (internal
+  function: `skew_continuous`)
 
-+ FIX: `simulate_factors`/`simulate_hierarchical_factors` ignored `loadings_range`/`correlations_range` (and the hierarchical equivalents) after the first retry attempt, so the admissibility retry loop could never actually resample those parameters
+o CHANGE: better ML population error in `add_population_error` (update from
+  {bifactor})
 
-+ FIX: `add_cross_loadings` could error with "missing value where TRUE/FALSE needed" when `magnitude_cross_loadings` was supplied with length equal to `factors` (a documented, valid length)
+o CHANGE: some optimizations to `add_population_error`
 
-+ FIX: `add_cross_loadings` now errors informatively (instead of crashing) when called on data with only one factor, since cross-loadings require at least two factors
+o CHANGE: some optimiztaions to `NEST`
 
-+ FIX: `add_local_dependence` could error with "NAs are not allowed in subscripted assignments" when composed after `add_cross_loadings` had already consumed most of a factor's available variables
+Version 0.0.6
 
-+ FIX: `add_cross_loadings`/`add_local_dependence`/`add_method_factors`/`add_wording_effects` incorrectly indexed `parameters$variables` when converting a raw-count `_range` argument (e.g. `proportion_cross_loadings_range`) into a proportion, which could silently misconvert the range or crash outright for a single-factor model
+o CHANGE: `add_wording_effects` methods moved from `utils-latentFactoR` to
+  `add_wording_effects-helpers` to facilitate ease of finding code (no
+  observable changes to the user)
 
-+ FIX: `add_local_dependence`/`add_method_factors` admissibility retry loops had no maximum-iteration guard and could loop indefinitely
+o FIX: categories greater than 7 were not previously allowed (they are now)
 
-+ FIX: `add_population_error` reused the first random population-error draw on every retry iteration instead of resampling, making `convergence_iterations` ineffective
+o FIX: correlations in `EKC` were not used appropriately and led to an error
 
-+ FIX: `add_population_error` applied its CFA sign-indeterminacy correction globally across the whole loadings matrix instead of per-factor, which could corrupt an otherwise correctly-signed factor's loadings in multi-factor models
+o CHANGE: switched on "Byte-Compile" (byte-compiles on our end and not when the
+  user installs)
 
-+ FIX: `ESEM` did not resolve its `estimator` argument via `match.arg`, so the documented default (omitting `estimator`) failed; `estimator` now defaults to `"MLR"`
+Version 0.0.5
 
-+ FIX: `ESEM` built lavaan variable names with a hardcoded zero-padding width that mismatched the actual data column names for models with fewer than 10 or 100+ total variables
+o FIX: bug in skew when only providing 1 value
 
-+ FIX: `NEST`/`factor_forest`/`estimate_dimensions` used base `isSymmetric()` (which requires matching row and column names) to detect correlation-matrix input; an unnamed but valid correlation matrix was misclassified as raw data, silently discarding a user-supplied `sample_size`
+o FIX: further correction to `EKC` (uses `cumsum(eigenvalues)` rather than
+  `sum(eigenvalues)`)
 
-+ FIX: `NEST` could error with a non-conformable matrix multiplication when its internal rank-reduction step truncated below the requested number of factors
+o NEW: `add_wording_effects` will add wording effects such as acquiescence,
+  difficulty, random careless, straight line, or some combination of the four to
+  a simulated factor model
 
-+ FIX: `EKC` returned `NA` instead of the maximum number of dimensions when every eigenvalue exceeded its reference value
+o NEW: `ESEM` to perform Exploratory Structural Equation Modeling using {lavaan}
+  (allows wording effects to be estimated)
 
-+ FIX: `obtain_zipfs_parameters` could not recover `alpha < 1` due to a hardcoded search floor, despite `alpha < 1` being a documented, valid input to `data_to_zipfs`
+o FIX: `factor_forest` uses raw data in `psych::fa.parallel` rather than
+  correlation matrix
 
-+ FIX: `data_to_zipfs`'s zero-sum-column repair silently failed when the most-correlated donor column was itself all-zero
+o NEW: internal functions for computing effect sizes across conditions are
+  included (see `simulation_helpers.R`)
 
-+ FIX: `factor_forest`'s downloaded model cache path used a Windows-style backslash separator, breaking cache detection (forcing re-download every call) on Linux/macOS
+o NEW: skew in `add_local_dependence` is guaranteed to be same direction for
+  locally dependent variables
 
-+ FIX: `factor_forest`'s eigenvalue-padding step could run backward and overwrite real eigenvalues for datasets with 80 or more variables
+Version 0.0.4
 
-+ FIX: `simulate_factors` enforced a minimum of 2 variables per factor in code while documenting (and enforcing via `variables_range`) a minimum of 3
+o FIX: correction to `EKC` (used `factor_forest`'s version of EKC which used
+  reference values rather than eigenvalues); `EKC` uses eigenvalues whereas
+  `factor_forest` uses reference (which was what the random forest model was
+  trained on)
 
-+ INTERNAL: removed dead/unreachable code (`error.report`, a duplicated `digits()` definition, a non-functional `.onload` typo) and added `URL`/`BugReports` to `DESCRIPTION`; `inst/CITATION` now derives its version/year from `DESCRIPTION` instead of a hardcoded string
+o FIX: cross-loadings with population error are screened for communalities >=
+  0.80; communalities near 0.90 prior to population error would often get stuck
+  and not converge
 
+o NEW: `skew` argument for continuous data
 
-Changes in version 0.0.7
+Version 0.0.3
 
-+ FIX: error check for positive definite in `add_population_error`
+o NEW: `add_population_error` will add population error, using {bifactor}, to a
+  simulated factor model
 
-+ FIX: correction when adding negative skew for continuous data (internal function: `skew_continuous`)
+o NEW: `data_to_zipfs` to transform data to Zipf's distribution from
+  `simulate_factors`
 
-+ UPDATE: better ML population error in `add_population_error` (update from {bifactor})
+o NEW: `obtain_zipfs_parameters` to obtain a dataset's best fitting Zipf's
+  distribution parameters
 
-+ UPDATE: some optimizations to `add_population_error` 
+o NEW: `NEST` Next Eigenvalue Sufficiency Test to estimate dimensions
 
-+ UPDATE: some optimiztaions to `NEST`
+o NEW: `estimate_dimensions` provides a single function to estimate dimensions
+  using state-of-the-art methods: Exploratory Graph Analysis (EGA), Exploratory
+  Factor Analysis with out-of-sample prediction (FSPE), Next Eigenvalue
+  Sufficiency Test (NEST), parallel analysis (PA), and Factor Forest
 
+Version 0.0.2
 
-Changes in version 0.0.6
+o CHANGE: skews for categories now include 6 categories
 
-+ MOVE: `add_wording_effects` methods moved from `utils-latentFactoR` to `add_wording_effects-helpers` to facilitate ease of finding code (no observable changes to the user)
+o CHANGE: available skew increments are now 0.05 (were 0.50 previously)
 
-+ FIX: categories greater than 7 were not previously allowed (they are now)
+o NEW: `add_local_dependence` will add local dependence between variables from a
+  simulated factor model
 
-+ FIX: correlations in `EKC` were not used appropriately and led to an error
+Version 0.0.1
 
-+ UPDATE: switched on "Byte-Compile" (byte-compiles on our end and not when the user installs)
-
-
-Changes in version 0.0.5
-
-+ FIX: bug in skew when only providing 1 value
-
-+ FIX: further correction to `EKC` (uses `cumsum(eigenvalues)` rather than `sum(eigenvalues)`)
-
-+ ADD: `add_wording_effects` will add wording effects such as acquiescence, difficulty, random careless, straight line, or some combination of the four to a simulated factor model
-
-+ ADD: `ESEM` to perform Exploratory Structural Equation Modeling using {lavaan} (allows wording effects to be estimated)
-
-+ FIX: `factor_forest` uses raw data in `psych::fa.parallel` rather than correlation matrix
-
-+ ADD: internal functions for computing effect sizes across conditions are included (see `simulation_helpers.R`)
-
-+ ADD: skew in `add_local_dependence` is guaranteed to be same direction for locally dependent variables
-
-
-Changes in version 0.0.4
-
-+ FIX: correction to `EKC` (used `factor_forest`'s version of EKC which used reference values rather than eigenvalues); `EKC` uses eigenvalues whereas `factor_forest` uses reference (which was what the random forest model was trained on)
-
-+ FIX: cross-loadings with population error are screened for communalities >= 0.80; communalities near 0.90 prior to population error would often get stuck and not converge
-
-+ ADD: `skew` argument for continuous data
-
-
-Changes in version 0.0.3
-
-+ ADD: `add_population_error` will add population error, using {bifactor}, to a simulated factor model
-
-+ ADD: `data_to_zipfs` to transform data to Zipf's distribution from `simulate_factors`
-
-+ ADD: `obtain_zipfs_parameters` to obtain a dataset's best fitting Zipf's distribution parameters
-
-+ ADD: `NEST` Next Eigenvalue Sufficiency Test to estimate dimensions
-
-+ ADD: `estimate_dimensions` provides a single function to estimate dimensions using state-of-the-art methods: Exploratory Graph Analysis (EGA),
-Exploratory Factor Analysis with out-of-sample prediction (FSPE), Next Eigenvalue Sufficiency Test (NEST), parallel analysis (PA), and Factor Forest
-
-
-Changes in version 0.0.2
-
-+ UPDATE: skews for categories now include 6 categories
-
-+ UPDATE: available skew increments are now 0.05 (were 0.50 previously)
-
-+ ADD: `add_local_dependence` will add local dependence between variables from a simulated factor model
-
-
-Initial commit version 0.0.1
+o NEW: initial release

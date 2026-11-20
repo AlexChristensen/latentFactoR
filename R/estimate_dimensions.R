@@ -42,6 +42,11 @@
 #' \code{\link[psych]{fa.parallel}}.
 #' Defaults are listed
 #'
+#' @param seed Numeric (length = 1).
+#' Seed for reproducible results. The same \code{seed} gives the same results
+#' (and does not change the random number stream of the R session).
+#' Defaults to \code{NULL} (random seed)
+#'
 #' @return Returns a list containing:
 #'
 #' \item{dimensions}{Dimensions estimated from each method}
@@ -96,9 +101,15 @@ estimate_dimensions <- function(
     PA_args = list(
       fm = "minres", fa = "both", cor = "cor",
       n.iter = 20, sim = FALSE, plot = FALSE
-    )
+    ),
+    seed = NULL
 )
 {
+
+  # Set seed (reproducible results)
+  seed_token <- lf_seed_start(seed)
+  on.exit(lf_seed_end(seed_token), add = TRUE)
+
 
   # Check for appropriate data
   object_error(data, c("matrix", "data.frame", "array"));
@@ -270,54 +281,67 @@ estimate_dimensions <- function(
     message("done.")
   }
 
-  ## Factor Forest
-  message("Estimating Factor Forest...", appendLF = FALSE)
+  ## Factor Forest (requires data rather than a correlation matrix)
+  if(is_symmetric(data)){
 
-  ## Update default Factor Forest arguments
-  FF_args <- update_defaults(
-    FUN = "FF", FUN_args = FF_args
-  )
+    ## Factor Forest
+    warning("Factor Forest cannot be estimated. Factor Forest requires data rather than a correlation (symmetric) matrix")
 
-  ## Obtain Factor Forest arguments
-  FF_args <- obtain_arguments(
-    FUN = factor_forest,
-    FUN_args = FF_args
-  )
-
-  ## Set data and sample size
-  FF_args$data <- data
-  FF_args$sample_size <- sample_size
-
-  ## Estimate Factor Forest
-  ff_results <- try(
-    suppressMessages(
-      suppressWarnings(
-        do.call(
-          what = factor_forest,
-          args = FF_args
-        )
-      )
-    ), silent = TRUE
-  )
-
-  ## Catch error
-  if(is(ff_results, "try-error")){
-
-    ## Return bad result
-    ff_results <- list(
-      dimensions = NA
-    )
-    ## Factor Forest finished
-    message("could not be estimated properly.")
-
-  }else if(ff_results$dimensions == FF_args$maximum_factors){
-
-    ## Factor Forest finished
-    message("maximum factors reached.")
+    ## Set results
+    ff_results <- list(dimensions = NA)
 
   }else{
-    ## Factor Forest finished
-    message("done.")
+
+    ## Factor Forest
+    message("Estimating Factor Forest...", appendLF = FALSE)
+
+    ## Update default Factor Forest arguments
+    FF_args <- update_defaults(
+      FUN = "FF", FUN_args = FF_args
+    )
+
+    ## Obtain Factor Forest arguments
+    FF_args <- obtain_arguments(
+      FUN = factor_forest,
+      FUN_args = FF_args
+    )
+
+    ## Set data and sample size
+    FF_args$data <- data
+    FF_args$sample_size <- sample_size
+
+    ## Estimate Factor Forest
+    ff_results <- try(
+      suppressMessages(
+        suppressWarnings(
+          do.call(
+            what = factor_forest,
+            args = FF_args
+          )
+        )
+      ), silent = TRUE
+    )
+
+    ## Catch error
+    if(is(ff_results, "try-error")){
+
+      ## Return bad result
+      ff_results <- list(
+        dimensions = NA
+      )
+      ## Factor Forest finished
+      message("could not be estimated properly.")
+
+    }else if(isTRUE(ff_results$dimensions == FF_args$maximum_factors)){
+
+      ## Factor Forest finished
+      message("maximum factors reached.")
+
+    }else{
+      ## Factor Forest finished
+      message("done.")
+    }
+
   }
 
   ## Check for whether FSPE can be estimated
@@ -336,7 +360,12 @@ estimate_dimensions <- function(
     ## FSPE
     message("Estimating FSPE...", appendLF = FALSE)
 
-    ## Obtain EGA arguments
+    ## Update default FSPE arguments
+    FSPE_args <- update_defaults(
+      FUN = "FSPE", FUN_args = FSPE_args
+    )
+
+    ## Obtain FSPE arguments
     FSPE_args <- obtain_arguments(
       FUN = fspe::fspe,
       FUN_args = FSPE_args
@@ -468,21 +497,12 @@ estimate_dimensions <- function(
   if(is(pa_results, "try-error")){
     ## Return bad result
     pa_results <- list(
-      nfact <- NA,
-      ncomp <- NA
+      nfact = NA,
+      ncomp = NA
     )
     ## Parallel Analysis finished
     message("could not be estimated properly.")
   }else{
-    ## Check for dimensions
-    ## PAF
-    if("nfact" %in% names(pa_results)){
-      pa_nfact <- pa_results$nfact
-    }
-    ## PCA
-    if("ncomp" %in% names(pa_results)){
-      pa_ncomp <- pa_results$ncomp
-    }
 
     ## Parallel Analysis finished
     message("done.")
@@ -496,12 +516,8 @@ estimate_dimensions <- function(
     FF = ff_results$dimensions,
     FSPE = fspe_results$nfactor,
     NEST = nest_results$dimensions,
-    PA_PAF = ifelse(
-      exists("pa_nfact"), pa_nfact, NA
-    ),
-    PA_PCA = ifelse(
-      exists("pa_ncomp"), pa_ncomp, NA
-    )
+    PA_PAF = swiftelse(is.null(pa_results$nfact), NA, pa_results$nfact),
+    PA_PCA = swiftelse(is.null(pa_results$ncomp), NA, pa_results$ncomp)
   )
 
   # Set up results list

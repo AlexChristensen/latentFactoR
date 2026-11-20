@@ -167,7 +167,7 @@ effect_table <- function(
       paste0(
         "Only one method, '", unique_methods, "', was found ",
         "in the data. Results will only include this method."
-      ), call. = FALSE
+      )
     )
 
   }

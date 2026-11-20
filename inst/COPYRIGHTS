@@ -7,3 +7,7 @@ Files: src/ziggurat.c
 Copyright: John Burkardt
 License: LGPL (>= 2)
 Comment: Original ziggurat implementation. Modified by Alexander P. Christensen, 30 July 2023.
+
+Files: inst/extdata/tunedxgb.json
+Copyright: David Goretzko and Markus Buhner
+Comment: Pre-trained XGBoost model of Factor Forest (Goretzko & Buhner, 2020; https://osf.io/mvrau/), used by `factor_forest`. The booster in `tunedxgb.rds` (saved by a 2018 xgboost release in the legacy binary format) was re-saved without modification in the JSON format with xgboost 1.7.6; class probabilities match the legacy booster exactly at its best iteration (129 of 134 rounds).

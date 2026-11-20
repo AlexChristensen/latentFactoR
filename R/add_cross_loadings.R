@@ -31,6 +31,11 @@
 #' with careful consideration of the structure. Make sure to perform
 #' additional checks that the data are adequate
 #'
+#' @param seed Numeric (length = 1).
+#' Seed for reproducible results. The same \code{seed} gives the same results
+#' (and does not change the random number stream of the R session).
+#' Defaults to \code{NULL} (random seed)
+#'
 #' @return Returns a list containing the same parameters as the original
 #' \code{lf_object} but with updated \code{data}, \code{population_correlation},
 #' and \code{parameters} (specifically, \code{loadings} matrix). Also returns
@@ -93,9 +98,15 @@ add_cross_loadings <- function(
     lf_object,
     proportion_cross_loadings, proportion_cross_loadings_range = NULL,
     magnitude_cross_loadings, magnitude_cross_loadings_range = NULL,
-    leave_cross_loadings = FALSE
+    leave_cross_loadings = FALSE,
+    seed = NULL
 )
 {
+
+  # Set seed (reproducible results)
+  seed_token <- lf_seed_start(seed)
+  on.exit(lf_seed_end(seed_token), add = TRUE)
+
 
   # Check inputs
   inputs <- add_cross_loadings_errors(
@@ -248,19 +259,13 @@ add_cross_loadings_errors <- function(
 {
 
   # Check for appropriate class
-  if(!is(lf_object, "lf_simulate")){
-
-    # Produce error
-    stop(
-      paste(
-        "`lf_object` input is not class \"lf_simulate\" from the `simulate_factors` function.",
-        "\n\nInput class(es) of current `lf_object`:",
-        paste0("\"", class(lf_object), "\"", collapse = ", "),
-        "\n\nUse `simulate_factors` to generate your data to input into this function"
-      )
-    )
-
-  }
+  # (cross-loadings re-simulate the data from the factor model so they must
+  # be added before local dependence, method factors, wording effects,
+  # and population error)
+  check_lf_object(
+    lf_object, "add_cross_loadings",
+    forbid = c("lf_ld", "lf_me", "lf_we", "lf_pe", "lf_zipfs"), flat = TRUE
+  )
 
   # Obtain parameters from simulated data
   parameters <- lf_object$parameters
@@ -273,59 +278,11 @@ add_cross_loadings_errors <- function(
     )
   }
 
-  # Check for proportion cross-loadings range
-  if(!is.null(proportion_cross_loadings_range)){
-    type_error(proportion_cross_loadings_range, "numeric") # object type error
-    length_error(proportion_cross_loadings_range, 2) # object length error
-
-    # Check for number of variables in range
-    if(any(proportion_cross_loadings_range >= 1)){
-
-      # Target values (positions within the range vector,
-      # not factor indices, so use a single representative
-      # variable count rather than indexing `parameters$variables`)
-      target_LD <- which(proportion_cross_loadings_range >= 1)
-
-      # Ensure proportions
-      proportion_cross_loadings_range[target_LD] <-
-        proportion_cross_loadings_range[target_LD] / mean(parameters$variables)
-
-    }
-
-    # Check for error in range
-    range_error(proportion_cross_loadings_range, c(0, 1)) # object range error
-    proportion_cross_loadings <- runif_xoshiro(
-      parameters$factors,
-      min = min(proportion_cross_loadings_range),
-      max = max(proportion_cross_loadings_range)
-    )
-  }
-
-  # Ensure appropriate types
-  type_error(proportion_cross_loadings, "numeric")
-
-  # Ensure appropriate lengths
-  length_error(proportion_cross_loadings, c(1, parameters$factors))
-
-  # Set proportions
-  if(length(proportion_cross_loadings) == 1){
-    proportion_cross_loadings <- rep(proportion_cross_loadings, parameters$factors)
-  }
-
-  # Convert local dependence proportions to proportions
-  if(any(proportion_cross_loadings >= 1)){
-
-    # Target values
-    target_LD <- which(proportion_cross_loadings >= 1)
-
-    # Ensure proportions
-    proportion_cross_loadings[target_LD] <-
-      proportion_cross_loadings[target_LD] / parameters$variables[target_LD]
-
-  }
-
-  # Ensure appropriate ranges
-  range_error(proportion_cross_loadings, c(0, 1))
+  # Resolve proportions (or numbers of variables)
+  proportion_cross_loadings <- resolve_proportion(
+    proportion_cross_loadings, proportion_cross_loadings_range,
+    parameters$variables, "proportion_cross_loadings", one_is_count = TRUE
+  )
 
   # Obtain integer values of proportions
   integer_cross_loadings <- round(proportion_cross_loadings * parameters$variables)
