@@ -11,9 +11,11 @@ Authors@R: c(
 	person("Francisco", "Abad", role = "ctb"),
 	person("Eduardo", "Garcia-Garzon", role = "ctb"),
 	person("Vithor", "Franco", role = "aut", email = "vithorfranco@gmail.com"),
-	person("David", "Blackman", role = "ctb", comment = "Original xoshiro.c implementation"),
-    person("Sebastiano", "Vigna", role = "ctb", comment = "Original xoshiro.c implementation"),
-    person("John", "Burkardt", role = c("cph", "ctb"), comment = "Original ziggurat.c implementation"))
+	person("David", "Blackman", role = c("cph", "ctb"), comment = "Original xoshiro.c implementation"),
+	person("Sebastiano", "Vigna", role = c("cph", "ctb"), comment = "Original xoshiro.c implementation"),
+	person("John", "Burkardt", role = c("cph", "ctb"), comment = "Original ziggurat.c implementation"),
+	person("David", "Goretzko", role = c("cph", "ctb"), comment = "Pre-trained Factor Forest XGBoost model (inst/extdata/tunedxgb.json)"),
+	person("Markus", "Buhner", role = c("cph", "ctb"), comment = "Pre-trained Factor Forest XGBoost model (inst/extdata/tunedxgb.json)"))
 Maintainer: Alexander Christensen <alexpaulchristensen@gmail.com>
 Description: Generates data based on latent factor models. Data can be continuous, polytomous, dichotomous, or mixed. Skews, cross-loadings, wording effects, population errors, and local dependencies can be added. All parameters can be manipulated. Data categorization is based on Garrido, Abad, and Ponsoda (2011) <doi:10.1177/0013164410389489>.
 URL: https://github.com/AlexChristensen/latentFactoR
