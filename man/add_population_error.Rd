@@ -37,8 +37,9 @@ exactly)
 
 \item \code{"tkl"} --- Tucker, Koopman, and Linn (1969). Error is
 the contribution of many random minor factors whose loadings decay
-geometrically. The proportion of variance attributed to the minor factors
-is optimized
+geometrically. The minor factors take a proportion of each variable's
+uniqueness (the major factors are unchanged) and this proportion is
+optimized
 
 \item \code{"wb"} --- Wu and Browne (2015). The population correlation
 matrix with error is the inverse of a Wishart draw for the precision matrix
@@ -49,9 +50,11 @@ distribution is optimized. Draws are not rescaled; draws with an
 error outside of -1 to 1 are treated as infeasible
 
 \item \code{"hb"} --- Hu and Bentler (1998). Underparameterized
-misspecification: a random subset of the loadings that are zero in the true
-model are non-zero in the population (omitted cross-loadings). The size of
-the omitted cross-loadings is optimized
+misspecification: a random subset of the loadings (and, optionally, factor
+covariances) that are zero in the true model are non-zero in the population
+(omitted cross-loadings and factor covariances). The omitted parameters have
+random signs and magnitudes that vary uniformly between one half and one
+times a common size, and the common size is optimized
 
 }}
 
@@ -121,9 +124,15 @@ make the target \code{fit_value} harder to reach within the error bounds
 (\eqn{[-1, 1]}).
 Defaults to \code{0.30}
 
-\item \code{omitted} --- Proportion of the zero loadings in the true model
-that are omitted cross-loadings for \code{method = "hb"}. At least one
-cross-loading is always omitted. Defaults to \code{0.10}
+\item \code{omitted} --- Number of loadings that are zero in the true
+model that are omitted cross-loadings for \code{method = "hb"}. If not
+specified, the number is limited to the number of zero loadings. Defaults to
+\code{2}
+
+\item \code{omitted_covariances} --- Number of factor covariances that are
+zero in the true model (e.g., between substantive and method factors) that
+are omitted factor covariances for \code{method = "hb"}. Defaults to
+\code{0}
 
 }}
 
@@ -191,6 +200,13 @@ true model fit to the population correlation matrix with error
 
 \item \code{iterations} --- Number of optimization attempts used
 
+\item \code{omitted} --- Only for \code{method = "hb"}. A list of the
+omitted parameters that were added to the population (their values in the
+population; true model values are zero): \code{loadings} (matrix of omitted
+cross-loadings), \code{factor_covariances} (matrix of omitted factor
+covariances), and \code{size} (common size; the magnitude of each omitted
+parameter is between one half and one times \code{size})
+
 }
 
 }
@@ -223,10 +239,15 @@ zero unless \code{leave_cross_loadings = TRUE}), the non-zero factor
 correlations, the uniquenesses, and any correlated residuals from
 \code{\link[latentFactoR]{add_local_dependence}}
 
-Because chi-square-based indices (CFI, TLI, and RMSEA) depend on sample
-size, the population-level fit is evaluated at the size of the human
-population (approximately 8.3 billion). At this size, the fit indices are
-within about \eqn{10^{-8}} of their large-sample limits
+The fit indices are population values (infinite sample size) computed from
+the maximum likelihood discrepancy \eqn{F} between the population
+correlation matrix with error, \eqn{\Sigma}, and the correlation matrix
+implied by the true model fit to it (\eqn{df} are the degrees of freedom of
+the true model): \eqn{RMSEA = \sqrt{F / df}} and
+\eqn{CFI = 1 - F / F_0}, where \eqn{F_0 = -\log|\Sigma|} is the
+discrepancy of the independence model
+(\eqn{TLI = 1 - (F / df) / (F_0 / df_0)} with
+\eqn{df_0 = p (p - 1) / 2} for \eqn{p} variables)
 
 Each optimization attempt uses new random draws of the error. Attempts
 continue (up to \code{max_iterations}) until \code{fit_value} is matched

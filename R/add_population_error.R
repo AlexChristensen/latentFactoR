@@ -25,10 +25,15 @@
 #' correlations, the uniquenesses, and any correlated residuals from
 #' \code{\link[latentFactoR]{add_local_dependence}}
 #'
-#' Because chi-square-based indices (CFI, TLI, and RMSEA) depend on sample
-#' size, the population-level fit is evaluated at the size of the human
-#' population (approximately 8.3 billion). At this size, the fit indices are
-#' within about \eqn{10^{-8}} of their large-sample limits
+#' The fit indices are population values (infinite sample size) computed from
+#' the maximum likelihood discrepancy \eqn{F} between the population
+#' correlation matrix with error, \eqn{\Sigma}, and the correlation matrix
+#' implied by the true model fit to it (\eqn{df} are the degrees of freedom of
+#' the true model): \eqn{RMSEA = \sqrt{F / df}} and
+#' \eqn{CFI = 1 - F / F_0}, where \eqn{F_0 = -\log|\Sigma|} is the
+#' discrepancy of the independence model
+#' (\eqn{TLI = 1 - (F / df) / (F_0 / df_0)} with
+#' \eqn{df_0 = p (p - 1) / 2} for \eqn{p} variables)
 #'
 #' Each optimization attempt uses new random draws of the error. Attempts
 #' continue (up to \code{max_iterations}) until \code{fit_value} is matched
@@ -58,8 +63,9 @@
 #'
 #' \item \code{"tkl"} --- Tucker, Koopman, and Linn (1969). Error is
 #' the contribution of many random minor factors whose loadings decay
-#' geometrically. The proportion of variance attributed to the minor factors
-#' is optimized
+#' geometrically. The minor factors take a proportion of each variable's
+#' uniqueness (the major factors are unchanged) and this proportion is
+#' optimized
 #'
 #' \item \code{"wb"} --- Wu and Browne (2015). The population correlation
 #' matrix with error is the inverse of a Wishart draw for the precision matrix
@@ -70,9 +76,11 @@
 #' error outside of -1 to 1 are treated as infeasible
 #'
 #' \item \code{"hb"} --- Hu and Bentler (1998). Underparameterized
-#' misspecification: a random subset of the loadings that are zero in the true
-#' model are non-zero in the population (omitted cross-loadings). The size of
-#' the omitted cross-loadings is optimized
+#' misspecification: a random subset of the loadings (and, optionally, factor
+#' covariances) that are zero in the true model are non-zero in the population
+#' (omitted cross-loadings and factor covariances). The omitted parameters have
+#' random signs and magnitudes that vary uniformly between one half and one
+#' times a common size, and the common size is optimized
 #'
 #' }
 #'
@@ -142,9 +150,15 @@
 #' (\eqn{[-1, 1]}).
 #' Defaults to \code{0.30}
 #'
-#' \item \code{omitted} --- Proportion of the zero loadings in the true model
-#' that are omitted cross-loadings for \code{method = "hb"}. At least one
-#' cross-loading is always omitted. Defaults to \code{0.10}
+#' \item \code{omitted} --- Number of loadings that are zero in the true
+#' model that are omitted cross-loadings for \code{method = "hb"}. If not
+#' specified, the number is limited to the number of zero loadings. Defaults to
+#' \code{2}
+#'
+#' \item \code{omitted_covariances} --- Number of factor covariances that are
+#' zero in the true model (e.g., between substantive and method factors) that
+#' are omitted factor covariances for \code{method = "hb"}. Defaults to
+#' \code{0}
 #'
 #' }
 #'
@@ -210,6 +224,13 @@
 #' true model fit to the population correlation matrix with error
 #'
 #' \item \code{iterations} --- Number of optimization attempts used
+#'
+#' \item \code{omitted} --- Only for \code{method = "hb"}. A list of the
+#' omitted parameters that were added to the population (their values in the
+#' population; true model values are zero): \code{loadings} (matrix of omitted
+#' cross-loadings), \code{factor_covariances} (matrix of omitted factor
+#' covariances), and \code{size} (common size; the magnitude of each omitted
+#' parameter is between one half and one times \code{size})
 #'
 #' }
 #'
@@ -282,7 +303,7 @@
 #' @export
 #'
 # Add population error to simulated data ----
-# Updated 20.11.2026
+# Updated 25.11.2026
 add_population_error <- function(
     lf_object,
     method = c("cb", "tkl", "wb", "hb"),
@@ -299,6 +320,9 @@ add_population_error <- function(
   seed_token <- lf_seed_start(seed)
   on.exit(lf_seed_end(seed_token), add = TRUE)
 
+
+  # Obtain options specified by the user
+  specified <- names(control)
 
   # Check inputs
   inputs <- add_population_error_errors(
@@ -357,16 +381,10 @@ add_population_error <- function(
       )
     }
 
-  }else if(method == "hb" && !any(model$loadings == 0)){
+  }else if(method == "hb"){
 
-    # No loadings to omit
-    stop(
-      paste(
-        "The true model has no zero loadings to omit (all loadings are free).",
-        "\n\nUse a different `method` or set `leave_cross_loadings = FALSE`",
-        "with a factor structure that has zero loadings"
-      ), call. = FALSE
-    )
+    # Number of omitted parameters (must be available in the true model)
+    control <- HB_counts(model, control, specified)
 
   }
 
@@ -384,12 +402,13 @@ add_population_error <- function(
         metric, target, preparation, parts, tolerance = tolerance
       ),
       "tkl" = TKL_optimize(
-        metric, target, R, parts,
+        metric, target, R, parts, diag(model$psi),
         control$minor_factors, control$decay
       ),
       "wb" = WB_optimize(metric, target, R, parts),
       "hb" = HB_optimize(
-        metric, target, model, R, parts, control$omitted
+        metric, target, model, R, parts,
+        control$omitted, control$omitted_covariances
       )
     )
 
@@ -512,6 +531,16 @@ add_population_error <- function(
     ),
     original_results = lf_object
   )
+
+  # Add omitted parameters (Hu and Bentler)
+  if(method == "hb"){
+
+    omitted <- best$fit$omitted
+    dimnames(omitted$loadings) <- list(rownames(R), factor_names)
+    dimnames(omitted$factor_covariances) <- list(factor_names, factor_names)
+    results$population_error$omitted <- omitted
+
+  }
 
   # Add class
   class(results) <- c(class(lf_object), "lf_pe")
@@ -643,7 +672,7 @@ add_population_error_errors <- function(
   # Set control defaults
   control_defaults <- list(
     minor_factors = max(50, 2 * ncol(lf_object$data)),
-    decay = 0.30, omitted = 0.10
+    decay = 0.30, omitted = 2, omitted_covariances = 0
   )
 
   # Check for unknown options
@@ -669,7 +698,18 @@ add_population_error_errors <- function(
   }
   range_error(control$minor_factors, c(1, Inf))
   range_error(control$decay, c(0, 1))
-  range_error(control$omitted, c(0, 1))
+  range_error(control$omitted, c(0, Inf))
+  range_error(control$omitted_covariances, c(0, Inf))
+  for(option in c("omitted", "omitted_covariances")){
+    if(control[[option]] %% 1 != 0){
+      stop(
+        paste0(
+          "`control$", option, "` = ", control[[option]],
+          " must be a whole number"
+        ), call. = FALSE
+      )
+    }
+  }
 
   # Return inputs
   return(

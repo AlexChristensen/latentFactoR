@@ -108,16 +108,25 @@ o INTERNAL: removed {testthat} (validation is run outside of the package)
 o CHANGE (BREAKING): `add_population_error` now uses the population error
   methods of {psychNetwoRk}, adapted to factor models. The error is generated
   with `method = "cb"` (Cudeck & Browne, 1992), `"tkl"` (Tucker, Koopman, &
-  Linn, 1969), `"wb"` (Wu & Browne, 2015), or `"hb"` (Hu & Bentler, 1998;
-  omitted cross-loadings) and optimized so that a fit index (`metric` = CFI,
-  TLI, RMSEA, or SRMR) of the true factor model fit to the population
-  correlation matrix with error (maximum likelihood, evaluated at the size of
-  the human population) equals `fit_value`. The arguments `cfa_method`, `fit`,
-  `misfit`, `error_method`, and `convergence_iterations` were replaced by
-  `method`, `metric`, `fit_value`, `max_iterations`, and `control`. The
+  Linn, 1969; random minor factors with geometrically decaying loadings that
+  take a proportion of each variable's uniqueness), `"wb"` (Wu & Browne, 2015),
+  or `"hb"` (Hu & Bentler, 1998; omitted cross-loadings and, optionally,
+  omitted factor covariances that are zero in the true model, with random signs
+  and magnitudes that vary uniformly between 0.5 and 1 times a common size) and
+  optimized so that a fit index (`metric` = CFI, TLI, RMSEA, or SRMR) of the
+  true factor model fit to the population correlation matrix with error
+  (maximum likelihood) equals `fit_value`. Fit indices are population values
+  (no sample size): RMSEA = sqrt(F / df), CFI = 1 - F / F0, and
+  TLI = 1 - (F / df) / (F0 / df0), where F is the maximum likelihood
+  discrepancy, F0 = -log|Sigma| is the discrepancy of the independence model,
+  and df0 = p(p - 1)/2. The arguments `cfa_method`, `fit`, `misfit`,
+  `error_method`, and `convergence_iterations` were replaced by `method`,
+  `metric`, `fit_value`, `max_iterations`, and `control` (`minor_factors` and
+  `decay` for `"tkl"`; `omitted` and `omitted_covariances` for `"hb"`). The
   `population_error` element of the output now contains `method`, `metric`,
   `fit_value`, `achieved`, `fit`, `delta`, `error`, `max_error`, `R_difference`,
-  `loadings`, `factor_correlations`, and `iterations`
+  `loadings`, `factor_correlations`, `iterations`, and, for `"hb"`, `omitted`
+  (the omitted cross-loadings and factor covariances)
 
 o FIX: the previous population error implementation compared SRMR against the
   target regardless of `fit` (e.g., CFI = 0.95 was checked against an SRMR of

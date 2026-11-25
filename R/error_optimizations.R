@@ -7,13 +7,11 @@
 # free (non-zero) parameters. Population error is added to the population
 # correlation matrix such that the fit of the true model (constrained maximum
 # likelihood) to the correlation matrix with error equals a target value of a
-# fit index. Fit indices are computed from the maximum likelihood discrepancy
-# at the size of the human population (so they are at their large-sample limits)
-
-#' @noRd
-# Population size (approximately the human population)
-# Updated 20.11.2026
-population_size <- 8.3e09
+# fit index. Fit indices are population values computed from the maximum
+# likelihood discrepancy F (no sample size):
+#   RMSEA = sqrt(F / df)
+#   CFI = 1 - F / F0, where F0 = -log|Sigma| (independence model)
+#   TLI = 1 - (F / df) / (F0 / df0), where df0 = p (p - 1) / 2
 
 # True model ----
 
@@ -530,9 +528,9 @@ known_cfa <- function(S, parts, start = parts$start, max.iter = 100, S_chol = ch
 
 #' @noRd
 # Fit indices of a model-implied matrix to a population matrix
-# Updated 20.11.2026
+# Updated 25.11.2026
 fit_indices <- function(
-    R_population, reference, df, n = population_size,
+    R_population, reference, df,
     population_chol = try(chol(R_population), silent = TRUE)
 )
 {
@@ -555,7 +553,7 @@ fit_indices <- function(
         log_det_population - nodes,
       log_det_population = log_det_population,
       residual = R_population - reference$R,
-      nodes = nodes, df = df, n = n,
+      nodes = nodes, df = df,
       R_population = R_population
     )
   )
@@ -565,35 +563,28 @@ fit_indices <- function(
 #' @noRd
 # Fit indices from the maximum likelihood discrepancy
 #   F = log|Sigma_model| + tr(Sigma_pop Sigma_model^-1) - log|Sigma_pop| - p
-# and the log-determinant of the population matrix (independence baseline)
+# and the log-determinant of the population matrix (independence baseline
+# F0 = -log|Sigma_pop|). Population (infinite sample size) indices:
+#   RMSEA = sqrt(F / df)
+#   CFI = 1 - F / F0
+#   TLI = 1 - (F / df) / (F0 / df0), where df0 = p (p - 1) / 2
 # (SRMR is from the residuals or, if supplied, `SRMR` directly)
-# Updated 20.11.2026
+# Updated 25.11.2026
 fit_from_discrepancy <- function(
     discrepancy, log_det_population, residual = NULL, nodes, df,
-    n = population_size, R_population = NULL, SRMR = NULL
+    R_population = NULL, SRMR = NULL
 )
 {
 
-  # Chi-square
-  chi_square <- n * discrepancy
+  # Discrepancy of the model (zero within rounding error at no error)
+  discrepancy <- max(discrepancy, 0)
 
-  # Baseline chi-square (independence model): -log|Sigma_pop|
-  baseline_chi_square <- -n * log_det_population
+  # Discrepancy of the independence model
+  baseline <- -log_det_population
   baseline_df <- nodes * (nodes - 1) / 2
 
-  # Guard against non-finite results
-  if(!is.finite(chi_square) || !is.finite(baseline_chi_square)){
-    return(list(valid = FALSE))
-  }
-
-  # Chi-square above degrees of freedom
-  model_excess <- chi_square - df
-  baseline_excess <- baseline_chi_square - baseline_df
-
-  # Check for degenerate baseline
-  denominator <- max(baseline_excess, model_excess, 0)
-  baseline_ratio <- baseline_chi_square / baseline_df
-  if(denominator == 0 || baseline_ratio <= 1){
+  # Guard against non-finite results and a degenerate baseline
+  if(!is.finite(discrepancy) || !is.finite(baseline) || baseline <= 0){
     return(list(valid = FALSE))
   }
 
@@ -607,12 +598,11 @@ fit_from_discrepancy <- function(
   return(
     list(
       valid = TRUE, R_population = R_population,
-      discrepancy = discrepancy, chi_square = chi_square,
-      baseline_chi_square = baseline_chi_square,
+      discrepancy = discrepancy, baseline = baseline,
       baseline_df = baseline_df, df = df,
-      CFI = 1 - max(model_excess, 0) / denominator,
-      TLI = (baseline_ratio - chi_square / df) / (baseline_ratio - 1),
-      RMSEA = sqrt(max(model_excess, 0) / (df * n)),
+      CFI = 1 - discrepancy / baseline,
+      TLI = 1 - (discrepancy / df) / (baseline / baseline_df),
+      RMSEA = sqrt(discrepancy / df),
       SRMR = SRMR
     )
   )
@@ -621,8 +611,8 @@ fit_from_discrepancy <- function(
 
 #' @noRd
 # Fit indices of the known model (constrained maximum likelihood)
-# Updated 20.11.2026
-refit_indices <- function(R_population, parts, start = parts$start, n = population_size)
+# Updated 25.11.2026
+refit_indices <- function(R_population, parts, start = parts$start)
 {
 
   # Check positive definiteness
@@ -645,7 +635,7 @@ refit_indices <- function(R_population, parts, start = parts$start, n = populati
 
   # Obtain fit of the known model (decompositions are reused)
   fit <- fit_indices(
-    R_population, known$reference, parts$df, n,
+    R_population, known$reference, parts$df,
     population_chol = population_chol
   )
 
@@ -664,8 +654,8 @@ refit_indices <- function(R_population, parts, start = parts$start, n = populati
 # Each refit starts from the solution at the nearest previously evaluated
 # parameter (falling back to the true parameters). Returns a function of the
 # scalar parameter and the population matrix function
-# Updated 20.11.2026
-warm_refit <- function(population, parts, n = population_size)
+# Updated 25.11.2026
+warm_refit <- function(population, parts)
 {
 
   # Store of evaluated parameters and solutions
@@ -689,7 +679,7 @@ warm_refit <- function(population, parts, n = population_size)
       }
 
       # Fit known model
-      fit <- refit_indices(R_population, parts, start = start, n = n)
+      fit <- refit_indices(R_population, parts, start = start)
 
       # Store solution
       if(fit$valid){
@@ -875,15 +865,15 @@ solve_scalar <- function(
 #' @noRd
 # Solve with warm-started refits and confirm with a refit from the true
 # parameters (guards against the warm start following a different minimum)
-# Updated 20.11.2026
+# Updated 25.11.2026
 solve_refit <- function(
     population, parts, lower, upper, metric, target,
-    n = population_size, spacing = "geometric"
+    spacing = "geometric"
 )
 {
 
   # Solve with warm starts
-  refit <- warm_refit(population, parts, n)
+  refit <- warm_refit(population, parts)
   solution <- solve_scalar(refit, lower, upper, metric, target, spacing = spacing)
 
   # Check for no solution
@@ -985,12 +975,12 @@ CB_population <- function(error_vector, preparation)
 #' @noRd
 # Cudeck and Browne (1992) error function
 # (the true model is the minimizer so the reference is the original matrix)
-# Updated 20.11.2026
-CB_error <- function(error_vector, preparation, df, n = population_size)
+# Updated 25.11.2026
+CB_error <- function(error_vector, preparation, df)
 {
   return(
     fit_indices(
-      CB_population(error_vector, preparation), preparation$reference, df, n
+      CB_population(error_vector, preparation), preparation$reference, df
     )
   )
 }
@@ -1001,8 +991,8 @@ CB_error <- function(error_vector, preparation, df, n = population_size)
 #   log|R_population| = log|R| + sum(log(1 + s l))
 #   F(s) = s sum(l) - sum(log(1 + s l))
 #   SRMR(s) = s * SRMR(D)
-# Updated 20.11.2026
-CB_direction_fit <- function(scale, eigenvalues, unit_SRMR, preparation, df, n = population_size)
+# Updated 25.11.2026
+CB_direction_fit <- function(scale, eigenvalues, unit_SRMR, preparation, df)
 {
 
   # Positive definiteness
@@ -1016,7 +1006,7 @@ CB_direction_fit <- function(scale, eigenvalues, unit_SRMR, preparation, df, n =
     fit_from_discrepancy(
       discrepancy = scale * sum(eigenvalues) - sum(log(shifted)),
       log_det_population = preparation$reference$log_det + sum(log(shifted)),
-      nodes = ncol(preparation$reference$R), df = df, n = n,
+      nodes = ncol(preparation$reference$R), df = df,
       SRMR = scale * unit_SRMR
     )
   )
@@ -1025,12 +1015,12 @@ CB_direction_fit <- function(scale, eigenvalues, unit_SRMR, preparation, df, n =
 
 #' @noRd
 # Cudeck and Browne (1992) cost function (error is projected)
-# Updated 20.11.2026
-CB_error_cost <- function(vector, metric, target, preparation, df, n = population_size)
+# Updated 25.11.2026
+CB_error_cost <- function(vector, metric, target, preparation, df)
 {
 
   # Obtain fit
-  fit <- CB_error(as.vector(CB_project(vector, preparation)), preparation, df, n)
+  fit <- CB_error(as.vector(CB_project(vector, preparation)), preparation, df)
 
   # Check for invalid results
   if(!fit$valid){
@@ -1044,14 +1034,14 @@ CB_error_cost <- function(vector, metric, target, preparation, df, n = populatio
 
 #' @noRd
 # Cudeck and Browne (1992) gradient function
-# Updated 20.11.2026
-CB_error_gradient <- function(vector, metric, target, preparation, df, n = population_size)
+# Updated 25.11.2026
+CB_error_gradient <- function(vector, metric, target, preparation, df)
 {
 
   # Obtain fit
   reference <- preparation$reference
   nodes <- ncol(reference$R)
-  fit <- CB_error(as.vector(CB_project(vector, preparation)), preparation, df, n)
+  fit <- CB_error(as.vector(CB_project(vector, preparation)), preparation, df)
 
   # Cost is flat when invalid
   if(!fit$valid){
@@ -1062,46 +1052,36 @@ CB_error_gradient <- function(vector, metric, target, preparation, df, n = popul
   R_population_inverse <- chol2inv(chol(fit$R_population))
 
   # Parameter e enters Sigma_pop at (i,j) and (j,i), so
-  #   d chi-square / de = 2 * n * (R^-1 - Sigma_pop^-1)_ij
-  #   d baseline / de = -2 * n * (Sigma_pop^-1)_ij
-  chi_gradient <- 2 * n * (reference$inverse - R_population_inverse)
-  baseline_gradient <- -2 * n * R_population_inverse
-
-  # Chi-square above degrees of freedom
-  model_excess <- fit$chi_square - df
-  baseline_excess <- fit$baseline_chi_square - fit$baseline_df
+  #   d F / de = 2 * (R^-1 - Sigma_pop^-1)_ij
+  #   d F0 / de = -2 * (Sigma_pop^-1)_ij
+  discrepancy_gradient <- 2 * (reference$inverse - R_population_inverse)
+  baseline_gradient <- -2 * R_population_inverse
 
   # Gradient of the metric
   metric_gradient <- switch(
     metric,
     "CFI" = {
 
-      # Flat when chi-square is below degrees of freedom (CFI = 1)
-      # or when it exceeds the baseline (CFI = 0)
-      if(model_excess <= 0 || model_excess >= baseline_excess){
-        matrix(0, nrow = nodes, ncol = nodes)
-      }else{
-        -(chi_gradient * baseline_excess - model_excess * baseline_gradient) /
-          baseline_excess^2
-      }
+      # CFI = 1 - F / F0
+      -(discrepancy_gradient * fit$baseline - fit$discrepancy * baseline_gradient) /
+        fit$baseline^2
 
     },
     "TLI" = {
 
-      # B = baseline chi-square / df, M = model chi-square / df
-      B <- fit$baseline_chi_square / fit$baseline_df
-      M <- fit$chi_square / df
-      (-(chi_gradient / df) * (B - 1) + (baseline_gradient / fit$baseline_df) * (M - 1)) /
-        (B - 1)^2
+      # TLI = 1 - (F df0) / (F0 df)
+      -(fit$baseline_df / df) *
+        (discrepancy_gradient * fit$baseline - fit$discrepancy * baseline_gradient) /
+        fit$baseline^2
 
     },
     "RMSEA" = {
 
-      # Flat when chi-square is below degrees of freedom (RMSEA = 0)
-      if(model_excess <= 0){
+      # Flat at no error (RMSEA = 0)
+      if(fit$discrepancy <= 0){
         matrix(0, nrow = nodes, ncol = nodes)
       }else{
-        chi_gradient / (2 * df * n * fit$RMSEA)
+        discrepancy_gradient / (2 * df * fit$RMSEA)
       }
 
     },
@@ -1133,10 +1113,9 @@ CB_error_gradient <- function(vector, metric, target, preparation, df, n = popul
 
 #' @noRd
 # Cudeck and Browne (1992) optimization
-# Updated 20.11.2026
+# Updated 25.11.2026
 CB_optimize <- function(
-    metric, target, preparation, parts,
-    n = population_size, tolerance = 0.01
+    metric, target, preparation, parts, tolerance = 0.01
 )
 {
 
@@ -1152,12 +1131,9 @@ CB_optimize <- function(
   }
 
   # Random direction over error cells
-  # (random signs with magnitudes in [0.5, 1] before projection)
+  # (standard normal errors before projection)
   direction <- as.vector(
-    CB_project(
-      shuffle_replace(c(-1, 1), cells) * runif_xoshiro(cells, min = 0.5, max = 1),
-      preparation
-    )
+    CB_project(rnorm_ziggurat(cells), preparation)
   )
 
   # Check for degenerate direction
@@ -1188,7 +1164,7 @@ CB_optimize <- function(
   # Scale the direction to reach the target metric (closed form)
   scaled <- solve_scalar(
     FUN = function(scale){
-      CB_direction_fit(scale, eigenvalues, unit_SRMR, preparation, df, n)
+      CB_direction_fit(scale, eigenvalues, unit_SRMR, preparation, df)
     },
     lower = 0, upper = maximum_scale,
     metric = metric, target = target, tolerance = 1e-14
@@ -1197,7 +1173,7 @@ CB_optimize <- function(
   # Exact fit at the solution
   if(isTRUE(scaled$valid)){
     scaled <- c(
-      CB_error(direction * scaled$parameter, preparation, df, n),
+      CB_error(direction * scaled$parameter, preparation, df),
       list(parameter = scaled$parameter)
     )
   }
@@ -1216,7 +1192,7 @@ CB_optimize <- function(
         par = direction * start_scale,
         fn = CB_error_cost, gr = CB_error_gradient,
         metric = metric, target = target, preparation = preparation,
-        df = df, n = n, method = "L-BFGS-B"
+        df = df, method = "L-BFGS-B"
       ), silent = TRUE
     )
 
@@ -1225,7 +1201,7 @@ CB_optimize <- function(
 
       # Obtain fit
       projected <- as.vector(CB_project(optimization$par, preparation))
-      fit <- CB_error(projected, preparation, df, n)
+      fit <- CB_error(projected, preparation, df)
 
       # Keep the solution closest to the target
       if(
@@ -1278,19 +1254,31 @@ CB_optimize <- function(
 
 #' @noRd
 # Tucker, Koopman, and Linn (1969) population correlation matrix
-# (minor factors contribute `weight` of the variance; diagonal remains one)
-# Updated 20.11.2026
-TKL_population <- function(weight, minor, R)
+# Minor factors contribute `variance` of each variable's uniqueness (the
+# `direction` already includes the uniquenesses); the major factors are
+# unchanged and the remaining uniqueness keeps the diagonal at one
+# Updated 25.11.2026
+TKL_population <- function(variance, direction, R)
 {
-  return((1 - weight) * R + weight * minor)
+
+  # Add minor factor correlations (diagonal remains one)
+  R_population <- R + variance * direction
+  diag(R_population) <- 1
+
+  # Return population correlation matrix
+  return(R_population)
+
 }
 
 #' @noRd
 # Tucker, Koopman, and Linn (1969) optimization
-# Updated 20.11.2026
+# Random minor factors with geometrically decaying loadings are scaled so that
+# the variance they contribute to each variable is `variance` times the
+# variable's uniqueness. The proportion `variance` (between 0 and 1) is solved
+# for the target metric
+# Updated 25.11.2026
 TKL_optimize <- function(
-    metric, target, R, parts,
-    minor_factors, decay, n = population_size
+    metric, target, R, parts, uniquenesses, minor_factors, decay
 )
 {
 
@@ -1310,21 +1298,16 @@ TKL_optimize <- function(
   # Scale each variable's loadings to unit length
   loadings <- loadings / sqrt(rowSums(loadings^2))
 
-  # Correlations from minor factors
-  minor <- tcrossprod(loadings)
+  # Correlations from minor factors scaled to the uniquenesses
+  # (variable i contributes `variance * uniquenesses[i]` of variance)
+  direction <- tcrossprod(loadings) * tcrossprod(sqrt(uniquenesses))
+  diag(direction) <- 0
 
-  # Largest weight that keeps the errors within [-1, 1]
-  # (error is linear in the weight: weight * (minor - R))
-  maximum_weight <- min(
-    0.999, 1 / max(abs((minor - R)[upper.tri(R)]))
-  )
-
-  # Return solution
+  # Return solution (errors are bounded by the variance proportion)
   return(
     solve_refit(
-      function(weight){TKL_population(weight, minor, R)},
-      parts, lower = 0, upper = maximum_weight,
-      metric = metric, target = target, n = n
+      function(variance){TKL_population(variance, direction, R)},
+      parts, lower = 0, upper = 1, metric = metric, target = target
     )
   )
 
@@ -1371,8 +1354,8 @@ WB_population <- function(log_dispersion, draws, R)
 
 #' @noRd
 # Wu and Browne (2015) optimization
-# Updated 20.11.2026
-WB_optimize <- function(metric, target, R, parts, n = population_size)
+# Updated 25.11.2026
+WB_optimize <- function(metric, target, R, parts)
 {
 
   # Obtain nodes
@@ -1392,7 +1375,7 @@ WB_optimize <- function(metric, target, R, parts, n = population_size)
     solve_refit(
       function(log_dispersion){WB_population(log_dispersion, draws, R)},
       parts, lower = log(1e-06), upper = log(1 / nodes),
-      metric = metric, target = target, n = n, spacing = "linear"
+      metric = metric, target = target, spacing = "linear"
     )
   )
 
@@ -1401,18 +1384,90 @@ WB_optimize <- function(metric, target, R, parts, n = population_size)
 # Hu and Bentler (1998) ----
 
 #' @noRd
+# Hu and Bentler (1998) number of omitted parameters
+# The number of omitted cross-loadings is capped at the number of zero loadings
+# when it was not specified (e.g., small models); otherwise the number
+# requested must be available. Factor covariances that are zero in the true
+# model are candidates for omitted factor covariances
+# Updated 25.11.2026
+HB_counts <- function(model, control, specified)
+{
+
+  # Obtain number of parameters that can be omitted
+  loadings <- sum(model$loadings == 0)
+  covariances <- sum(lower.tri(model$phi) & model$phi == 0)
+
+  # Check omitted cross-loadings
+  if(control$omitted > loadings){
+
+    # Specified by the user
+    if("omitted" %in% specified){
+      stop(
+        paste0(
+          "`control$omitted` = ", control$omitted, " is more than the number ",
+          "of loadings that are zero in the true model (", loadings, ")",
+          "\n\nUse `control = list(omitted = ", loadings, ")` or fewer"
+        ), call. = FALSE
+      )
+    }
+
+    # Default
+    control$omitted <- loadings
+
+  }
+
+  # Check omitted factor covariances
+  if(control$omitted_covariances > covariances){
+    stop(
+      paste0(
+        "`control$omitted_covariances` = ", control$omitted_covariances,
+        " is more than the number of factor covariances that are zero in the ",
+        "true model (", covariances, ")",
+        "\n\nUse `control = list(omitted_covariances = ", covariances,
+        ")` or fewer"
+      ), call. = FALSE
+    )
+  }
+
+  # Check for something to omit
+  if(control$omitted + control$omitted_covariances == 0){
+    stop(
+      paste(
+        "The true model has no parameters to omit (all loadings are free",
+        "and `control$omitted_covariances` is zero or there are no zero",
+        "factor covariances).",
+        "\n\nUse a different `method` or set `leave_cross_loadings = FALSE`",
+        "with a factor structure that has zero loadings"
+      ), call. = FALSE
+    )
+  }
+
+  # Return control
+  return(control)
+
+}
+
+#' @noRd
 # Hu and Bentler (1998) population correlation matrix
-# Omitted cross-loadings of magnitude `size` are added to the population
-# loadings; uniquenesses are reduced so that the diagonal remains one
-# Updated 20.11.2026
+# Omitted cross-loadings and factor covariances (relative magnitudes in
+# `omissions`) of overall magnitude `size` are added to the population
+# loadings and factor correlations; uniquenesses are reduced so that the
+# diagonal remains one
+# Updated 25.11.2026
 HB_population <- function(size, omissions)
 {
 
-  # Population loadings with omitted cross-loadings
+  # Population loadings and factor correlations with omitted parameters
   loadings <- omissions$loadings + size * omissions$omitted
+  phi <- omissions$phi + size * omissions$omitted_phi
+
+  # Factor correlations must remain a correlation matrix
+  if(is(try(chol(phi), silent = TRUE), "try-error")){
+    return(NULL)
+  }
 
   # Common part
-  common <- loadings %*% tcrossprod(omissions$phi, loadings)
+  common <- loadings %*% tcrossprod(phi, loadings)
 
   # Uniquenesses must remain positive
   uniquenesses <- 1 - diag(common)
@@ -1437,31 +1492,44 @@ HB_population <- function(size, omissions)
 
 #' @noRd
 # Hu and Bentler (1998) optimization
-# (underparameterized misspecification: omitted cross-loadings)
-# Updated 20.11.2026
+# (underparameterized misspecification: omitted cross-loadings and factor
+# covariances). Omitted parameters have random signs and magnitudes that are
+# uniformly distributed between 0.5 and 1 times a common size that is solved
+# for the target metric
+# Updated 25.11.2026
 HB_optimize <- function(
-    metric, target, model, R, parts, omitted, n = population_size
+    metric, target, model, R, parts, omitted, omitted_covariances
 )
 {
 
-  # Zero loadings in the true model
-  zero_cells <- which(model$loadings == 0)
+  # Obtain candidates (parameters that are zero in the true model)
+  loading_cells <- which(model$loadings == 0)
+  covariance_cells <- which(lower.tri(model$phi) & model$phi == 0)
 
-  # Check for omittable loadings
-  if(length(zero_cells) == 0){
+  # Check for omittable parameters
+  if(omitted + omitted_covariances == 0){
     return(list(valid = FALSE))
   }
 
-  # Randomly select omitted cross-loadings (at least one)
-  omitted_cells <- shuffle(
-    zero_cells, size = max(1, round(omitted * length(zero_cells)))
-  )
+  # Randomly select omitted parameters
+  omitted_loading_cells <- shuffle(loading_cells, size = omitted)
+  omitted_covariance_cells <- shuffle(covariance_cells, size = omitted_covariances)
 
-  # Random signs for omitted cross-loadings
+  # Random relative magnitudes (0.5 to 1) with random signs
+  # (uniform so that no omitted parameter is negligible and none dominates)
   omitted_loadings <- matrix(0, nrow = nrow(model$loadings), ncol = ncol(model$loadings))
-  omitted_loadings[omitted_cells] <- swiftelse(
-    runif_xoshiro(length(omitted_cells)) < 0.50, -1, 1
-  )
+  if(length(omitted_loading_cells) > 0){
+    omitted_loadings[omitted_loading_cells] <-
+      runif_xoshiro(length(omitted_loading_cells), min = 0.5, max = 1) *
+      shuffle_replace(c(-1, 1), length(omitted_loading_cells))
+  }
+  omitted_phi <- matrix(0, nrow = nrow(model$phi), ncol = ncol(model$phi))
+  if(length(omitted_covariance_cells) > 0){
+    omitted_phi[omitted_covariance_cells] <-
+      runif_xoshiro(length(omitted_covariance_cells), min = 0.5, max = 1) *
+      shuffle_replace(c(-1, 1), length(omitted_covariance_cells))
+    omitted_phi <- omitted_phi + t(omitted_phi)
+  }
 
   # Correlated residuals of the true model (diagonal is replaced)
   residuals <- model$psi
@@ -1470,7 +1538,8 @@ HB_optimize <- function(
   # Population components
   omissions <- list(
     loadings = model$loadings, phi = model$phi,
-    omitted = omitted_loadings, residuals = residuals
+    omitted = omitted_loadings, omitted_phi = omitted_phi,
+    residuals = residuals
   )
 
   # Population correlation matrix (errors within [-1, 1])
@@ -1488,7 +1557,7 @@ HB_optimize <- function(
 
   }
 
-  # Find largest size (magnitude of omitted cross-loadings)
+  # Find largest size (overall magnitude of omitted parameters)
   maximum_size <- 1
   if(is.null(population(maximum_size))){
 
@@ -1511,13 +1580,23 @@ HB_optimize <- function(
 
   }
 
-  # Return solution
-  return(
-    solve_refit(
-      population, parts, lower = 0, upper = maximum_size,
-      metric = metric, target = target, n = n
-    )
+  # Solve for the size
+  solution <- solve_refit(
+    population, parts, lower = 0, upper = maximum_size,
+    metric = metric, target = target
   )
+
+  # Add omitted parameters (signed values in the population)
+  if(isTRUE(solution$valid)){
+    solution$omitted <- list(
+      loadings = solution$parameter * omitted_loadings,
+      factor_covariances = solution$parameter * omitted_phi,
+      size = solution$parameter
+    )
+  }
+
+  # Return solution
+  return(solution)
 
 }
 
