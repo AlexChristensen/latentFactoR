@@ -1,5 +1,15 @@
 Version 0.1.0
 
+o NEW: `obtain_fit_indices()` computes the CFI, TLI, RMSEA, and SRMR of a
+  model-implied correlation matrix relative to a correlation matrix for a given
+  sample size (`sample_size = Inf` gives the population values)
+
+o NEW: `add_population_error()` returns the parameters specific to each method
+  in `population_error$parameters`: the minor factor loadings and variance
+  proportion (`"tkl"`), the error direction and its scale (`"cb"`), the
+  dispersion and Wishart degrees of freedom (`"wb"`), and the size of the
+  omitted parameters (`"hb"`)
+
 o FIX: the normal random number generator (ziggurat) used the same low bits for
   the strip index and the value and was seeded with the clock only (parallel
   workers could share streams); it now uses independent bits and the same

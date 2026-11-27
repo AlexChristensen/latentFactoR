@@ -232,6 +232,36 @@
 #' covariances), and \code{size} (common size; the magnitude of each omitted
 #' parameter is between one half and one times \code{size})
 #'
+#' \item \code{parameters} --- List of the parameters specific to
+#' \code{method}:
+#'
+#' \itemize{
+#'
+#' \item \code{"cb"} --- \code{direction} (random error matrix that is
+#' orthogonal to the true model) and \code{scale} (multiplier of
+#' \code{direction} that gives \code{error}). \code{scale} is \code{NA} when the
+#' target could not be reached along \code{direction} and the error was instead
+#' optimized cell by cell
+#'
+#' \item \code{"tkl"} --- \code{minor_loadings} (variables by minor factors
+#' matrix of the minor factor loadings in the population; the off-diagonal of
+#' \code{tcrossprod(minor_loadings)} equals \code{error}),
+#' \code{variance_proportion} (optimized proportion of each uniqueness taken by
+#' the minor factors), \code{minor_variances} (variance of each variable due to
+#' the minor factors), \code{uniquenesses} (uniquenesses of the true model
+#' \emph{before} the minor factors take their share), \code{minor_factors}, and
+#' \code{decay}
+#'
+#' \item \code{"wb"} --- \code{dispersion} (optimized dispersion, approximately
+#' RMSEA\eqn{^2}) and \code{wishart_df} (degrees of freedom of the Wishart
+#' distribution, \code{1 / dispersion})
+#'
+#' \item \code{"hb"} --- \code{size} (common size of the omitted parameters),
+#' and the population \code{loadings}, \code{factor_correlations}, and
+#' \code{uniquenesses}, which include the omitted parameters
+#'
+#' }
+#'
 #' }
 #'
 #' }
@@ -303,7 +333,7 @@
 #' @export
 #'
 # Add population error to simulated data ----
-# Updated 25.11.2026
+# Updated 27.11.2026
 add_population_error <- function(
     lf_object,
     method = c("cb", "tkl", "wb", "hb"),
@@ -541,6 +571,25 @@ add_population_error <- function(
     results$population_error$omitted <- omitted
 
   }
+
+  # Add method-specific parameters (with names)
+  method_parameters <- best$fit$method_parameters
+  variable_labels <- rownames(R)
+  if(method == "cb"){
+    dimnames(method_parameters$direction) <- dimnames(R)
+  }else if(method == "tkl"){
+    minor_count <- ncol(method_parameters$minor_loadings)
+    dimnames(method_parameters$minor_loadings) <- list(
+      variable_labels, paste0("M", seq_len(minor_count))
+    )
+    names(method_parameters$minor_variances) <- variable_labels
+    names(method_parameters$uniquenesses) <- variable_labels
+  }else if(method == "hb"){
+    dimnames(method_parameters$loadings) <- list(variable_labels, factor_names)
+    dimnames(method_parameters$factor_correlations) <- list(factor_names, factor_names)
+    names(method_parameters$uniquenesses) <- variable_labels
+  }
+  results$population_error$parameters <- method_parameters
 
   # Add class
   class(results) <- c(class(lf_object), "lf_pe")

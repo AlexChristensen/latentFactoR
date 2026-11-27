@@ -1113,7 +1113,7 @@ CB_error_gradient <- function(vector, metric, target, preparation, df)
 
 #' @noRd
 # Cudeck and Browne (1992) optimization
-# Updated 25.11.2026
+# Updated 27.11.2026
 CB_optimize <- function(
     metric, target, preparation, parts, tolerance = 0.01
 )
@@ -1244,8 +1244,13 @@ CB_optimize <- function(
     return(list(valid = FALSE))
   }
 
-  # Return exact fit with the true model
+  # Return exact fit with the true model and error parameters
+  # (`scale` is missing when the error was optimized cell by cell, in which
+  # case the error is no longer a multiple of the random direction)
   scaled$model <- known
+  scaled$method_parameters <- list(
+    direction = error_matrix, scale = scaled$parameter
+  )
   return(scaled)
 
 }
@@ -1276,7 +1281,7 @@ TKL_population <- function(variance, direction, R)
 # the variance they contribute to each variable is `variance` times the
 # variable's uniqueness. The proportion `variance` (between 0 and 1) is solved
 # for the target metric
-# Updated 25.11.2026
+# Updated 27.11.2026
 TKL_optimize <- function(
     metric, target, R, parts, uniquenesses, minor_factors, decay
 )
@@ -1303,13 +1308,27 @@ TKL_optimize <- function(
   direction <- tcrossprod(loadings) * tcrossprod(sqrt(uniquenesses))
   diag(direction) <- 0
 
-  # Return solution (errors are bounded by the variance proportion)
-  return(
-    solve_refit(
-      function(variance){TKL_population(variance, direction, R)},
-      parts, lower = 0, upper = 1, metric = metric, target = target
-    )
+  # Solve for the variance proportion (errors are bounded by the proportion)
+  solution <- solve_refit(
+    function(variance){TKL_population(variance, direction, R)},
+    parts, lower = 0, upper = 1, metric = metric, target = target
   )
+
+  # Add minor factors (loadings in the metric of the population: their
+  # cross-products are the error and their sums of squares are the variance
+  # that they take from each variable's uniqueness)
+  if(isTRUE(solution$valid)){
+    solution$method_parameters <- list(
+      minor_loadings = loadings * sqrt(solution$parameter * uniquenesses),
+      variance_proportion = solution$parameter,
+      minor_variances = solution$parameter * uniquenesses,
+      uniquenesses = uniquenesses,
+      minor_factors = minor_factors, decay = decay
+    )
+  }
+
+  # Return solution
+  return(solution)
 
 }
 
@@ -1354,7 +1373,7 @@ WB_population <- function(log_dispersion, draws, R)
 
 #' @noRd
 # Wu and Browne (2015) optimization
-# Updated 25.11.2026
+# Updated 27.11.2026
 WB_optimize <- function(metric, target, R, parts)
 {
 
@@ -1369,15 +1388,24 @@ WB_optimize <- function(metric, target, R, parts)
     cholesky = t(chol(chol2inv(chol(R))))
   )
 
-  # Return solution
+  # Solve for the dispersion
   # (dispersion v = 1 / m, with m > nodes - 1; v is approximately RMSEA^2)
-  return(
-    solve_refit(
-      function(log_dispersion){WB_population(log_dispersion, draws, R)},
-      parts, lower = log(1e-06), upper = log(1 / nodes),
-      metric = metric, target = target, spacing = "linear"
-    )
+  solution <- solve_refit(
+    function(log_dispersion){WB_population(log_dispersion, draws, R)},
+    parts, lower = log(1e-06), upper = log(1 / nodes),
+    metric = metric, target = target, spacing = "linear"
   )
+
+  # Add dispersion and degrees of freedom of the Wishart distribution
+  if(isTRUE(solution$valid)){
+    solution$method_parameters <- list(
+      dispersion = exp(solution$parameter),
+      wishart_df = exp(-solution$parameter)
+    )
+  }
+
+  # Return solution
+  return(solution)
 
 }
 
@@ -1496,7 +1524,7 @@ HB_population <- function(size, omissions)
 # covariances). Omitted parameters have random signs and magnitudes that are
 # uniformly distributed between 0.5 and 1 times a common size that is solved
 # for the target metric
-# Updated 25.11.2026
+# Updated 27.11.2026
 HB_optimize <- function(
     metric, target, model, R, parts, omitted, omitted_covariances
 )
@@ -1593,6 +1621,19 @@ HB_optimize <- function(
       factor_covariances = solution$parameter * omitted_phi,
       size = solution$parameter
     )
+
+    # Add population model (true model plus omitted parameters)
+    population_loadings <- model$loadings + solution$parameter * omitted_loadings
+    population_phi <- model$phi + solution$parameter * omitted_phi
+    solution$method_parameters <- list(
+      size = solution$parameter,
+      loadings = population_loadings,
+      factor_correlations = population_phi,
+      uniquenesses = 1 - rowSums(
+        (population_loadings %*% population_phi) * population_loadings
+      )
+    )
+
   }
 
   # Return solution

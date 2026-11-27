@@ -207,6 +207,36 @@ cross-loadings), \code{factor_covariances} (matrix of omitted factor
 covariances), and \code{size} (common size; the magnitude of each omitted
 parameter is between one half and one times \code{size})
 
+\item \code{parameters} --- List of the parameters specific to
+\code{method}:
+
+\itemize{
+
+\item \code{"cb"} --- \code{direction} (random error matrix that is
+orthogonal to the true model) and \code{scale} (multiplier of
+\code{direction} that gives \code{error}). \code{scale} is \code{NA} when the
+target could not be reached along \code{direction} and the error was instead
+optimized cell by cell
+
+\item \code{"tkl"} --- \code{minor_loadings} (variables by minor factors
+matrix of the minor factor loadings in the population; the off-diagonal of
+\code{tcrossprod(minor_loadings)} equals \code{error}),
+\code{variance_proportion} (optimized proportion of each uniqueness taken by
+the minor factors), \code{minor_variances} (variance of each variable due to
+the minor factors), \code{uniquenesses} (uniquenesses of the true model
+\emph{before} the minor factors take their share), \code{minor_factors}, and
+\code{decay}
+
+\item \code{"wb"} --- \code{dispersion} (optimized dispersion, approximately
+RMSEA\eqn{^2}) and \code{wishart_df} (degrees of freedom of the Wishart
+distribution, \code{1 / dispersion})
+
+\item \code{"hb"} --- \code{size} (common size of the omitted parameters),
+and the population \code{loadings}, \code{factor_correlations}, and
+\code{uniquenesses}, which include the omitted parameters
+
+}
+
 }
 
 }
